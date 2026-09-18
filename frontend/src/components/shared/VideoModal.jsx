@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Film, Play, Star, AlertCircle, Maximize2 } from 'lucide-react';
-import { TMDB_API_KEY, fetchMovieVideos } from '../../services/tmdb';
+import { X, Server, Film, Play, Star, ShieldCheck, ShieldAlert, Sparkles } from 'lucide-react';
+import { fetchMovieVideos } from '../../services/tmdb';
 import '../../styles/VideoModal.css';
 
 export default function VideoModal({ movie, onClose }) {
   const [activeServer, setActiveServer] = useState('primary'); // 'primary' | 'backup' | 'trailer'
+  const [shieldActive, setShieldActive] = useState(true); // Chic Anti-Popup Ad Shield
   const [trailerKey, setTrailerKey] = useState(null);
   const [loadingTrailer, setLoadingTrailer] = useState(true);
 
-  // Close on Escape key press
+  // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -17,7 +18,7 @@ export default function VideoModal({ movie, onClose }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Lock body scroll when modal is open
+  // Lock body scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -28,7 +29,6 @@ export default function VideoModal({ movie, onClose }) {
   // Fetch Trailer from TMDB
   useEffect(() => {
     if (!movie?.id) return;
-    
     let isMounted = true;
     setLoadingTrailer(true);
 
@@ -37,7 +37,6 @@ export default function VideoModal({ movie, onClose }) {
         const videos = await fetchMovieVideos(movie.id);
         if (!isMounted) return;
 
-        // Find official trailer
         const trailer = 
           videos.find(v => v.type === 'Trailer' && v.site === 'YouTube') ||
           videos.find(v => v.site === 'YouTube') ||
@@ -56,9 +55,7 @@ export default function VideoModal({ movie, onClose }) {
     };
 
     loadTrailer();
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [movie]);
 
   if (!movie) return null;
@@ -67,7 +64,7 @@ export default function VideoModal({ movie, onClose }) {
   const releaseYear = movie.release_date ? movie.release_date.split('-')[0] : (movie.year || '');
   const rating = movie.vote_average ? movie.vote_average.toFixed(1) : (movie.rating || null);
 
-  // Determine iframe source based on active server
+  // Sources selection
   let iframeSrc = '';
   if (activeServer === 'primary') {
     iframeSrc = `https://vidsrc.sbs/embed/movie/${movie.id}`;
@@ -78,6 +75,11 @@ export default function VideoModal({ movie, onClose }) {
       ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0` 
       : 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1';
   }
+
+  // Sandbox permissions: When shield is active, block top-navigation (page redirect hijack) and popups
+  const sandboxRules = shieldActive && activeServer !== 'trailer'
+    ? "allow-forms allow-scripts allow-same-origin allow-presentation"
+    : undefined;
 
   return (
     <div className="video-modal-overlay" onClick={onClose} dir="rtl">
@@ -100,20 +102,32 @@ export default function VideoModal({ movie, onClose }) {
                     <Star size={12} fill="currentColor" /> {rating}
                   </span>
                 )}
-                <span className="modal-badge-movora">Movora Player</span>
+                <span className="modal-badge-movora">Movora Cinema</span>
               </div>
             </div>
           </div>
 
-          {/* Close Button */}
-          <button 
-            className="video-modal-close-btn" 
-            onClick={onClose} 
-            title="إغلاق المشغل (Esc)"
-            aria-label="إغلاق"
-          >
-            <X size={20} />
-          </button>
+          <div className="modal-header-actions">
+            {/* Chic Smart Ad Shield Toggle */}
+            <button 
+              className={`ad-shield-badge ${shieldActive ? 'active' : 'inactive'}`}
+              onClick={() => setShieldActive(!shieldActive)}
+              title={shieldActive ? "الحماية الذكية مفعّلة لمنع النوافذ المنبثقة والإعلانات المزعجة" : "انقر لتفعيل الحماية الذكية"}
+            >
+              {shieldActive ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
+              <span>{shieldActive ? 'درع الحماية: مفعّل' : 'درع الحماية: متوقف'}</span>
+            </button>
+
+            {/* Close Button */}
+            <button 
+              className="video-modal-close-btn" 
+              onClick={onClose} 
+              title="إغلاق المشغل (Esc)"
+              aria-label="إغلاق"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Server Switcher Controls */}
@@ -151,23 +165,25 @@ export default function VideoModal({ movie, onClose }) {
           </div>
         </div>
 
-        {/* Video Player Iframe Container (Responsive aspect-video) */}
+        {/* Video Player Iframe Container (Responsive aspect-video with Anti-Popup Shield) */}
         <div className="video-player-frame-wrapper">
           <iframe
-            key={`${activeServer}-${movie.id}`}
+            key={`${activeServer}-${movie.id}-${shieldActive}`}
             src={iframeSrc}
             title={title}
             className="video-player-iframe"
             allowFullScreen
             allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-            referrerPolicy="origin"
+            referrerPolicy="no-referrer"
+            sandbox={sandboxRules}
           />
         </div>
 
         {/* Player Bottom Info Bar */}
         <div className="video-modal-footer">
           <div className="player-hint">
-            <span>💡 ملاحظة: في حال واجهت بطء في التحميل، يمكنك التبديل إلى السيرفر البديل أعلاه فوراً.</span>
+            <Sparkles size={14} style={{ color: '#ff315a', verticalAlign: 'middle', marginLeft: 4 }} />
+            <span>نظام Movora المحمي: تم تعطيل الإعلانات المنبثقة والتحويلات الإجبارية لتوفير مشاهدة سلسة وسينمائية.</span>
           </div>
           <button className="close-bottom-btn" onClick={onClose}>
             إغلاق المشغل

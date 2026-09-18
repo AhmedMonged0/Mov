@@ -134,6 +134,8 @@ export default function MovieDetails() {
               title={title}
               allowFullScreen
               allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+              referrerPolicy="no-referrer"
+              sandbox={currentServer !== 'trailer' ? "allow-forms allow-scripts allow-same-origin allow-presentation" : undefined}
             />
           </div>
         </div>
