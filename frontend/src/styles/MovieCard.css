@@ -1,0 +1,248 @@
+.movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 20px;
+}
+
+.movie-card {
+  background: none;
+  border: 0;
+  color: #fff;
+  text-align: right;
+  padding: 0;
+  cursor: pointer;
+  min-width: 0;
+  text-decoration: none;
+  display: block;
+  transition: transform 0.25s ease;
+  user-select: none;
+  outline: none;
+}
+
+.movie-card:hover,
+.movie-card:focus-visible {
+  transform: translateY(-5px);
+}
+
+.poster-wrap {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #14151c;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.movie-card:hover .poster-wrap,
+.movie-card:focus-visible .poster-wrap {
+  border-color: rgba(255, 49, 90, 0.5);
+  box-shadow: 0 12px 32px rgba(255, 49, 90, 0.2), 0 8px 20px rgba(0, 0, 0, 0.6);
+}
+
+.poster-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease, filter 0.3s ease;
+}
+
+.movie-card:hover img,
+.movie-card:focus-visible img {
+  transform: scale(1.08);
+  filter: brightness(0.5);
+}
+
+/* Elegant Placeholder when poster is missing */
+.poster-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: linear-gradient(145deg, #181a24 0%, #0f1017 100%);
+  color: #fff;
+  text-align: center;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.placeholder-icon-wrap {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(255, 49, 90, 0.12);
+  border: 1px solid rgba(255, 49, 90, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.placeholder-film-icon {
+  color: #ff315a;
+}
+
+.placeholder-brand {
+  font-size: 10px;
+  letter-spacing: 2px;
+  font-weight: 800;
+  color: #ff315a;
+  margin-bottom: 6px;
+}
+
+.placeholder-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e5e5e5;
+  margin: 0 0 6px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.placeholder-year {
+  font-size: 11px;
+  color: #717688;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.quality {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: linear-gradient(135deg, #ff315a, #d1123d);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(255, 49, 90, 0.35);
+}
+
+/* Prominent Hover Effect with Play Icon and Watch Badge */
+.play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: 5;
+  color: white;
+  background: rgba(8, 9, 14, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.play-icon-pulse-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.play-icon-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff315a, #ff5578);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 24px rgba(255, 49, 90, 0.7);
+  transform: scale(0.85);
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.play-watch-badge {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+  transform: translateY(6px);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.movie-card:hover .play-overlay,
+.movie-card:focus-visible .play-overlay {
+  opacity: 1;
+}
+
+.movie-card:hover .play-icon-circle,
+.movie-card:focus-visible .play-icon-circle {
+  transform: scale(1.05);
+}
+
+.movie-card:hover .play-watch-badge,
+.movie-card:focus-visible .play-watch-badge {
+  transform: translateY(0);
+}
+
+.card-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  margin-top: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  color: #f0f0f5;
+  transition: color 0.2s ease;
+}
+
+.movie-card:hover .card-title,
+.movie-card:focus-visible .card-title {
+  color: #ff5578;
+}
+
+.meta {
+  display: flex;
+  gap: 8px;
+  color: #7b8094;
+  font-size: 11.5px;
+  margin-top: 4px;
+  align-items: center;
+  direction: rtl;
+}
+
+.year-tag {
+  color: #9297aa;
+}
+
+.rating {
+  margin-right: auto;
+  color: #f7c95b;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .movie-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .movie-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; }
+  .play-icon-circle { width: 44px; height: 44px; }
+  .play-watch-badge { font-size: 10px; padding: 3px 8px; }
+}

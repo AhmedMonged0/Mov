@@ -1,0 +1,133 @@
+.hero {
+  min-height: 720px;
+  padding: 170px 5% 100px;
+  display: flex;
+  align-items: center;
+  background-position: center top;
+  background-size: cover;
+  position: relative;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(270deg, #08090c 0%, rgba(8, 9, 12, 0.90) 40%, rgba(8, 9, 12, 0.45) 75%, #08090c 100%),
+              linear-gradient(to top, #08090c 0%, transparent 60%);
+  z-index: 1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 650px;
+  text-align: right;
+}
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #ff5578;
+  font-weight: 800;
+  display: inline-block;
+  background: rgba(255, 85, 120, 0.1);
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.hero h1 {
+  font-size: 56px;
+  line-height: 1.15;
+  margin: 10px 0 18px;
+  letter-spacing: -1px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.hero h1 strong {
+  font-weight: 900;
+}
+
+.hero p {
+  color: #c4c7d5;
+  max-width: 540px;
+  line-height: 1.8;
+  font-size: 15px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 14px;
+  margin: 28px 0 20px;
+}
+
+.primary, .secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 12px;
+  padding: 13px 24px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 15px;
+  transition: transform 0.2s, filter 0.2s;
+}
+
+.primary:hover, .secondary:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.primary {
+  background: linear-gradient(135deg, #ff315a 0%, #ff5578 100%);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(255, 49, 90, 0.4);
+}
+
+.secondary {
+  background: #1c1e27;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #9ea3b5;
+  font-size: 13.5px;
+}
+
+.hero-rating {
+  color: #f7c95b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+}
+
+.badge-tmdb {
+  font-size: 11px;
+  color: #01b4e4;
+  background: rgba(1, 180, 228, 0.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .hero h1 { font-size: 42px; }
+}
+
+@media (max-width: 620px) {
+  .hero { min-height: 600px; padding-top: 130px; }
+  .hero h1 { font-size: 32px; }
+  .hero p { font-size: 14px; }
+}

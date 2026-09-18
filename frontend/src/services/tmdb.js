@@ -1,0 +1,137 @@
+// TMDB Official Direct API Service for Movora (movora.me)
+
+export const TMDB_API_KEY =
+  (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_TMDB_API_KEY) ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.NEXT_PUBLIC_TMDB_API_KEY) ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_TMDB_API_KEY) ||
+  '8cb7e82b636a10030a1cfa44f580e49f';
+
+const BASE_URL = 'https://api.themoviedb.org/3';
+export const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
+
+/**
+ * Build official poster URL from TMDB
+ * Path format: https://image.tmdb.org/t/p/w500${poster_path}
+ */
+export const getPosterUrl = (posterPath, size = 'w500') => {
+  if (!posterPath) return null;
+  return `${IMAGE_BASE_URL}/${size}${posterPath}`;
+};
+
+/**
+ * Build official backdrop URL from TMDB
+ */
+export const getBackdropUrl = (backdropPath, size = 'original') => {
+  if (!backdropPath) return null;
+  return `${IMAGE_BASE_URL}/${size}${backdropPath}`;
+};
+
+/**
+ * Get popular movies in Arabic (Default State for Home page)
+ * https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&language=ar&page=1
+ */
+export const fetchPopularMovies = async (page = 1) => {
+  try {
+    const url = `${BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&language=ar&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`TMDB Error: ${res.status} ${res.statusText}`);
+    }
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Failed to fetch popular movies from TMDB:', error);
+    throw error;
+  }
+};
+
+/**
+ * Search movies in Arabic (Search Bar)
+ * https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&language=ar&query=${searchTerm}
+ */
+export const searchMovies = async (searchTerm, page = 1) => {
+  if (!searchTerm || !searchTerm.trim()) {
+    return [];
+  }
+  try {
+    const query = encodeURIComponent(searchTerm.trim());
+    const url = `${BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&language=ar&query=${query}&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`TMDB Search Error: ${res.status} ${res.statusText}`);
+    }
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error(`Failed to search movies for "${searchTerm}":`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get movie details by ID in Arabic
+ * https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}&language=ar
+ */
+export const fetchMovieDetails = async (movieId) => {
+  try {
+    const url = `${BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=ar&append_to_response=videos,credits,similar`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`TMDB Movie Details Error: ${res.status}`);
+    }
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error(`Failed to fetch movie details for ID ${movieId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get movie trailers / videos
+ */
+export const fetchMovieVideos = async (movieId) => {
+  try {
+    // Try Arabic first
+    let res = await fetch(`${BASE_URL}/movie/${movieId}/videos?api_key=${TMDB_API_KEY}&language=ar`);
+    let data = await res.json();
+    if (data.results && data.results.length > 0) {
+      return data.results;
+    }
+    // Fallback to English trailers if Arabic not available
+    res = await fetch(`${BASE_URL}/movie/${movieId}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
+    data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error(`Failed to fetch videos for movie ${movieId}:`, error);
+    return [];
+  }
+};
+
+/**
+ * Discover movies by category / genre ID
+ */
+export const fetchMoviesByGenre = async (genreId, page = 1) => {
+  try {
+    const url = `${BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=ar&with_genres=${genreId}&sort_by=popularity.desc&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch movies by genre');
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Failed to discover movies by genre:', error);
+    throw error;
+  }
+};
+
+export default {
+  TMDB_API_KEY,
+  IMAGE_BASE_URL,
+  getPosterUrl,
+  getBackdropUrl,
+  fetchPopularMovies,
+  searchMovies,
+  fetchMovieDetails,
+  fetchMovieVideos,
+  fetchMoviesByGenre,
+};
