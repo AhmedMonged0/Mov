@@ -2,6 +2,26 @@
    MOVORA ADMIN DASHBOARD & SECURITY PORTAL STYLES (movora.me)
    ========================================================================== */
 
+/* Block any third-party ads or in-page push popups inside Admin Area */
+body:has(.admin-dashboard-wrapper) > div:not(#root),
+body:has(.admin-login-page) > div:not(#root),
+body:has(.admin-dashboard-wrapper) > iframe,
+body:has(.admin-login-page) > iframe,
+body:has(.admin-dashboard-wrapper) [class*="inpage_push"],
+body:has(.admin-login-page) [class*="inpage_push"],
+body:has(.admin-dashboard-wrapper) [class*="monetag"],
+body:has(.admin-login-page) [class*="monetag"],
+body:has(.admin-dashboard-wrapper) [id*="monetag"],
+body:has(.admin-login-page) [id*="monetag"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+  z-index: -9999 !important;
+}
+
 /* --------------------------------------------------------------------------
    1. Admin Login Screen
    -------------------------------------------------------------------------- */

@@ -82,9 +82,39 @@ export async function saveAdSettingsToCloud(newSettings) {
   return { success: true, data: merged };
 }
 
+// Completely purge any floating or injected ads on Admin pages
+export function purgeAdminAds() {
+  if (typeof document === 'undefined') return;
+  const selectors = [
+    '#movora-monetag-script-tag',
+    '[class*="inpage_push"]',
+    '[class*="monetag"]',
+    '[id*="monetag"]',
+    'div[style*="z-index: 2147483647"]',
+    'div[style*="z-index: 999999"]',
+    'div[style*="z-index: 100000"]'
+  ];
+
+  selectors.forEach((sel) => {
+    try {
+      document.querySelectorAll(sel).forEach((el) => {
+        if (!el.closest('#root')) {
+          el.remove();
+        }
+      });
+    } catch (e) {}
+  });
+}
+
 // Apply settings directly to the DOM
 export function applyAdSettings(settings) {
   if (typeof document === 'undefined') return;
+
+  // Never show ads in admin dashboard or login page!
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+    purgeAdminAds();
+    return;
+  }
 
   const { enabled, monetagVerification, monetagScript } = settings;
 

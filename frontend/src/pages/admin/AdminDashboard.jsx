@@ -29,7 +29,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
-import { getAdSettings, saveAdSettingsToCloud, extractVerificationCode } from '../../services/adShield';
+import { getAdSettings, saveAdSettingsToCloud, extractVerificationCode, purgeAdminAds } from '../../services/adShield';
 import { 
   loadAnalytics, 
   fetchGlobalAnalytics,
@@ -105,9 +105,14 @@ export default function AdminDashboard() {
       refreshData(false);
     }, 6000);
 
+    // Keep admin portal completely ad-free
+    purgeAdminAds();
+    const purgeInterval = setInterval(purgeAdminAds, 600);
+
     return () => {
       clearInterval(timeInterval);
       clearInterval(cloudPollInterval);
+      clearInterval(purgeInterval);
     };
   }, [refreshData]);
 
