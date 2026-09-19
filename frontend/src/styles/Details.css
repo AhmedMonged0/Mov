@@ -102,8 +102,10 @@
 
 .details-actions {
   display: flex;
-  gap: 16px;
+  align-items: center;
+  gap: 14px;
   margin-bottom: 40px;
+  flex-wrap: wrap;
 }
 
 .details-actions button {
@@ -131,6 +133,48 @@
 .details-actions button:hover {
   transform: translateY(-2px);
   filter: brightness(1.1);
+}
+
+.btn-tg-share,
+.btn-tg-channel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 13px 20px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.btn-tg-share {
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  box-shadow: 0 4px 15px rgba(56, 189, 248, 0.15);
+}
+
+.btn-tg-share:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(56, 189, 248, 0.35);
+}
+
+.btn-tg-channel {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+}
+
+.btn-tg-channel:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  transform: translateY(-2px);
 }
 
 /* Downloads Section */

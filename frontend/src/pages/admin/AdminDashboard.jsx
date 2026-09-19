@@ -26,10 +26,12 @@ import {
   DollarSign,
   Sparkles,
   Shield,
-  AlertCircle
+  AlertCircle,
+  Send
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { getAdSettings, saveAdSettingsToCloud, extractVerificationCode, purgeAdminAds } from '../../services/adShield';
+import TelegramPublisherModal from '../../components/admin/TelegramPublisherModal';
 import { 
   loadAnalytics, 
   fetchGlobalAnalytics,
@@ -69,6 +71,9 @@ export default function AdminDashboard() {
   const [adSettings, setAdSettings] = useState(() => getAdSettings());
   const [isSavingAds, setIsSavingAds] = useState(false);
   const [adsFeedback, setAdsFeedback] = useState(null);
+
+  // Telegram Smart Publisher Modal State
+  const [showTelegramModal, setShowTelegramModal] = useState(false);
 
   // Load real global analytics data from cloud
   const refreshData = useCallback(async (showSpinner = true) => {
@@ -261,6 +266,20 @@ export default function AdminDashboard() {
           >
             <DollarSign size={15} style={{ color: '#facc15' }} />
             <span>إعلانات Monetag والأرباح 💰</span>
+          </button>
+
+          <button 
+            className="admin-action-btn tg-publisher-btn"
+            onClick={() => setShowTelegramModal(true)}
+            title="أداة النشر التلقائي الذكي على تليجرام"
+            style={{
+              borderColor: 'rgba(56, 189, 248, 0.45)',
+              background: 'rgba(56, 189, 248, 0.12)',
+              color: '#38bdf8'
+            }}
+          >
+            <Send size={15} style={{ color: '#38bdf8' }} />
+            <span>نشر على تليجرام 📢</span>
           </button>
 
           <button 
@@ -1047,6 +1066,11 @@ export default function AdminDashboard() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Telegram Smart Publisher Modal */}
+      {showTelegramModal && (
+        <TelegramPublisherModal onClose={() => setShowTelegramModal(false)} />
       )}
     </div>
   );

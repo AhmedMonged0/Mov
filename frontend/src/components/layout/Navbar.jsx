@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Menu, X, Star, Film, Loader2, Play, Sparkles, Flame } from 'lucide-react';
+import { Search, Menu, X, Star, Film, Loader2, Play, Sparkles, Flame, Send } from 'lucide-react';
 import Logo from '../shared/Logo';
 import { searchMovies, getPosterUrl } from '../../services/tmdb';
 import '../../styles/Navbar.css';
@@ -168,6 +168,17 @@ export default function Navbar() {
             </Link>
           );
         })}
+        <a 
+          href="https://t.me/movora_me" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="nav-tg-pill"
+          title="قناة موفورا الرسمية على تليجرام"
+          onClick={() => setMobileMenu(false)}
+        >
+          <Send size={13} />
+          <span>تليجرام</span>
+        </a>
       </nav>
 
       {/* Global Live Instant Search Bar & Actions */}
