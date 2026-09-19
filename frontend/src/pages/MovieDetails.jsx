@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Play, Download, Star, ArrowRight, Film, Clock, Calendar, Server, Languages, ShieldCheck, Send } from 'lucide-react';
+import { Play, Download, Star, ArrowRight, Film, Clock, Calendar, Server, Languages, ShieldCheck } from 'lucide-react';
 import { fetchMovieDetails, fetchMovieVideos, getPosterUrl, getBackdropUrl } from '../services/tmdb';
 import { trackMovieStream } from '../services/analyticsTracker';
 import { updatePageSEO, resetPageSEO } from '../services/seoHelper';
@@ -317,17 +317,6 @@ export default function MovieDetails() {
               >
                 <Play size={20} fill="currentColor" /> بدء المشاهدة الفورية
               </button>
-
-              <a
-                href={`https://t.me/share/url?url=${encodeURIComponent(`https://movora.me/movie/${movie.id}`)}&text=${encodeURIComponent(`🍿 شاهد فيلم ${title} (${releaseYear}) بجودة 1080p مجاناً على موفورا:\n`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-tg-share"
-                title="شارك الفيلم مع أصدقائك على تليجرام"
-              >
-                <Send size={17} />
-                <span>شارك على تليجرام</span>
-              </a>
 
               <a
                 href="https://t.me/movora_me"
