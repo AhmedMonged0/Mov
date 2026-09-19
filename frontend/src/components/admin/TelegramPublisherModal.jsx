@@ -20,6 +20,7 @@ import { fetchTrendingMovies, searchMovies, getPosterUrl } from '../../services/
 import '../../styles/TelegramPublisher.css';
 
 const DEFAULT_CHANNEL = '@movora_me';
+const DEFAULT_BOT_TOKEN = '8961203516:AAFVsKyB-9VHLOhy5BqBS3-87xun8WZ46EQ';
 
 const HOOKS = [
   '🍿 فيلم سهرة الليلة',
@@ -30,7 +31,7 @@ const HOOKS = [
 ];
 
 export default function TelegramPublisherModal({ onClose }) {
-  const [botToken, setBotToken] = useState(() => localStorage.getItem('movora_tg_bot_token') || '');
+  const [botToken, setBotToken] = useState(() => localStorage.getItem('movora_tg_bot_token') || DEFAULT_BOT_TOKEN);
   const [channelId, setChannelId] = useState(() => localStorage.getItem('movora_tg_channel') || DEFAULT_CHANNEL);
   const [showToken, setShowToken] = useState(false);
 
@@ -53,6 +54,12 @@ export default function TelegramPublisherModal({ onClose }) {
   const [showHelp, setShowHelp] = useState(false);
 
   const searchTimerRef = useRef(null);
+
+  // Ensure token and channel are permanently cached on mount
+  useEffect(() => {
+    localStorage.setItem('movora_tg_bot_token', botToken.trim() || DEFAULT_BOT_TOKEN);
+    localStorage.setItem('movora_tg_channel', channelId.trim() || DEFAULT_CHANNEL);
+  }, []);
 
   // Load trending movies on mount
   useEffect(() => {
@@ -281,19 +288,30 @@ export default function TelegramPublisherModal({ onClose }) {
             <input 
               type="text" 
               value={channelId} 
-              onChange={(e) => setChannelId(e.target.value)} 
+              onChange={(e) => {
+                const v = e.target.value;
+                setChannelId(v);
+                localStorage.setItem('movora_tg_channel', v.trim());
+              }} 
               placeholder="@movora_me"
               dir="ltr"
             />
           </div>
 
           <div className="tg-input-group token-group">
-            <label>رمز Bot Token (من @BotFather):</label>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>رمز Bot Token:</span>
+              <span style={{ color: '#38bdf8', fontSize: '11px', fontWeight: 700 }}>✓ محفوظ وجاهز للنشر دائماً</span>
+            </label>
             <div className="token-input-wrap">
               <input 
                 type={showToken ? 'text' : 'password'} 
                 value={botToken} 
-                onChange={(e) => setBotToken(e.target.value)} 
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setBotToken(v);
+                  localStorage.setItem('movora_tg_bot_token', v.trim());
+                }} 
                 placeholder="1234567890:AAHq..." 
                 dir="ltr"
               />
