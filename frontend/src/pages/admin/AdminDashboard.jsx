@@ -168,10 +168,10 @@ export default function AdminDashboard() {
           <button 
             className="admin-action-btn"
             onClick={() => setShowPwdModal(true)}
-            title="تغيير الرمز السري للوحة"
+            title="تغيير كلمة المرور للوحة الأدمن"
           >
             <KeyRound size={15} />
-            <span>تغيير الرمز السري</span>
+            <span>تغيير كلمة المرور</span>
           </button>
 
           <Link to="/" target="_blank" className="admin-action-btn visit-site" title="فتح الموقع">
@@ -562,7 +562,7 @@ export default function AdminDashboard() {
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <KeyRound size={20} style={{ color: '#ff315a' }} />
-                <h3>تغيير الرمز السري للوحة الأدمن</h3>
+                <h3>تغيير كلمة المرور للوحة الأدمن</h3>
               </div>
               <button className="modal-close-btn" onClick={() => setShowPwdModal(false)}>
                 <X size={18} />
@@ -578,23 +578,23 @@ export default function AdminDashboard() {
 
             <form onSubmit={handlePasswordSubmit} className="modal-form">
               <div className="form-group">
-                <label>رمز الدخول الحالي:</label>
+                <label>كلمة المرور الحالية:</label>
                 <input
                   type="password"
                   value={oldSecret}
                   onChange={(e) => setOldSecret(e.target.value)}
-                  placeholder="أدخل الرمز الحالي..."
+                  placeholder="أدخل كلمة المرور الحالية..."
                   required
                 />
               </div>
 
               <div className="form-group">
-                <label>الرمز السري الجديد (4 خانات على الأقل):</label>
+                <label>كلمة المرور الجديدة (6 خانات على الأقل):</label>
                 <input
                   type="password"
                   value={newSecret}
                   onChange={(e) => setNewSecret(e.target.value)}
-                  placeholder="أدخل الرمز الجديد..."
+                  placeholder="أدخل كلمة المرور الجديدة..."
                   required
                 />
               </div>
@@ -604,7 +604,7 @@ export default function AdminDashboard() {
                   إلغاء
                 </button>
                 <button type="submit" className="btn-save">
-                  حفظ الرمز الجديد
+                  حفظ كلمة المرور الجديدة
                 </button>
               </div>
             </form>

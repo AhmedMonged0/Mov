@@ -66,7 +66,7 @@ export default function AdminLogin() {
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="admin-login-form">
           <div className="admin-input-group">
-            <label htmlFor="adminSecret">رمز الدخول أو الـ PIN السري:</label>
+            <label htmlFor="adminSecret">كلمة المرور:</label>
             <div className="admin-input-wrapper">
               <Key size={18} className="admin-input-icon" />
               <input
@@ -74,7 +74,7 @@ export default function AdminLogin() {
                 type={showSecret ? "text" : "password"}
                 value={secret}
                 onChange={(e) => setSecret(e.target.value)}
-                placeholder="أدخل الرمز السري..."
+                placeholder="أدخل كلمة المرور..."
                 autoComplete="current-password"
                 autoFocus
               />
@@ -87,9 +87,6 @@ export default function AdminLogin() {
                 {showSecret ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
             </div>
-            <span className="admin-input-hint">
-              الرمز الافتراضي: <code>202688</code> أو <code>movora@admin2026</code> (يمكن تغييره لاحقاً)
-            </span>
           </div>
 
           <button 

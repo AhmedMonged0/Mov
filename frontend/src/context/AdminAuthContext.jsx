@@ -3,10 +3,9 @@ import { Navigate, useLocation } from 'react-router-dom';
 
 const AdminAuthContext = createContext(null);
 
-const ADMIN_STORAGE_KEY = 'movora_admin_secret_v1';
+const ADMIN_STORAGE_KEY = 'movora_admin_secret_v2';
 const ADMIN_SESSION_KEY = 'movora_admin_auth_token';
-const DEFAULT_ADMIN_SECRET = 'movora@admin2026';
-const DEFAULT_ADMIN_PIN = '202688';
+const DEFAULT_ADMIN_SECRET = 'Ahmed@678599';
 
 export function AdminAuthProvider({ children }) {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -28,27 +27,23 @@ export function AdminAuthProvider({ children }) {
     }
   }, []);
 
-  // Validate admin secret / PIN
+  // Validate admin password
   const loginAdmin = (enteredSecret) => {
     if (!enteredSecret || !enteredSecret.trim()) {
-      return { success: false, message: 'يرجى إدخال رمز المرور أو كود PIN السري' };
+      return { success: false, message: 'يرجى إدخال كلمة المرور' };
     }
 
     const currentSecret = localStorage.getItem(ADMIN_STORAGE_KEY) || DEFAULT_ADMIN_SECRET;
     const cleanEntered = enteredSecret.trim();
 
-    if (
-      cleanEntered === currentSecret || 
-      cleanEntered === DEFAULT_ADMIN_PIN ||
-      cleanEntered === DEFAULT_ADMIN_SECRET
-    ) {
+    if (cleanEntered === currentSecret || cleanEntered === DEFAULT_ADMIN_SECRET) {
       const sessionToken = 'adm_session_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2);
       localStorage.setItem(ADMIN_SESSION_KEY, sessionToken);
       setIsAdmin(true);
       return { success: true };
     }
 
-    return { success: false, message: 'رمز الدخول غير صحيح، يرجى التأكد من الرمز السري' };
+    return { success: false, message: 'كلمة المرور غير صحيحة، يرجى المحاولة مرة أخرى' };
   };
 
   // Logout admin
@@ -57,19 +52,19 @@ export function AdminAuthProvider({ children }) {
     setIsAdmin(false);
   };
 
-  // Change Admin Secret / PIN
+  // Change Admin Password
   const changeAdminSecret = (oldSecret, newSecret) => {
     const currentSecret = localStorage.getItem(ADMIN_STORAGE_KEY) || DEFAULT_ADMIN_SECRET;
-    if (oldSecret !== currentSecret && oldSecret !== DEFAULT_ADMIN_PIN && oldSecret !== DEFAULT_ADMIN_SECRET) {
-      return { success: false, message: 'رمز الدخول الحالي غير صحيح' };
+    if (oldSecret !== currentSecret && oldSecret !== DEFAULT_ADMIN_SECRET) {
+      return { success: false, message: 'كلمة المرور الحالية غير صحيحة' };
     }
 
-    if (!newSecret || newSecret.trim().length < 4) {
-      return { success: false, message: 'يجب أن يتكون الرمز الجديد من 4 خانات على الأقل' };
+    if (!newSecret || newSecret.trim().length < 6) {
+      return { success: false, message: 'يجب أن تتكون كلمة المرور الجديدة من 6 خانات على الأقل' };
     }
 
     localStorage.setItem(ADMIN_STORAGE_KEY, newSecret.trim());
-    return { success: true, message: 'تم تحديث رمز الدخول السري بنجاح' };
+    return { success: true, message: 'تم تحديث كلمة المرور بنجاح' };
   };
 
   return (
