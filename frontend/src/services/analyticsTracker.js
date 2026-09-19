@@ -1,12 +1,40 @@
 // ==========================================================================
 // MOVORA REAL-TIME GLOBAL TRAFFIC & ANALYTICS ENGINE (100% REAL CLOUD DATA)
-// Syncs seamlessly across all mobile phones, PCs, tablets, and devices worldwide
+// Supports Instant Realtime Database Sync across all mobile phones & PCs
 // ==========================================================================
 
-const STORAGE_KEY = 'movora_real_analytics_v3';
+const STORAGE_KEY = 'movora_real_analytics_v4';
 const VISITOR_KEY = 'movora_visitor_id';
 const SESSION_KEY = 'movora_session_id';
-const CLOUD_ENDPOINT = 'https://api.restful-api.dev/objects/ff808181a09d98f701a0b8c87b4240e0';
+const FIREBASE_CONFIG_KEY = 'movora_firebase_db_url';
+
+// Firebase Realtime Database URL (Can be set via env, localStorage, or admin UI)
+let FIREBASE_DB_URL = 
+  import.meta.env.VITE_FIREBASE_DB_URL || 
+  localStorage.getItem(FIREBASE_CONFIG_KEY) || 
+  '';
+
+// Get current Firebase DB URL
+export function getFirebaseDbUrl() {
+  return FIREBASE_DB_URL;
+}
+
+// Set or update Firebase DB URL dynamically
+export function setFirebaseDbUrl(url) {
+  if (url && url.trim()) {
+    let clean = url.trim().replace(/\/+$/, '');
+    if (clean.endsWith('.json')) {
+      clean = clean.replace(/\.json$/, '');
+    }
+    localStorage.setItem(FIREBASE_CONFIG_KEY, clean);
+    FIREBASE_DB_URL = clean;
+    return clean;
+  } else {
+    localStorage.removeItem(FIREBASE_CONFIG_KEY);
+    FIREBASE_DB_URL = '';
+    return '';
+  }
+}
 
 // Generate or retrieve persistent unique visitor ID
 export function getVisitorId() {
@@ -119,154 +147,100 @@ export function saveAnalytics(data) {
   }
 }
 
-// Convert cloud flat record to normalized frontend object
-function normalizeCloudData(cloudObj) {
+// Normalize incoming cloud data safely
+function normalizeAnalytics(d) {
   const empty = createEmptyAnalytics();
-  if (!cloudObj || !cloudObj.data) return empty;
-  const d = cloudObj.data;
+  if (!d) return empty;
 
-  let topMovies = [];
-  try {
-    topMovies = d.topMoviesJson ? JSON.parse(d.topMoviesJson) : [];
-  } catch (e) { topMovies = []; }
-
-  let recentEvents = [];
-  try {
-    recentEvents = d.recentEventsJson ? JSON.parse(d.recentEventsJson) : [];
-  } catch (e) { recentEvents = []; }
-
-  let dailyTraffic = empty.dailyTraffic;
-  try {
-    if (d.dailyTrafficJson) {
-      dailyTraffic = JSON.parse(d.dailyTrafficJson);
-    }
-  } catch (e) { dailyTraffic = empty.dailyTraffic; }
-
-  let activeSessions = {};
-  try {
-    activeSessions = d.liveSessionsJson ? JSON.parse(d.liveSessionsJson) : {};
-  } catch (e) { activeSessions = {}; }
-
-  let uniqueVisitorIds = [];
-  try {
-    uniqueVisitorIds = d.uniqueVisitorIdsJson ? JSON.parse(d.uniqueVisitorIdsJson) : [];
-  } catch (e) { uniqueVisitorIds = []; }
-
-  // Prune sessions older than 5 minutes
   const now = Date.now();
   let liveCount = 0;
   const prunedSessions = {};
-  for (const [sid, time] of Object.entries(activeSessions)) {
-    if (now - time < 300000) {
-      prunedSessions[sid] = time;
-      liveCount++;
+  if (d.activeSessions) {
+    for (const [sid, time] of Object.entries(d.activeSessions)) {
+      if (now - time < 300000) {
+        prunedSessions[sid] = time;
+        liveCount++;
+      }
     }
   }
 
   return {
     totalVisits: Number(d.totalVisits) || 0,
     uniqueVisitorsCount: Number(d.uniqueVisitorsCount) || 0,
-    uniqueVisitorIds,
+    uniqueVisitorIds: Array.isArray(d.uniqueVisitorIds) ? d.uniqueVisitorIds : [],
     totalStreams: Number(d.totalStreams) || 0,
     deviceCounts: {
-      Mobile: Number(d.deviceMobile) || 0,
-      Desktop: Number(d.deviceDesktop) || 0,
-      Tablet: Number(d.deviceTablet) || 0,
+      Mobile: Number(d.deviceCounts?.Mobile) || 0,
+      Desktop: Number(d.deviceCounts?.Desktop) || 0,
+      Tablet: Number(d.deviceCounts?.Tablet) || 0,
     },
     browserCounts: {
-      Chrome: Number(d.browserChrome) || 0,
-      Safari: Number(d.browserSafari) || 0,
-      Edge: Number(d.browserEdge) || 0,
-      Firefox: Number(d.browserFirefox) || 0,
-      Opera: Number(d.browserOpera) || 0,
-      Brave: Number(d.browserBrave) || 0,
+      Chrome: Number(d.browserCounts?.Chrome) || 0,
+      Safari: Number(d.browserCounts?.Safari) || 0,
+      Edge: Number(d.browserCounts?.Edge) || 0,
+      Firefox: Number(d.browserCounts?.Firefox) || 0,
+      Opera: Number(d.browserCounts?.Opera) || 0,
+      Brave: Number(d.browserCounts?.Brave) || 0,
     },
-    dailyTraffic,
-    topMovies,
-    recentEvents,
+    dailyTraffic: Array.isArray(d.dailyTraffic) ? d.dailyTraffic : empty.dailyTraffic,
+    topMovies: Array.isArray(d.topMovies) ? d.topMovies : [],
+    recentEvents: Array.isArray(d.recentEvents) ? d.recentEvents : [],
     activeSessions: prunedSessions,
     liveActiveCount: Math.max(1, liveCount),
     lastUpdated: d.lastUpdated || now,
   };
 }
 
-// Convert normalized frontend object back to cloud flat record
-function serializeCloudPayload(data) {
-  return {
-    name: 'movora_production_cloud_analytics_v1',
-    data: {
-      totalVisits: data.totalVisits || 0,
-      uniqueVisitorsCount: data.uniqueVisitorsCount || 0,
-      totalStreams: data.totalStreams || 0,
-      deviceMobile: data.deviceCounts?.Mobile || 0,
-      deviceDesktop: data.deviceCounts?.Desktop || 0,
-      deviceTablet: data.deviceCounts?.Tablet || 0,
-      browserChrome: data.browserCounts?.Chrome || 0,
-      browserSafari: data.browserCounts?.Safari || 0,
-      browserEdge: data.browserCounts?.Edge || 0,
-      browserFirefox: data.browserCounts?.Firefox || 0,
-      browserOpera: data.browserCounts?.Opera || 0,
-      browserBrave: data.browserCounts?.Brave || 0,
-      uniqueVisitorIdsJson: JSON.stringify(data.uniqueVisitorIds || []),
-      dailyTrafficJson: JSON.stringify(data.dailyTraffic || []),
-      topMoviesJson: JSON.stringify((data.topMovies || []).slice(0, 20)),
-      recentEventsJson: JSON.stringify((data.recentEvents || []).slice(0, 30)),
-      liveSessionsJson: JSON.stringify(data.activeSessions || {}),
-      lastUpdated: Date.now(),
-    },
-  };
-}
-
-// Fetch Global Live Analytics from Cloud
+// Fetch Global Live Analytics (From Firebase if connected, else Local Cache)
 export async function fetchGlobalAnalytics() {
-  if (!CLOUD_ENDPOINT) return loadAnalytics();
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
+  if (FIREBASE_DB_URL) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 4000);
 
-    const res = await fetch(CLOUD_ENDPOINT, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
+      const res = await fetch(`${FIREBASE_DB_URL}/traffic.json`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
 
-    if (res.ok) {
-      const raw = await res.json();
-      const normalized = normalizeCloudData(raw);
-      saveAnalytics(normalized);
-      return normalized;
+      if (res.ok) {
+        const raw = await res.json();
+        if (raw) {
+          const normalized = normalizeAnalytics(raw);
+          saveAnalytics(normalized);
+          return normalized;
+        }
+      }
+    } catch (e) {
+      // Graceful offline fallback
     }
-  } catch (err) {
-    // Graceful offline fallback
   }
   return loadAnalytics();
 }
 
-// Push Global Live Analytics to Cloud
-async function pushGlobalAnalytics(data) {
-  if (!CLOUD_ENDPOINT) return false;
+// Push updated data to Firebase Cloud
+async function pushToFirebase(data) {
+  if (!FIREBASE_DB_URL) return false;
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
 
-    const payload = serializeCloudPayload(data);
-    const res = await fetch(CLOUD_ENDPOINT, {
+    const res = await fetch(`${FIREBASE_DB_URL}/traffic.json`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
       signal: controller.signal,
     });
     clearTimeout(timer);
     return res.ok;
-  } catch (err) {
+  } catch (e) {
     return false;
   }
 }
 
-// Track REAL Page View (Called on every page navigation)
+// Track REAL Page View
 export function trackPageView(path = window.location.pathname) {
   try {
     const visitorId = getVisitorId();
@@ -274,12 +248,12 @@ export function trackPageView(path = window.location.pathname) {
     const { device, browser, os } = detectDevice();
     const today = getArabicDayName();
 
-    // 1. Immediately update local cache for zero delay
+    // 1. Update local cache immediately
     const local = loadAnalytics();
     local.totalVisits = (local.totalVisits || 0) + 1;
     saveAnalytics(local);
 
-    // 2. Asynchronously sync to global cloud
+    // 2. Asynchronously sync to cloud if Firebase is connected
     setTimeout(async () => {
       try {
         const globalData = await fetchGlobalAnalytics();
@@ -327,9 +301,9 @@ export function trackPageView(path = window.location.pathname) {
         globalData.recentEvents = [newEvent, ...(globalData.recentEvents || [])].slice(0, 30);
 
         saveAnalytics(globalData);
-        await pushGlobalAnalytics(globalData);
+        await pushToFirebase(globalData);
       } catch (e) {
-        console.warn('Sync page view warning:', e);
+        console.warn('Sync page view notice:', e);
       }
     }, 100);
   } catch (err) {
@@ -337,7 +311,7 @@ export function trackPageView(path = window.location.pathname) {
   }
 }
 
-// Track REAL Movie Stream Playback (Called whenever any user plays a movie)
+// Track REAL Movie Stream Playback
 export function trackMovieStream(movie, server = 'primary') {
   if (!movie) return;
   try {
@@ -346,12 +320,12 @@ export function trackMovieStream(movie, server = 'primary') {
     const title = movie.title || movie.original_title || 'فيلم بدون عنوان';
     const today = getArabicDayName();
 
-    // 1. Immediately update local cache
+    // 1. Update local cache immediately
     const local = loadAnalytics();
     local.totalStreams = (local.totalStreams || 0) + 1;
     saveAnalytics(local);
 
-    // 2. Asynchronously sync to global cloud
+    // 2. Asynchronously sync to cloud
     setTimeout(async () => {
       try {
         const globalData = await fetchGlobalAnalytics();
@@ -401,9 +375,9 @@ export function trackMovieStream(movie, server = 'primary') {
         globalData.recentEvents = [newEvent, ...(globalData.recentEvents || [])].slice(0, 30);
 
         saveAnalytics(globalData);
-        await pushGlobalAnalytics(globalData);
+        await pushToFirebase(globalData);
       } catch (e) {
-        console.warn('Sync movie stream warning:', e);
+        console.warn('Sync movie stream notice:', e);
       }
     }, 100);
   } catch (err) {
@@ -411,7 +385,7 @@ export function trackMovieStream(movie, server = 'primary') {
   }
 }
 
-// Record Active Heartbeat for Live Users
+// Record Active Heartbeat
 export function recordHeartbeat() {
   const sessionId = getSessionId();
   try {
@@ -477,7 +451,7 @@ export async function resetAnalyticsData() {
     timestamp: Date.now(),
   }];
   saveAnalytics(empty);
-  await pushGlobalAnalytics(empty);
+  await pushToFirebase(empty);
   return empty;
 }
 
@@ -505,4 +479,6 @@ export default {
   getBrowserPercentages,
   resetAnalyticsData,
   exportAnalyticsJson,
+  getFirebaseDbUrl,
+  setFirebaseDbUrl,
 };

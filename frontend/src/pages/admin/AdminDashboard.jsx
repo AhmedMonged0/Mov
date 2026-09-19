@@ -20,7 +20,9 @@ import {
   Trash2,
   X,
   ShieldCheck,
-  BarChart3
+  BarChart3,
+  Cloud,
+  Database
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { 
@@ -31,7 +33,9 @@ import {
   getBrowserPercentages,
   resetAnalyticsData, 
   exportAnalyticsJson,
-  recordHeartbeat 
+  recordHeartbeat,
+  getFirebaseDbUrl,
+  setFirebaseDbUrl
 } from '../../services/analyticsTracker';
 import '../../styles/AdminDashboard.css';
 
@@ -48,6 +52,12 @@ export default function AdminDashboard() {
   const [oldSecret, setOldSecret] = useState('');
   const [newSecret, setNewSecret] = useState('');
   const [pwdFeedback, setPwdFeedback] = useState(null);
+
+  // Cloud Database Modal State
+  const [showCloudModal, setShowCloudModal] = useState(false);
+  const [firebaseUrlInput, setFirebaseUrlInput] = useState(() => getFirebaseDbUrl());
+  const [cloudStatus, setCloudStatus] = useState(() => Boolean(getFirebaseDbUrl()));
+  const [cloudFeedback, setCloudFeedback] = useState(null);
 
   // Load real global analytics data from cloud
   const refreshData = useCallback(async (showSpinner = true) => {
@@ -113,6 +123,28 @@ export default function AdminDashboard() {
     }
   };
 
+  // Handle Cloud DB URL save
+  const handleCloudSubmit = async (e) => {
+    e.preventDefault();
+    setCloudFeedback(null);
+    try {
+      const saved = setFirebaseDbUrl(firebaseUrlInput);
+      setCloudStatus(Boolean(saved));
+      if (saved) {
+        setCloudFeedback({ success: true, message: 'تم حفظ رابط السحابة بنجاح! جاري جلب البيانات المشتركة...' });
+        await refreshData(true);
+        setTimeout(() => {
+          setShowCloudModal(false);
+          setCloudFeedback(null);
+        }, 1500);
+      } else {
+        setCloudFeedback({ success: true, message: 'تم إيقاف المزامنة السحابية والعودة للوضع المحلي.' });
+      }
+    } catch (err) {
+      setCloudFeedback({ success: false, message: 'حدث خطأ أثناء حفظ الرابط.' });
+    }
+  };
+
   if (!data) {
     return (
       <div className="admin-loading-screen" dir="rtl">
@@ -171,6 +203,19 @@ export default function AdminDashboard() {
           >
             <Download size={15} />
             <span>تصدير التقرير</span>
+          </button>
+
+          <button 
+            className="admin-action-btn"
+            onClick={() => setShowCloudModal(true)}
+            title="ربط قاعدة بيانات سحابية لمزامنة الموبايلات والكمبيوتر"
+            style={{
+              borderColor: cloudStatus ? 'rgba(34, 197, 94, 0.4)' : 'rgba(245, 158, 11, 0.4)',
+              background: cloudStatus ? 'rgba(34, 197, 94, 0.1)' : 'rgba(245, 158, 11, 0.1)'
+            }}
+          >
+            <Cloud size={15} style={{ color: cloudStatus ? '#22c55e' : '#f59e0b' }} />
+            <span>{cloudStatus ? 'السحابة متصلة 🟢' : 'ربط السحابة 🟡'}</span>
           </button>
 
           <button 
@@ -613,6 +658,82 @@ export default function AdminDashboard() {
                 </button>
                 <button type="submit" className="btn-save">
                   حفظ كلمة المرور الجديدة
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Cloud Database Sync Modal */}
+      {showCloudModal && (
+        <div className="admin-modal-backdrop" onClick={() => setShowCloudModal(false)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} dir="rtl" style={{ maxWidth: '540px' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Cloud size={20} style={{ color: '#38bdf8' }} />
+                <h3>مزامنة الإحصائيات السحابية (Firebase)</h3>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowCloudModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{
+              background: 'rgba(56, 189, 248, 0.08)',
+              border: '1px solid rgba(56, 189, 248, 0.2)',
+              borderRadius: '8px',
+              padding: '12px 14px',
+              fontSize: '13px',
+              color: '#cbd5e1',
+              lineHeight: '1.6',
+              marginBottom: '16px'
+            }}>
+              💡 <strong>كيف تجعل الإحصائيات تظهر من الموبايل عندك هنا مباشرة؟</strong><br />
+              بمجرد وضع رابط <strong>Firebase Realtime Database</strong>، تصبح كل زيارة ومشاهدة فيلم من أي موبايل أو كمبيوتر في العالم مسجلة في قاعدة بيانات مشتركة، وتظهر تلقائياً هنا في لوحة الأدمن لديك لحظياً!
+            </div>
+
+            {cloudFeedback && (
+              <div className={`modal-feedback ${cloudFeedback.success ? 'success' : 'error'}`}>
+                {cloudFeedback.success ? <CheckCircle2 size={16} /> : <Lock size={16} />}
+                <span>{cloudFeedback.message}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCloudSubmit} className="modal-form">
+              <div className="form-group">
+                <label>رابط قاعدة بيانات Firebase Realtime Database:</label>
+                <input
+                  type="text"
+                  value={firebaseUrlInput}
+                  onChange={(e) => setFirebaseUrlInput(e.target.value)}
+                  placeholder="https://your-project-default-rtdb.firebaseio.com"
+                  style={{ direction: 'ltr', textAlign: 'left', fontFamily: 'monospace', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontSize: '12px',
+                color: '#94a3b8',
+                marginBottom: '16px',
+                lineHeight: '1.7'
+              }}>
+                <strong style={{ color: '#fff' }}>طريقة الحصول عليه مجاناً بدقيقة واحدة (بدون فيزا):</strong><br />
+                1. ادخل على <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" style={{ color: '#38bdf8' }}>console.firebase.google.com</a> واضغط <strong>Add Project</strong>.<br />
+                2. من القائمة اختر <strong>Realtime Database</strong> ثم <strong>Create Database</strong>.<br />
+                3. اختر <strong>Start in test mode</strong> واضغط <strong>Enable</strong>.<br />
+                4. انسخ الرابط والصقه هنا واضغط حفظ، ومبروك عليك المزامنة الحية!
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowCloudModal(false)}>
+                  إلغاء
+                </button>
+                <button type="submit" className="btn-save" style={{ background: '#38bdf8', color: '#000', fontWeight: 'bold' }}>
+                  حفظ وتفعيل المزامنة
                 </button>
               </div>
             </form>
