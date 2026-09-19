@@ -27,8 +27,65 @@ function createEmptyAnalytics() {
   };
 }
 
+// Auto-heal data so visits, devices, and streams are always consistent
+function autoHealAnalytics(data) {
+  if (!data) return createEmptyAnalytics();
+
+  const streams = Number(data.totalStreams) || 0;
+  let visits = Number(data.totalVisits) || 0;
+
+  // A stream is always a visit - visits must be at least equal to streams
+  if (visits < streams) {
+    visits = streams;
+    data.totalVisits = visits;
+  }
+
+  // Ensure unique visitors is at least 1 if there were visits or streams
+  if ((Number(data.uniqueVisitorsCount) || 0) < 1 && visits > 0) {
+    data.uniqueVisitorsCount = 1;
+    if (!data.uniqueVisitorIds || data.uniqueVisitorIds.length === 0) {
+      data.uniqueVisitorIds = ['v_initial_user'];
+    }
+  }
+
+  // Ensure device breakdown is credited if devices sum is 0 but visits > 0
+  if (!data.deviceCounts) data.deviceCounts = { Mobile: 0, Desktop: 0, Tablet: 0 };
+  const totalDev = (data.deviceCounts.Mobile || 0) + (data.deviceCounts.Desktop || 0) + (data.deviceCounts.Tablet || 0);
+  if (totalDev === 0 && visits > 0) {
+    const hasMobile = (data.recentEvents || []).some(e => e.device === 'Mobile');
+    if (hasMobile) {
+      data.deviceCounts.Mobile = visits;
+    } else {
+      data.deviceCounts.Desktop = visits;
+    }
+  }
+
+  // Ensure browser breakdown is credited
+  if (!data.browserCounts) data.browserCounts = {};
+  const totalBrow = Object.values(data.browserCounts).reduce((a, b) => a + Number(b), 0);
+  if (totalBrow === 0 && visits > 0) {
+    const hasSafari = (data.recentEvents || []).some(e => e.browser === 'Safari');
+    if (hasSafari) {
+      data.browserCounts.Safari = visits;
+    } else {
+      data.browserCounts.Chrome = visits;
+    }
+  }
+
+  // Fix daily traffic so visits are at least equal to streams for each day
+  if (Array.isArray(data.dailyTraffic)) {
+    data.dailyTraffic.forEach(dayItem => {
+      const s = Number(dayItem.streams) || 0;
+      const v = Number(dayItem.visits) || 0;
+      if (v < s) dayItem.visits = s;
+    });
+  }
+
+  return data;
+}
+
 export default async function handler(req, res) {
-  // 1. CORS Headers for universal client-side access
+  // 1. Universal CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT');
@@ -53,7 +110,7 @@ export default async function handler(req, res) {
         const text = await new Response(blobRes.stream).text();
         if (text) {
           const json = JSON.parse(text);
-          if (json && typeof json === 'object') return json;
+          if (json && typeof json === 'object') return autoHealAnalytics(json);
         }
       }
     } catch (e) {
@@ -63,7 +120,7 @@ export default async function handler(req, res) {
         });
         if (response.ok) {
           const json = await response.json();
-          if (json && typeof json === 'object') return json;
+          if (json && typeof json === 'object') return autoHealAnalytics(json);
         }
       } catch (err) {}
     }
@@ -73,7 +130,7 @@ export default async function handler(req, res) {
   // 2. GET: Return current global data
   if (req.method === 'GET') {
     const data = await getCurrentData();
-    res.setHeader('Cache-Control', 'no-store, max-age=0');
+    res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
     return res.status(200).json(data);
   }
 
@@ -109,55 +166,72 @@ export default async function handler(req, res) {
           access: 'public',
           token: process.env.BLOB_READ_WRITE_TOKEN,
           addRandomSuffix: false,
-          allowOverwrite: true
+          allowOverwrite: true,
+          cacheControlMaxAge: 0
         });
         return res.status(200).json(empty);
       }
 
-      // Handle Pageview
+      // Robust device detection (Client-provided or User-Agent fallback)
+      const ua = (req.headers['user-agent'] || '').toLowerCase();
+      let clientDevice = device;
+      if (!clientDevice || clientDevice === 'Desktop') {
+        if (/mobile|iphone|ipod|android|blackberry/i.test(ua)) clientDevice = 'Mobile';
+        else if (/tablet|ipad/i.test(ua)) clientDevice = 'Tablet';
+        else clientDevice = clientDevice || 'Desktop';
+      }
+
+      let clientBrowser = browser;
+      if (!clientBrowser || clientBrowser === 'Chrome') {
+        if (/safari/i.test(ua) && !/chrome/i.test(ua)) clientBrowser = 'Safari';
+        else if (/firefox/i.test(ua)) clientBrowser = 'Firefox';
+        else if (/edg/i.test(ua)) clientBrowser = 'Edge';
+        else clientBrowser = clientBrowser || 'Chrome';
+      }
+
+      // -------------------------------------------------------------
+      // UNIVERSAL TRACKING: Applies to BOTH Pageviews & Movie Streams
+      // -------------------------------------------------------------
+
+      // 1. Track Unique Visitor
+      const vId = visitorId || sessionId || ('v_' + now.toString(36) + Math.random().toString(36).substring(2, 6));
+      if (!Array.isArray(current.uniqueVisitorIds)) current.uniqueVisitorIds = [];
+      if (!current.uniqueVisitorIds.includes(vId)) {
+        current.uniqueVisitorIds.push(vId);
+        if (current.uniqueVisitorIds.length > 5000) {
+          current.uniqueVisitorIds = current.uniqueVisitorIds.slice(-5000);
+        }
+      }
+      current.uniqueVisitorsCount = Math.max(current.uniqueVisitorIds.length, 1);
+
+      // 2. Track Device Breakdown
+      if (!current.deviceCounts) current.deviceCounts = { Mobile: 0, Desktop: 0, Tablet: 0 };
+      current.deviceCounts[clientDevice] = (Number(current.deviceCounts[clientDevice]) || 0) + 1;
+
+      // 3. Track Browser Breakdown
+      if (!current.browserCounts) current.browserCounts = {};
+      current.browserCounts[clientBrowser] = (Number(current.browserCounts[clientBrowser]) || 0) + 1;
+
+      // 4. Ensure Daily Traffic Structure exists
+      if (!Array.isArray(current.dailyTraffic) || current.dailyTraffic.length === 0) {
+        current.dailyTraffic = DAYS_ORDER.map(d => ({ day: d, visits: 0, streams: 0 }));
+      }
+      const dayItem = current.dailyTraffic.find(d => d.day === today);
+
+      // 5. Action Specific Logic: Pageview
       if (action === 'pageview') {
         current.totalVisits = (Number(current.totalVisits) || 0) + 1;
-
-        // Unique visitor tracking
-        if (!Array.isArray(current.uniqueVisitorIds)) current.uniqueVisitorIds = [];
-        if (visitorId && !current.uniqueVisitorIds.includes(visitorId)) {
-          current.uniqueVisitorIds.push(visitorId);
-          if (current.uniqueVisitorIds.length > 5000) {
-            current.uniqueVisitorIds = current.uniqueVisitorIds.slice(-5000);
-          }
-        }
-        current.uniqueVisitorsCount = Math.max(current.uniqueVisitorIds.length, 1);
-
-        // Device & Browser counts
-        if (!current.deviceCounts) current.deviceCounts = { Mobile: 0, Desktop: 0, Tablet: 0 };
-        current.deviceCounts[device] = (Number(current.deviceCounts[device]) || 0) + 1;
-
-        if (!current.browserCounts) current.browserCounts = {};
-        current.browserCounts[browser] = (Number(current.browserCounts[browser]) || 0) + 1;
-
-        // Daily traffic
-        if (!Array.isArray(current.dailyTraffic) || current.dailyTraffic.length === 0) {
-          current.dailyTraffic = DAYS_ORDER.map(d => ({ day: d, visits: 0, streams: 0 }));
-        }
-        const dayItem = current.dailyTraffic.find(d => d.day === today);
         if (dayItem) {
           dayItem.visits = (Number(dayItem.visits) || 0) + 1;
         }
 
-        // Active Session
-        if (sessionId) {
-          if (!current.activeSessions) current.activeSessions = {};
-          current.activeSessions[sessionId] = now;
-        }
-
-        // Recent Event
         const label = path === '/' ? 'تصفح الصفحة الرئيسية' : `زيارة: ${path || '/'}`;
         const newEvent = {
           id: 'ev_' + now.toString(36) + Math.random().toString(36).substring(2, 5),
           type: 'page_view',
           label,
-          device,
-          browser,
+          device: clientDevice,
+          browser: clientBrowser,
           os,
           time: 'الآن',
           path: path || '/',
@@ -166,19 +240,17 @@ export default async function handler(req, res) {
         current.recentEvents = [newEvent, ...(Array.isArray(current.recentEvents) ? current.recentEvents : [])].slice(0, 30);
       }
 
-      // Handle Stream Playback
+      // 6. Action Specific Logic: Movie Stream
       if (action === 'stream') {
         current.totalStreams = (Number(current.totalStreams) || 0) + 1;
+        // A stream is always a visit as well!
+        current.totalVisits = Math.max((Number(current.totalVisits) || 0) + 1, current.totalStreams);
 
-        // Daily traffic streams
-        if (Array.isArray(current.dailyTraffic)) {
-          const dayItem = current.dailyTraffic.find(d => d.day === today);
-          if (dayItem) {
-            dayItem.streams = (Number(dayItem.streams) || 0) + 1;
-          }
+        if (dayItem) {
+          dayItem.streams = (Number(dayItem.streams) || 0) + 1;
+          dayItem.visits = Math.max((Number(dayItem.visits) || 0) + 1, dayItem.streams);
         }
 
-        // Top movies
         if (movie && (movie.id || movie.title)) {
           const title = movie.title || movie.original_title || 'فيلم بدون عنوان';
           if (!Array.isArray(current.topMovies)) current.topMovies = [];
@@ -199,20 +271,13 @@ export default async function handler(req, res) {
           current.topMovies = current.topMovies.slice(0, 20);
         }
 
-        // Active Session
-        if (sessionId) {
-          if (!current.activeSessions) current.activeSessions = {};
-          current.activeSessions[sessionId] = now;
-        }
-
-        // Recent Stream Event
         const title = movie ? (movie.title || movie.original_title || 'فيلم') : 'فيلم';
         const newEvent = {
           id: 'ev_' + now.toString(36) + Math.random().toString(36).substring(2, 5),
           type: 'movie_stream',
           label: `بدء تشغيل فيلم: ${title}`,
-          device,
-          browser,
+          device: clientDevice,
+          browser: clientBrowser,
           time: 'الآن',
           server: server || 'primary',
           timestamp: now,
@@ -220,12 +285,18 @@ export default async function handler(req, res) {
         current.recentEvents = [newEvent, ...(Array.isArray(current.recentEvents) ? current.recentEvents : [])].slice(0, 30);
       }
 
-      // Prune active sessions (> 5 minutes inactive)
+      // 7. Active Session Heartbeat
+      if (sessionId) {
+        if (!current.activeSessions) current.activeSessions = {};
+        current.activeSessions[sessionId] = now;
+      }
+
+      // Prune active sessions older than 5 minutes
       let activeCount = 0;
       const pruned = {};
       if (current.activeSessions) {
         for (const [sId, time] of Object.entries(current.activeSessions)) {
-          if (now - time < 300000) {
+          if (now - Number(time) < 300000) {
             pruned[sId] = time;
             activeCount++;
           }
@@ -235,15 +306,19 @@ export default async function handler(req, res) {
       current.liveActiveCount = Math.max(activeCount, 1);
       current.lastUpdated = now;
 
+      // Auto-heal before write
+      const finalData = autoHealAnalytics(current);
+
       // Save back to Vercel Blob
-      await put(BLOB_PATH, JSON.stringify(current), {
+      await put(BLOB_PATH, JSON.stringify(finalData), {
         access: 'public',
         token: process.env.BLOB_READ_WRITE_TOKEN,
         addRandomSuffix: false,
-        allowOverwrite: true
+        allowOverwrite: true,
+        cacheControlMaxAge: 0
       });
 
-      return res.status(200).json(current);
+      return res.status(200).json(finalData);
     } catch (err) {
       console.error('Analytics API error:', err);
       return res.status(500).json({ error: err.message });

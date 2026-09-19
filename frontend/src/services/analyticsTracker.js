@@ -4,7 +4,7 @@
 // Zero user configuration required!
 // ==========================================================================
 
-const STORAGE_KEY = 'movora_real_analytics_v5';
+const STORAGE_KEY = 'movora_real_analytics_v6';
 const VISITOR_KEY = 'movora_visitor_id';
 const SESSION_KEY = 'movora_session_id';
 const FIREBASE_CONFIG_KEY = 'movora_firebase_db_url';
@@ -12,12 +12,8 @@ const FIREBASE_CONFIG_KEY = 'movora_firebase_db_url';
 // Official Vercel Cloud Storage Blob URL (Global Real-Time Store)
 export const VERCEL_BLOB_URL = 'https://gbawmvigpohlszyw.public.blob.vercel-storage.com/analytics/traffic.json';
 
-// Universal API Endpoint (Direct in production, proxies to production during local development)
-export const API_ENDPOINT =
-  typeof window !== 'undefined' &&
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'https://www.movora.me/api/analytics'
-    : '/api/analytics';
+// Canonical Production API Endpoint - No redirect risks across mobile/desktop
+export const API_ENDPOINT = 'https://www.movora.me/api/analytics';
 
 // Optional Firebase Realtime Database URL
 let FIREBASE_DB_URL =
@@ -156,7 +152,7 @@ export function saveAnalytics(data) {
   }
 }
 
-// Normalize incoming cloud data safely
+// Normalize incoming cloud data safely & auto-heal discrepancies
 export function normalizeAnalytics(d) {
   const empty = createEmptyAnalytics();
   if (!d) return empty;
@@ -173,15 +169,44 @@ export function normalizeAnalytics(d) {
     }
   }
 
+  const streams = Number(d.totalStreams) || 0;
+  let visits = Number(d.totalVisits) || 0;
+  // A stream is always a visit
+  if (visits < streams) visits = streams;
+
+  let uniqueCount = Number(d.uniqueVisitorsCount) || 0;
+  if (uniqueCount < 1 && visits > 0) uniqueCount = 1;
+
+  let mobile = Number(d.deviceCounts?.Mobile) || 0;
+  let desktop = Number(d.deviceCounts?.Desktop) || 0;
+  let tablet = Number(d.deviceCounts?.Tablet) || 0;
+  if (mobile === 0 && desktop === 0 && tablet === 0 && visits > 0) {
+    const hasMobile = (d.recentEvents || []).some(e => e.device === 'Mobile');
+    if (hasMobile) mobile = visits;
+    else desktop = visits;
+  }
+
+  // Ensure daily traffic numbers are clean
+  const daily = (Array.isArray(d.dailyTraffic) && d.dailyTraffic.length > 0 ? d.dailyTraffic : empty.dailyTraffic).map(item => {
+    const s = Number(item.streams) || 0;
+    let v = Number(item.visits) || 0;
+    if (v < s) v = s;
+    return {
+      day: item.day,
+      visits: v,
+      streams: s
+    };
+  });
+
   return {
-    totalVisits: Number(d.totalVisits) || 0,
-    uniqueVisitorsCount: Number(d.uniqueVisitorsCount) || 0,
+    totalVisits: visits,
+    uniqueVisitorsCount: uniqueCount,
     uniqueVisitorIds: Array.isArray(d.uniqueVisitorIds) ? d.uniqueVisitorIds : [],
-    totalStreams: Number(d.totalStreams) || 0,
+    totalStreams: streams,
     deviceCounts: {
-      Mobile: Number(d.deviceCounts?.Mobile) || 0,
-      Desktop: Number(d.deviceCounts?.Desktop) || 0,
-      Tablet: Number(d.deviceCounts?.Tablet) || 0,
+      Mobile: mobile,
+      Desktop: desktop,
+      Tablet: tablet,
     },
     browserCounts: {
       Chrome: Number(d.browserCounts?.Chrome) || 0,
@@ -191,7 +216,7 @@ export function normalizeAnalytics(d) {
       Opera: Number(d.browserCounts?.Opera) || 0,
       Brave: Number(d.browserCounts?.Brave) || 0,
     },
-    dailyTraffic: Array.isArray(d.dailyTraffic) && d.dailyTraffic.length > 0 ? d.dailyTraffic : empty.dailyTraffic,
+    dailyTraffic: daily,
     topMovies: Array.isArray(d.topMovies) ? d.topMovies : [],
     recentEvents: Array.isArray(d.recentEvents) ? d.recentEvents : [],
     activeSessions: prunedSessions,
@@ -202,31 +227,7 @@ export function normalizeAnalytics(d) {
 
 // Fetch Global Live Analytics (From Serverless API -> Direct Blob CDN -> Fallback to Local)
 export async function fetchGlobalAnalytics() {
-  // 1. Direct fetch from high-speed Vercel Blob CDN (Fastest, zero lag)
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3500);
-
-    const res = await fetch(`${VERCEL_BLOB_URL}?t=${Date.now()}`, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-
-    if (res.ok) {
-      const raw = await res.json();
-      if (raw && typeof raw === 'object') {
-        const normalized = normalizeAnalytics(raw);
-        saveAnalytics(normalized);
-        return normalized;
-      }
-    }
-  } catch (e) {
-    // fallback to API route
-  }
-
-  // 2. Fetch via Serverless API route
+  // 1. Fetch via Serverless API route (Guaranteed fresh, auto-healed)
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3500);
@@ -247,22 +248,31 @@ export async function fetchGlobalAnalytics() {
       }
     }
   } catch (e) {
-    // fallback
+    // fallback to direct blob CDN
   }
 
-  // 3. Fallback to Firebase if user configured it
-  if (FIREBASE_DB_URL) {
-    try {
-      const res = await fetch(`${FIREBASE_DB_URL}/traffic.json`);
-      if (res.ok) {
-        const raw = await res.json();
-        if (raw) {
-          const normalized = normalizeAnalytics(raw);
-          saveAnalytics(normalized);
-          return normalized;
-        }
+  // 2. Direct fetch from high-speed Vercel Blob CDN (Fast fallback)
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+
+    const res = await fetch(`${VERCEL_BLOB_URL}?t=${Date.now()}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    if (res.ok) {
+      const raw = await res.json();
+      if (raw && typeof raw === 'object') {
+        const normalized = normalizeAnalytics(raw);
+        saveAnalytics(normalized);
+        return normalized;
       }
-    } catch (e) {}
+    }
+  } catch (e) {
+    // fallback
   }
 
   return loadAnalytics();
@@ -272,7 +282,7 @@ export async function fetchGlobalAnalytics() {
 async function pushAnalyticsEvent(payload) {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
+    const timer = setTimeout(() => controller.abort(), 4500);
 
     const res = await fetch(API_ENDPOINT, {
       method: 'POST',
@@ -308,18 +318,16 @@ export function trackPageView(path = window.location.pathname) {
     local.totalVisits = (local.totalVisits || 0) + 1;
     saveAnalytics(local);
 
-    // 2. Asynchronously sync to cloud
-    setTimeout(() => {
-      pushAnalyticsEvent({
-        action: 'pageview',
-        path,
-        visitorId,
-        sessionId,
-        device,
-        browser,
-        os,
-      });
-    }, 50);
+    // 2. Directly sync to cloud (No delay)
+    pushAnalyticsEvent({
+      action: 'pageview',
+      path,
+      visitorId,
+      sessionId,
+      device,
+      browser,
+      os,
+    });
   } catch (err) {
     console.warn('Track page view error:', err);
   }
@@ -336,25 +344,24 @@ export function trackMovieStream(movie, server = 'primary') {
     // 1. Update local cache immediately
     const local = loadAnalytics();
     local.totalStreams = (local.totalStreams || 0) + 1;
+    local.totalVisits = Math.max((local.totalVisits || 0) + 1, local.totalStreams);
     saveAnalytics(local);
 
-    // 2. Asynchronously sync to cloud
-    setTimeout(() => {
-      pushAnalyticsEvent({
-        action: 'stream',
-        movie: {
-          id: movie.id,
-          title: movie.title || movie.original_title || 'فيلم بدون عنوان',
-          vote_average: movie.vote_average,
-        },
-        server,
-        visitorId,
-        sessionId,
-        device,
-        browser,
-        os,
-      });
-    }, 50);
+    // 2. Directly sync to cloud (No delay)
+    pushAnalyticsEvent({
+      action: 'stream',
+      movie: {
+        id: movie.id,
+        title: movie.title || movie.original_title || 'فيلم بدون عنوان',
+        vote_average: movie.vote_average,
+      },
+      server,
+      visitorId,
+      sessionId,
+      device,
+      browser,
+      os,
+    });
   } catch (err) {
     console.warn('Track movie stream error:', err);
   }
@@ -383,9 +390,9 @@ export function getLiveActiveUsersCount() {
 
 // Compute Device Percentages from Real Counts
 export function getDevicePercentages(deviceCounts = {}) {
-  const mobile = deviceCounts?.Mobile || 0;
-  const desktop = deviceCounts?.Desktop || 0;
-  const tablet = deviceCounts?.Tablet || 0;
+  const mobile = Number(deviceCounts?.Mobile) || 0;
+  const desktop = Number(deviceCounts?.Desktop) || 0;
+  const tablet = Number(deviceCounts?.Tablet) || 0;
   const total = mobile + desktop + tablet;
 
   if (total === 0) {

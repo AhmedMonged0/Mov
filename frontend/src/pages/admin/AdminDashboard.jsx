@@ -159,8 +159,11 @@ export default function AdminDashboard() {
   const browserPcts = getBrowserPercentages(data.browserCounts);
   const browserEntries = Object.entries(browserPcts);
 
-  // Calculate highest daily traffic for relative percentage calculation
-  const maxDayVisits = Math.max(...(data.dailyTraffic || []).map(d => d.visits), 1);
+  // Calculate highest daily traffic scale (visits or streams) with minimum baseline of 5
+  const maxTrafficVal = Math.max(
+    ...(data.dailyTraffic || []).map(d => Math.max(Number(d.visits) || 0, Number(d.streams) || 0)),
+    5
+  );
 
   return (
     <div className="admin-dashboard-container" dir="rtl">
@@ -380,28 +383,37 @@ export default function AdminDashboard() {
 
             <div className="traffic-bar-chart">
               {(data.dailyTraffic || []).map((item, idx) => {
-                const visitHeight = maxDayVisits > 0 ? Math.max(item.visits > 0 ? 8 : 0, Math.round((item.visits / maxDayVisits) * 100)) : 0;
-                const streamHeight = maxDayVisits > 0 ? Math.max(item.streams > 0 ? 8 : 0, Math.round((item.streams / maxDayVisits) * 100)) : 0;
+                const visitsCount = Number(item.visits) || 0;
+                const streamsCount = Number(item.streams) || 0;
+                const visitHeight = Math.min(100, Math.max(visitsCount > 0 ? 8 : 0, Math.round((visitsCount / maxTrafficVal) * 100)));
+                const streamHeight = Math.min(100, Math.max(streamsCount > 0 ? 8 : 0, Math.round((streamsCount / maxTrafficVal) * 100)));
+
                 return (
                   <div key={idx} className="chart-bar-column">
                     <div className="bar-wrapper">
-                      {/* Visits Bar */}
+                      {/* Visits Bar (Red) */}
                       <div 
                         className="bar-fill visits" 
                         style={{ height: `${visitHeight}%` }}
-                        title={`الزيارات: ${item.visits}`}
+                        title={`الزيارات: ${visitsCount}`}
                       >
-                        {item.visits > 0 && <span className="bar-tooltip">{item.visits}</span>}
+                        {visitsCount > 0 && <span className="bar-tooltip">{visitsCount} زيارة</span>}
                       </div>
-                      {/* Streams Bar */}
+                      {/* Streams Bar (Blue) */}
                       <div 
                         className="bar-fill streams" 
                         style={{ height: `${streamHeight}%` }}
-                        title={`تشغيل الأفلام: ${item.streams}`}
-                      />
+                        title={`تشغيل الأفلام: ${streamsCount}`}
+                      >
+                        {streamsCount > 0 && <span className="bar-tooltip">{streamsCount} تشغيل</span>}
+                      </div>
                     </div>
                     <span className="chart-col-label">{item.day}</span>
-                    <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>{item.visits}</span>
+                    <div className="chart-col-sub">
+                      <span className="sub-val visits" title={`زيارات ${item.day}`}>{visitsCount}</span>
+                      <span className="sub-sep">/</span>
+                      <span className="sub-val streams" title={`تشغيل ${item.day}`}>{streamsCount}</span>
+                    </div>
                   </div>
                 );
               })}
