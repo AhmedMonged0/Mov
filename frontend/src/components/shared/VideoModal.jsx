@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { X, Server, Film, Play, Star, ShieldCheck, Languages } from 'lucide-react';
 import { fetchMovieVideos } from '../../services/tmdb';
+import { trackMovieStream } from '../../services/analyticsTracker';
 import '../../styles/VideoModal.css';
 
 export default function VideoModal({ movie, initialServer = 'primary', onClose }) {
   const [activeServer, setActiveServer] = useState(initialServer); // 'primary' | 'multiembed' | 'backup' | 'trailer'
   const [trailerKey, setTrailerKey] = useState(null);
   const [loadingTrailer, setLoadingTrailer] = useState(true);
+
+  // Track movie stream in analytics
+  useEffect(() => {
+    if (movie && activeServer !== 'trailer') {
+      trackMovieStream(movie, activeServer);
+    }
+  }, [movie, activeServer]);
 
   // Close on Escape key
   useEffect(() => {

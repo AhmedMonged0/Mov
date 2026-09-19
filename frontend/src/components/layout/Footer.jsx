@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { Lock } from 'lucide-react';
 import '../../styles/Footer.css';
 
 export default function Footer() {
@@ -10,10 +12,13 @@ export default function Footer() {
           <span className="footer-domain">movora.me</span>
         </div>
         <p className="footer-desc">
-          منصة ترفيهية متكاملة تقدم أحدث وأقوى الأفلام والمسلسلات بالاعتماد على قاعدة بيانات TMDB الرسمية.
+          منصة ترفيهية متكاملة تقدم أحدث وأقوى الأعمال السينمائية العالمية بدقة فائقة وترجمة احترافية حصرية.
         </p>
         <div className="footer-bottom">
-          © {new Date().getFullYear()} Movora (movora.me) - جميع الحقوق محفوظة.
+          <span>© {new Date().getFullYear()} Movora (movora.me) - جميع الحقوق محفوظة.</span>
+          <Link to="/admin" className="footer-admin-link" title="بوابة الإدارة والترافيك">
+            <Lock size={12} /> لوحة الإدارة
+          </Link>
         </div>
       </div>
     </footer>

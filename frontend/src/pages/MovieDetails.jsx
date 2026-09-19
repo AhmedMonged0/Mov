@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Play, Download, Star, ArrowRight, Film, Clock, Calendar, Server, Languages, ShieldCheck } from 'lucide-react';
 import { fetchMovieDetails, fetchMovieVideos, getPosterUrl, getBackdropUrl } from '../services/tmdb';
+import { trackMovieStream } from '../services/analyticsTracker';
 import '../styles/Details.css';
 
 export default function MovieDetails() {
@@ -13,6 +14,13 @@ export default function MovieDetails() {
   const [currentServer, setCurrentServer] = useState('primary'); // 'primary' | 'multiembed' | 'backup' | 'trailer'
   const [trailerKey, setTrailerKey] = useState(null);
   const [imgError, setImgError] = useState(false);
+
+  // Track movie stream in analytics when user clicks play
+  useEffect(() => {
+    if (isPlaying && movie && currentServer !== 'trailer') {
+      trackMovieStream(movie, currentServer);
+    }
+  }, [isPlaying, movie, currentServer]);
 
   // Prevent third-party iframe from hijacking parent window when playing
   useEffect(() => {
