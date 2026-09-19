@@ -1,15 +1,21 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, X, RefreshCw, AlertCircle, Film, Sparkles } from 'lucide-react';
+import { Search, X, RefreshCw, AlertCircle, Film, Sparkles, Flame, Star, Clapperboard, Shuffle } from 'lucide-react';
 import Hero from '../components/home/Hero';
 import MovieCard from '../components/shared/MovieCard';
 import VideoModal from '../components/shared/VideoModal';
-import { fetchPopularMovies, searchMovies, fetchMoviesByGenre } from '../services/tmdb';
+import { 
+  fetchPopularMovies, 
+  fetchTrendingMovies, 
+  fetchNowPlayingMovies, 
+  fetchTopRatedMovies, 
+  searchMovies, 
+  fetchMoviesByGenre 
+} from '../services/tmdb';
 import '../styles/Home.css';
 
 const GENRES = [
   { id: 'all', name: 'الكل' },
-  { id: 'popular', name: 'الأكثر شعبية' },
   { id: 28, name: 'أكشن' },
   { id: 18, name: 'دراما' },
   { id: 35, name: 'كوميدي' },
@@ -17,15 +23,25 @@ const GENRES = [
   { id: 878, name: 'خيال علمي' },
   { id: 27, name: 'رعب' },
   { id: 53, name: 'إثارة' },
+  { id: 10749, name: 'رومانسي' },
+];
+
+const FEED_TABS = [
+  { id: 'trending', label: 'الأكثر تداولاً اليوم', icon: Flame },
+  { id: 'popular', label: 'الأكثر شعبية', icon: Sparkles },
+  { id: 'now_playing', label: 'أحدث عروض السينما', icon: Clapperboard },
+  { id: 'top_rated', label: 'الأعلى تقييماً', icon: Star },
 ];
 
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlQuery = searchParams.get('q') || '';
 
+  const [heroMovies, setHeroMovies] = useState([]);
   const [movies, setMovies] = useState([]);
-  const [popularMovies, setPopularMovies] = useState([]);
+  const [activeTab, setActiveTab] = useState('trending');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   
   const [searchTerm, setSearchTerm] = useState(urlQuery);
@@ -34,35 +50,90 @@ export default function Home() {
 
   // Video Player Modal State
   const [selectedMovie, setSelectedMovie] = useState(null);
+  const [initialPlayerServer, setInitialPlayerServer] = useState('primary');
 
   const debounceTimerRef = useRef(null);
 
-  // 1. Fetch Popular Movies (Default State)
-  const loadPopularMovies = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // 1. Fetch Dynamic Hero Movies (Trending Worldwide)
+  const loadHeroMovies = useCallback(async () => {
     try {
-      const results = await fetchPopularMovies(1);
-      setPopularMovies(results);
-      setMovies(results);
+      const trending = await fetchTrendingMovies('day');
+      if (trending && trending.length > 0) {
+        setHeroMovies(trending);
+      }
     } catch (err) {
-      console.error("Popular movies load error:", err);
-      setError('تعذر تحميل الأفلام الشائعة من TMDB. يرجى التحقق من الاتصال.');
-    } finally {
-      setLoading(false);
+      console.warn("Could not load trending for hero, falling back to popular:", err);
     }
   }, []);
 
-  // 2. Perform Direct TMDB Search
+  // 2. Fetch movies based on active feed tab
+  const loadFeedMovies = useCallback(async (tab = 'trending', page = 1) => {
+    setLoading(true);
+    setError(null);
+    try {
+      let results = [];
+      if (tab === 'trending') {
+        results = await fetchTrendingMovies('day', page);
+      } else if (tab === 'now_playing') {
+        results = await fetchNowPlayingMovies(page);
+      } else if (tab === 'top_rated') {
+        results = await fetchTopRatedMovies(page);
+      } else {
+        results = await fetchPopularMovies(page);
+      }
+
+      setMovies(results || []);
+      if (heroMovies.length === 0 && results && results.length > 0) {
+        setHeroMovies(results);
+      }
+    } catch (err) {
+      console.error(`Feed load error for tab ${tab}:`, err);
+      setError('تعذر تحميل الأفلام من TMDB. يرجى التحقق من اتصال الإنترنت.');
+    } finally {
+      setLoading(false);
+    }
+  }, [heroMovies.length]);
+
+  // 3. Shuffle / Dynamic Periodic Refresh of movies
+  const handleShuffleMovies = async () => {
+    if (activeSearchTerm) return;
+    setRefreshing(true);
+    try {
+      // Pick a random page between 1 and 4 for rich variety
+      const randomPage = Math.floor(Math.random() * 4) + 1;
+      let results = [];
+      if (selectedGenre !== 'all') {
+        results = await fetchMoviesByGenre(selectedGenre, randomPage);
+      } else {
+        if (activeTab === 'trending') {
+          results = await fetchTrendingMovies('day', randomPage);
+        } else if (activeTab === 'now_playing') {
+          results = await fetchNowPlayingMovies(randomPage);
+        } else if (activeTab === 'top_rated') {
+          results = await fetchTopRatedMovies(randomPage);
+        } else {
+          results = await fetchPopularMovies(randomPage);
+        }
+      }
+
+      // Slightly randomize order to give a fresh look
+      if (results && results.length > 0) {
+        const shuffled = [...results].sort(() => 0.5 - Math.random());
+        setMovies(shuffled);
+      }
+    } catch (err) {
+      console.error("Shuffle error:", err);
+    } finally {
+      setTimeout(() => setRefreshing(false), 500);
+    }
+  };
+
+  // 4. Perform Direct TMDB Search
   const executeSearch = useCallback(async (query) => {
     if (!query || !query.trim()) {
       setActiveSearchTerm('');
       setSelectedGenre('all');
-      if (popularMovies.length > 0) {
-        setMovies(popularMovies);
-      } else {
-        loadPopularMovies();
-      }
+      loadFeedMovies(activeTab);
       return;
     }
 
@@ -80,17 +151,39 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [popularMovies, loadPopularMovies]);
+  }, [activeTab, loadFeedMovies]);
 
   // Initial mount load
   useEffect(() => {
+    loadHeroMovies();
     if (urlQuery) {
       setSearchTerm(urlQuery);
       executeSearch(urlQuery);
     } else {
-      loadPopularMovies();
+      loadFeedMovies(activeTab);
     }
   }, [urlQuery]);
+
+  // Periodic subtle refresh of recommendations every 3 minutes to keep content fresh
+  useEffect(() => {
+    const periodicTimer = setInterval(() => {
+      if (!activeSearchTerm && selectedGenre === 'all') {
+        loadFeedMovies(activeTab);
+      }
+    }, 180000); // 3 minutes
+
+    return () => clearInterval(periodicTimer);
+  }, [activeSearchTerm, selectedGenre, activeTab, loadFeedMovies]);
+
+  // Handle Tab Switch
+  const handleTabSelect = (tabId) => {
+    if (activeSearchTerm) {
+      cancelSearch();
+    }
+    setActiveTab(tabId);
+    setSelectedGenre('all');
+    loadFeedMovies(tabId);
+  };
 
   // Handle Input Change with Instant Search Debounce
   const handleInputChange = (e) => {
@@ -123,7 +216,7 @@ export default function Home() {
     }
   };
 
-  // 4. Cancel Search Handler
+  // Cancel Search Handler
   const cancelSearch = () => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -133,12 +226,7 @@ export default function Home() {
     setSelectedGenre('all');
     setSearchParams({});
     setError(null);
-
-    if (popularMovies.length > 0) {
-      setMovies(popularMovies);
-    } else {
-      loadPopularMovies();
-    }
+    loadFeedMovies(activeTab);
   };
 
   // Filter by Genre
@@ -153,12 +241,8 @@ export default function Home() {
     setError(null);
 
     try {
-      if (genreId === 'all' || genreId === 'popular') {
-        if (popularMovies.length > 0) {
-          setMovies(popularMovies);
-        } else {
-          await loadPopularMovies();
-        }
+      if (genreId === 'all') {
+        await loadFeedMovies(activeTab);
       } else {
         const results = await fetchMoviesByGenre(genreId, 1);
         setMovies(results);
@@ -171,15 +255,20 @@ export default function Home() {
     }
   };
 
-  const featuredMovie = popularMovies.length > 0 ? popularMovies[0] : (movies.length > 0 ? movies[0] : null);
+  // Open player modal with specific server
+  const handleWatchMovie = (movie, server = 'primary') => {
+    setInitialPlayerServer(server);
+    setSelectedMovie(movie);
+  };
 
   return (
     <div className="home-page" dir="rtl">
-      {/* Hero Section */}
+      {/* Dynamic Rotating Hero Spotlight Showcase */}
       {!activeSearchTerm && (
         <Hero 
-          featured={featuredMovie} 
-          onWatchClick={(movie) => setSelectedMovie(movie)} 
+          movies={heroMovies.length > 0 ? heroMovies : movies}
+          onWatchClick={(movie) => handleWatchMovie(movie, 'primary')}
+          onTrailerClick={(movie) => handleWatchMovie(movie, 'trailer')}
         />
       )}
       
@@ -194,7 +283,7 @@ export default function Home() {
                 type="text"
                 value={searchTerm}
                 onChange={handleInputChange}
-                placeholder="ابحث عن أي فيلم بالعربية أو بالإنجليزية (مثال: سبايدرمان، Batman)..."
+                placeholder="ابحث عن أي فيلم بالعربية أو بالإنجليزية (مثال: Batman, Inception, سبايدرمان)..."
                 className="home-search-input"
                 dir="rtl"
               />
@@ -220,7 +309,7 @@ export default function Home() {
                 type="button"
                 onClick={cancelSearch}
                 className="cancel-search-action-btn"
-                title="العودة إلى الأفلام الشائعة"
+                title="العودة للرئيسية"
               >
                 <X size={17} />
                 <span>إلغاء البحث</span>
@@ -229,17 +318,41 @@ export default function Home() {
           </form>
         </div>
 
-        {/* Section Header */}
+        {/* Feed Tabs: Trending, Popular, Now Playing, Top Rated */}
+        {!activeSearchTerm && (
+          <div className="feed-tabs-container">
+            <div className="feed-tabs">
+              {FEED_TABS.map((tab) => {
+                const IconComponent = tab.icon;
+                const isActive = activeTab === tab.id && selectedGenre === 'all';
+                return (
+                  <button
+                    key={tab.id}
+                    className={`feed-tab-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => handleTabSelect(tab.id)}
+                  >
+                    <IconComponent size={16} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Section Header with Dynamic Shuffle Button */}
         <div className="section-head">
           <div>
             <span className="section-kicker">
-              {activeSearchTerm ? 'SEARCH RESULTS' : 'TMDB POPULAR'}
+              {activeSearchTerm ? 'SEARCH RESULTS' : 'MOVORA STREAMING'}
             </span>
-            <h2>
+            <h2 className="section-title-highlight">
               {activeSearchTerm ? (
                 <>نتائج البحث عن: <span className="highlight-term">"{activeSearchTerm}"</span></>
+              ) : selectedGenre !== 'all' ? (
+                `أفلام ${GENRES.find(g => g.id === selectedGenre)?.name || ''}`
               ) : (
-                'الأفلام الشائعة الآن'
+                FEED_TABS.find(t => t.id === activeTab)?.label || 'أحدث الأفلام'
               )}
             </h2>
           </div>
@@ -250,8 +363,14 @@ export default function Home() {
                 <X size={15} /> العودة للأفلام الشائعة
               </button>
             ) : (
-              <button className="see-all" onClick={loadPopularMovies} title="تحديث القائمة">
-                <RefreshCw size={15} className={loading ? 'spin-icon' : ''} /> تحديث القائمة
+              <button 
+                className={`shuffle-refresh-btn ${refreshing ? 'spinning' : ''}`} 
+                onClick={handleShuffleMovies} 
+                title="تحديث واقتراح أفلام متجددة تلقائياً"
+                disabled={loading || refreshing}
+              >
+                <Shuffle size={15} />
+                <span>تجديد الاقتراحات</span>
               </button>
             )}
           </div>
@@ -266,7 +385,6 @@ export default function Home() {
                 className={`filter ${selectedGenre === g.id ? "active" : ""}`} 
                 onClick={() => handleGenreSelect(g.id)}
               >
-                {g.id === 'popular' && <Sparkles size={14} style={{ marginLeft: 5 }} />}
                 {g.name}
               </button>
             ))}
@@ -278,7 +396,7 @@ export default function Home() {
           <div className="error-banner">
             <AlertCircle size={22} />
             <p>{error}</p>
-            <button onClick={activeSearchTerm ? () => executeSearch(activeSearchTerm) : loadPopularMovies}>
+            <button onClick={activeSearchTerm ? () => executeSearch(activeSearchTerm) : () => loadFeedMovies(activeTab)}>
               إعادة المحاولة
             </button>
           </div>
@@ -318,7 +436,7 @@ export default function Home() {
               <MovieCard 
                 key={movie.id} 
                 movie={movie} 
-                onMovieClick={(m) => setSelectedMovie(m)} 
+                onMovieClick={(m) => handleWatchMovie(m, 'primary')} 
               />
             ))}
           </div>
@@ -329,6 +447,7 @@ export default function Home() {
       {selectedMovie && (
         <VideoModal 
           movie={selectedMovie} 
+          initialServer={initialPlayerServer}
           onClose={() => setSelectedMovie(null)} 
         />
       )}

@@ -3,8 +3,8 @@ import { X, Server, Film, Play, Star, ShieldCheck, Languages } from 'lucide-reac
 import { fetchMovieVideos } from '../../services/tmdb';
 import '../../styles/VideoModal.css';
 
-export default function VideoModal({ movie, onClose }) {
-  const [activeServer, setActiveServer] = useState('primary'); // 'primary' | 'multiembed' | 'backup' | 'trailer'
+export default function VideoModal({ movie, initialServer = 'primary', onClose }) {
+  const [activeServer, setActiveServer] = useState(initialServer); // 'primary' | 'multiembed' | 'backup' | 'trailer'
   const [trailerKey, setTrailerKey] = useState(null);
   const [loadingTrailer, setLoadingTrailer] = useState(true);
 

@@ -1,8 +1,66 @@
-/* Filters */
-.filters {
+/* ==========================================================================
+   MOVORA HOMEPAGE STYLING & DYNAMIC FEED
+   ========================================================================== */
+
+/* Feed Tabs Bar (الأكثر تداولاً، الأكثر شعبية، سينما الآن، الأعلى تقييماً) */
+.feed-tabs-container {
+  margin-bottom: 28px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  direction: rtl;
+}
+
+.feed-tabs-container::-webkit-scrollbar {
+  height: 4px;
+}
+
+.feed-tabs-container::-webkit-scrollbar-thumb {
+  background: #252833;
+  border-radius: 4px;
+}
+
+.feed-tabs {
   display: flex;
   gap: 10px;
-  margin-bottom: 28px;
+  align-items: center;
+}
+
+.feed-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #11131a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #a0a6ba;
+  padding: 11px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+}
+
+.feed-tab-btn:hover {
+  background: #181a24;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+}
+
+.feed-tab-btn.active {
+  background: linear-gradient(135deg, rgba(255, 49, 90, 0.18) 0%, rgba(255, 49, 90, 0.08) 100%);
+  color: #ff315a;
+  border-color: #ff315a;
+  box-shadow: 0 4px 20px rgba(255, 49, 90, 0.25);
+}
+
+/* Filters (التصنيفات بالأكشن والدراما...) */
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 30px;
   overflow-x: auto;
   padding-bottom: 8px;
   direction: rtl;
@@ -18,24 +76,25 @@
 }
 
 .filter {
-  background: #121318;
-  color: #9ea3b5;
-  border: 1px solid #24262d;
-  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #8b91a5;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 8px 16px;
   border-radius: 99px;
   cursor: pointer;
   white-space: nowrap;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   display: flex;
   align-items: center;
   transition: all 0.2s ease;
+  font-family: inherit;
 }
 
 .filter:hover {
-  background: #191b22;
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
-  border-color: #353844;
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .filter.active {
@@ -110,23 +169,23 @@
 }
 
 .search-clear-btn:hover {
-  color: #ff315a;
-  background: rgba(255, 49, 90, 0.1);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .search-submit-btn {
   height: 52px;
-  padding: 0 26px;
-  background: linear-gradient(135deg, #ff315a, #d1123d);
+  padding: 0 28px;
+  background: linear-gradient(135deg, #ff315a 0%, #ff5277 100%);
   color: #fff;
   border: none;
   border-radius: 14px;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 15px;
   font-family: inherit;
   cursor: pointer;
+  box-shadow: 0 6px 20px rgba(255, 49, 90, 0.35);
   transition: all 0.2s ease;
-  box-shadow: 0 4px 16px rgba(255, 49, 90, 0.35);
   white-space: nowrap;
 }
 
@@ -135,7 +194,7 @@
   filter: brightness(1.1);
 }
 
-/* Cancel Search Button (زر إلغاء البحث) */
+/* Cancel Search Button */
 .cancel-search-action-btn {
   height: 52px;
   padding: 0 20px;
@@ -184,8 +243,63 @@
   color: #ff315a;
 }
 
-.spin-icon {
-  animation: spin 1s linear infinite;
+/* Section Header */
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 22px;
+  gap: 16px;
+  direction: rtl;
+}
+
+.section-kicker {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #ff315a;
+  font-weight: 800;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.section-title-highlight {
+  font-size: 26px;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0;
+}
+
+/* Shuffle / Dynamic Refresh Button (تجديد الاقتراحات) */
+.shuffle-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #c0c6d8;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: inherit;
+}
+
+.shuffle-refresh-btn:hover:not(:disabled) {
+  background: rgba(255, 49, 90, 0.12);
+  border-color: rgba(255, 49, 90, 0.4);
+  color: #ff5578;
+  transform: translateY(-2px);
+}
+
+.shuffle-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.shuffle-refresh-btn.spinning svg {
+  animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @keyframes spin {
@@ -291,6 +405,7 @@
   margin: 0 auto;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
   .home-search-form {
     flex-direction: column;
@@ -300,6 +415,11 @@
   .cancel-search-action-btn {
     height: 48px;
     justify-content: center;
+  }
+  .section-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
   .loading-grid {
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));

@@ -46,6 +46,55 @@ export const fetchPopularMovies = async (page = 1) => {
 };
 
 /**
+ * Get trending movies (day / week)
+ * https://api.themoviedb.org/3/trending/movie/day?api_key=${TMDB_API_KEY}&language=ar
+ */
+export const fetchTrendingMovies = async (timeWindow = 'day', page = 1) => {
+  try {
+    const url = `${BASE_URL}/trending/movie/${timeWindow}?api_key=${TMDB_API_KEY}&language=ar&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB Trending Error: ${res.status}`);
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Failed to fetch trending movies:', error);
+    return [];
+  }
+};
+
+/**
+ * Get now playing movies in theatres
+ */
+export const fetchNowPlayingMovies = async (page = 1) => {
+  try {
+    const url = `${BASE_URL}/movie/now_playing?api_key=${TMDB_API_KEY}&language=ar&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB Now Playing Error: ${res.status}`);
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Failed to fetch now playing movies:', error);
+    return [];
+  }
+};
+
+/**
+ * Get top rated movies
+ */
+export const fetchTopRatedMovies = async (page = 1) => {
+  try {
+    const url = `${BASE_URL}/movie/top_rated?api_key=${TMDB_API_KEY}&language=ar&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB Top Rated Error: ${res.status}`);
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Failed to fetch top rated movies:', error);
+    return [];
+  }
+};
+
+/**
  * Search movies in Arabic (Search Bar)
  * https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&language=ar&query=${searchTerm}
  */
@@ -130,6 +179,9 @@ export default {
   getPosterUrl,
   getBackdropUrl,
   fetchPopularMovies,
+  fetchTrendingMovies,
+  fetchNowPlayingMovies,
+  fetchTopRatedMovies,
   searchMovies,
   fetchMovieDetails,
   fetchMovieVideos,
