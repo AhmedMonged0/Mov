@@ -36,16 +36,11 @@ export default function Navbar() {
     }
   }, [location.search]);
 
-  // Close dropdown on click outside
+  // Keep dropdown open even during ad popups or outside clicks
+  // Close only on route change or Escape key
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (searchWrapperRef.current && !searchWrapperRef.current.contains(e.target)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    setShowDropdown(false);
+  }, [location.pathname]);
 
   // Close dropdown on Escape key
   useEffect(() => {
@@ -152,7 +147,8 @@ export default function Navbar() {
       </nav>
 
       {/* Global Live Instant Search Bar */}
-      <div className="nav-actions" ref={searchWrapperRef}>
+      {/* Global Live Instant Search Bar */}
+      <div className="nav-actions" ref={searchWrapperRef} onClick={(e) => e.stopPropagation()}>
         <form onSubmit={handleSearchSubmit} className={`search ${showDropdown ? 'active-focus' : ''}`}>
           <button type="submit" className="search-btn-icon" aria-label="بحث">
             {isSearching ? (
@@ -166,7 +162,13 @@ export default function Navbar() {
             value={searchQuery} 
             onChange={handleQueryChange}
             onFocus={() => {
-              if (searchQuery.trim().length >= 2 && previewResults.length > 0) {
+              if (searchQuery.trim().length >= 2) {
+                setShowDropdown(true);
+              }
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (searchQuery.trim().length >= 2) {
                 setShowDropdown(true);
               }
             }}
@@ -179,7 +181,10 @@ export default function Navbar() {
             <button 
               type="button" 
               className="clear-nav-search" 
-              onClick={handleClearSearch}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClearSearch();
+              }}
               title="مسح البحث"
             >
               <X size={14} />
@@ -187,12 +192,31 @@ export default function Navbar() {
           )}
         </form>
 
-        {/* Live Instant Search Dropdown Results */}
+        {/* Live Instant Search Dropdown Results (Protected against ad popups) */}
         {showDropdown && (
-          <div className="search-dropdown-menu" dir="rtl">
+          <div 
+            className="search-dropdown-menu" 
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
             <div className="dropdown-header">
-              <span>نتائج البحث الفوري</span>
-              {isSearching && <span className="dropdown-searching">جاري البحث...</span>}
+              <div className="dropdown-header-info">
+                <span>نتائج البحث الفوري</span>
+                {isSearching && <span className="dropdown-searching">جاري البحث...</span>}
+              </div>
+              <button 
+                type="button"
+                className="close-dropdown-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDropdown(false);
+                }}
+                title="إغلاق قائمة الاقتراحات"
+              >
+                <X size={13} />
+                <span>إغلاق</span>
+              </button>
             </div>
 
             {previewResults.length > 0 ? (
@@ -207,7 +231,10 @@ export default function Navbar() {
                     <div 
                       key={movie.id}
                       className="dropdown-item"
-                      onClick={() => handleSelectMovie(movie)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectMovie(movie);
+                      }}
                     >
                       <div className="dropdown-poster">
                         {poster ? (
@@ -243,7 +270,10 @@ export default function Navbar() {
                 {/* View All Results Button */}
                 <div 
                   className="dropdown-footer"
-                  onClick={handleSearchSubmit}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSearchSubmit(e);
+                  }}
                 >
                   <Search size={13} />
                   <span>عرض كافة النتائج لـ "{searchQuery}"</span>
