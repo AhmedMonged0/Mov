@@ -10,11 +10,11 @@ const AD_SETTINGS_KEY = 'movora_ad_settings_v1';
 const MONETAG_SCRIPT_ID = 'movora-monetag-script-tag';
 const MONETAG_META_ID = 'movora-monetag-meta-tag';
 
-// Default configuration
+// Default configuration with active Monetag Multitag
 const DEFAULT_AD_SETTINGS = {
-  enabled: false,
+  enabled: true,
   monetagVerification: '',
-  monetagScript: '',
+  monetagScript: '<script src="https://quge5.com/88/tag.min.js" data-zone="283157" async data-cfasync="false"></script>',
   bannerPlayerCode: '',
   antiAdultShield: true,
   lastUpdated: Date.now()

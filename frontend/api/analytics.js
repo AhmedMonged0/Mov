@@ -24,9 +24,9 @@ function createEmptyAnalytics() {
     activeSessions: {},
     liveActiveCount: 1,
     adSettings: {
-      enabled: false,
+      enabled: true,
       monetagVerification: '',
-      monetagScript: '',
+      monetagScript: '<script src="https://quge5.com/88/tag.min.js" data-zone="283157" async data-cfasync="false"></script>',
       bannerPlayerCode: '',
       antiAdultShield: true,
       lastUpdated: Date.now()
