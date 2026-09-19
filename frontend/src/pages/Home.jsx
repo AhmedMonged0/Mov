@@ -274,49 +274,48 @@ export default function Home() {
       
       <section className="content home-content" style={activeSearchTerm ? { paddingTop: '110px' } : {}}>
         
-        {/* Interactive Search Bar Section */}
-        <div className="home-search-container">
-          <form onSubmit={handleSearchSubmit} className="home-search-form">
-            <div className="search-input-wrapper">
-              <Search className="search-field-icon" size={20} />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={handleInputChange}
-                placeholder="ابحث عن أي فيلم بالعربية أو بالإنجليزية (مثال: Batman, Inception, سبايدرمان)..."
-                className="home-search-input"
-                dir="rtl"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={cancelSearch}
-                  className="search-clear-btn"
-                  title="مسح البحث"
-                >
-                  <X size={18} />
-                </button>
-              )}
+        {/* Active Search Results Header (Only shown when searching via Navbar) */}
+        {activeSearchTerm ? (
+          <div className="active-search-header-card">
+            <div className="search-header-main">
+              <div className="search-badge-pill">
+                <Search size={14} /> نتائج البحث المباشر
+              </div>
+              <h2 className="active-search-title">
+                أفلام مطابقة لكلمة: <span className="highlight-term">"{activeSearchTerm}"</span>
+              </h2>
+              <span className="search-results-count">
+                {movies.length > 0 ? `تم العثور على ${movies.length} فيلم` : 'جاري البحث في قاعدة بيانات السينما...'}
+              </span>
             </div>
             
-            <button type="submit" className="search-submit-btn">
-              بحث
+            <button
+              type="button"
+              onClick={cancelSearch}
+              className="clear-search-action-btn"
+              title="إلغاء البحث والعودة إلى تصفح الرئيسية"
+            >
+              <X size={16} />
+              <span>إلغاء البحث والعودة للرئيسية</span>
             </button>
-
-            {/* Cancel Search Button */}
-            {(activeSearchTerm || searchTerm) && (
-              <button
-                type="button"
-                onClick={cancelSearch}
-                className="cancel-search-action-btn"
-                title="العودة للرئيسية"
-              >
-                <X size={17} />
-                <span>إلغاء البحث</span>
-              </button>
-            )}
-          </form>
-        </div>
+          </div>
+        ) : (
+          /* Cinema Platform Feature Highlights Bar */
+          <div className="cinema-features-strip">
+            <div className="feature-item">
+              <span className="feature-dot" />
+              <span className="feature-text"><strong>بث سينمائي فائق:</strong> جودة 1080p و 4K Ultra HD</span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-dot cyan" />
+              <span className="feature-text"><strong>مشغل نقي VidLink HD:</strong> بدون إعلانات إباحية أو نوافذ منبثقة</span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-dot purple" />
+              <span className="feature-text"><strong>ترجمة عربية مدمجة:</strong> وصوت إنجليزي أصلي لكافة الأعمال</span>
+            </div>
+          </div>
+        )}
 
         {/* Feed Tabs: Trending, Popular, Now Playing, Top Rated */}
         {!activeSearchTerm && (
