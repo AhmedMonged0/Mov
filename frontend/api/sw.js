@@ -5,11 +5,11 @@ export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   const content = `self.options = {
-    "domain": "3nbf4.com",
-    "zoneId": 11839511
+    "domain": "5gvci.com",
+    "zoneId": 11839605
 }
 self.lary = ""
-importScripts('https://3nbf4.com/act/files/service-worker.min.js?r=sw')`;
+importScripts('https://5gvci.com/act/files/service-worker.min.js?r=sw')`;
 
   return res.status(200).send(content);
 }
