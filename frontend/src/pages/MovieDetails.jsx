@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Play, Download, Star, ArrowRight, Film, Clock, Calendar, Server, Languages, ShieldCheck } from 'lucide-react';
 import { fetchMovieDetails, fetchMovieVideos, getPosterUrl, getBackdropUrl } from '../services/tmdb';
 import { trackMovieStream } from '../services/analyticsTracker';
+import { updatePageSEO, resetPageSEO } from '../services/seoHelper';
 import AdBannerSlot from '../components/shared/AdBannerSlot';
 import '../styles/Details.css';
 
@@ -62,6 +63,59 @@ export default function MovieDetails() {
     };
     getMovie();
   }, [id]);
+
+  // Dynamic SEO & Google Structured Data (Schema.org Movie entity)
+  useEffect(() => {
+    if (!movie) return;
+
+    const movieTitle = movie.title || movie.original_title || 'فيلم';
+    const year = movie.release_date ? movie.release_date.split('-')[0] : '';
+    const rating = movie.vote_average ? movie.vote_average.toFixed(1) : '7.5';
+    const poster = movie.poster_path ? getPosterUrl(movie.poster_path, 'w780') : 'https://movora.me/favicon.svg';
+    const backdrop = movie.backdrop_path ? getBackdropUrl(movie.backdrop_path, 'w1280') : poster;
+    const genresStr = Array.isArray(movie.genres) ? movie.genres.map(g => g.name).join(', ') : 'أفلام سينما';
+
+    const pageTitle = `مشاهدة وتحميل فيلم ${movieTitle} (${year}) مترجم كامل HD | موفورا Movora`;
+    const pageDesc = movie.overview 
+      ? `مشاهدة وتحميل فيلم ${movieTitle} (${year}) مترجم كامل أون لاين بجودة عالية 1080p و 4K بدون إعلانات مزعجة. قصة الفيلم: ${movie.overview.slice(0, 160)}...`
+      : `مشاهدة وتحميل فيلم ${movieTitle} (${year}) مترجم كامل بجودة فائقة 1080p و 4K بسيرفرات سريعة وبدون إعلانات على موفورا (movora.me).`;
+
+    const schemaData = {
+      "@context": "https://schema.org",
+      "@type": "Movie",
+      "name": movieTitle,
+      "alternateName": movie.original_title,
+      "description": movie.overview || pageDesc,
+      "image": poster,
+      "datePublished": movie.release_date || year,
+      "genre": Array.isArray(movie.genres) ? movie.genres.map(g => g.name) : ["أفلام"],
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": rating,
+        "bestRating": "10",
+        "worstRating": "1",
+        "ratingCount": movie.vote_count || 150
+      },
+      "potentialAction": {
+        "@type": "WatchAction",
+        "target": `https://movora.me/movie/${movie.id}`
+      }
+    };
+
+    updatePageSEO({
+      title: pageTitle,
+      description: pageDesc,
+      keywords: `${movieTitle}, مشاهدة فيلم ${movieTitle}, تحميل فيلم ${movieTitle}, فيلم ${movieTitle} مترجم, فيلم ${movieTitle} ${year}, افلام ${genresStr}, موفورا, movora.me`,
+      canonicalUrl: `https://movora.me/movie/${movie.id}`,
+      ogType: 'video.movie',
+      ogImage: backdrop || poster,
+      schema: schemaData
+    });
+
+    return () => {
+      resetPageSEO();
+    };
+  }, [movie]);
 
   if (loading) {
     return (

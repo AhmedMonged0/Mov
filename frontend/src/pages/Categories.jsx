@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import MovieCard from '../components/shared/MovieCard';
 import VideoModal from '../components/shared/VideoModal';
 import { fetchMoviesByGenre, fetchPopularMovies } from '../services/tmdb';
+import { updatePageSEO, resetPageSEO } from '../services/seoHelper';
 
 const CATEGORY_MAP = [
   { id: 'all', name: 'الكل' },
@@ -43,6 +44,27 @@ export default function Categories() {
       }
     };
     loadCategoryMovies();
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    const categoryName = CATEGORY_MAP.find(c => String(c.id) === String(selectedCategory))?.name || 'التصنيفات';
+    const isAll = selectedCategory === 'all';
+    
+    updatePageSEO({
+      title: isAll 
+        ? 'تصنيفات الأفلام والمسلسلات | موفورا Movora'
+        : `أفلام ${categoryName} مترجمة بجودة عالية | موفورا Movora`,
+      description: isAll
+        ? 'استكشف تصنيفات الأفلام المتنوعة: أكشن، دراما، كوميدي، رعب، خيال علمي، وأنيميشن بجودة 1080p وترجمة عربية حصرية على موفورا (movora.me).'
+        : `تصفح وشاهد أقوى أفلام ${categoryName} العربية والأجنبية المترجمة بدقة عالية 1080p و 4K بدون إعلانات وبسيرفرات سريعة على موفورا.`,
+      canonicalUrl: isAll ? 'https://movora.me/categories' : `https://movora.me/categories?genre=${selectedCategory}`,
+      keywords: `افلام ${categoryName}, مشاهدة افلام ${categoryName}, تصنيف ${categoryName}, موفورا, movora, افلام 2026, افلام مترجمة`,
+      ogType: 'website'
+    });
+
+    return () => {
+      resetPageSEO();
+    };
   }, [selectedCategory]);
 
   return (
