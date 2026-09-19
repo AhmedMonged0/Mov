@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SEO Manager for Movora Platform (movora.me)
  * Dynamically injects and manages metadata, OpenGraph tags, canonical links, and Schema.org JSON-LD
  */
@@ -8,47 +8,55 @@ const DEFAULT_DESC = 'موفورا Movora (movora.me) - منصتك السينم�
 const DEFAULT_IMAGE = 'https://movora.me/favicon.svg';
 const DEFAULT_URL = 'https://movora.me/';
 
-function setMetaTag(selector, attribute, value) {
-  if (typeof document === 'undefined') return;
-  let element = document.querySelector(selector);
-  if (!element) {
-    element = document.createElement('meta');
-    if (selector.startsWith('meta[name=')) {
-      const name = selector.match(/meta\[name=([^]+)\]/)?.[1];
- if (name) element.setAttribute('name', name);
- } else if (selector.startsWith('meta[property=')) {
- const prop = selector.match(/meta\[property=([^]+)\]/)?.[1];
-      if (prop) element.setAttribute('property', prop);
+function setMetaTag(nameOrProperty, value, isProperty = false) {
+  if (typeof document === 'undefined' || !value) return;
+  try {
+    const attr = isProperty ? 'property' : 'name';
+    // Always quote the attribute value in CSS selector to prevent colons (e.g. og:title) from throwing SyntaxError
+    let element = document.head.querySelector(`meta[${attr}="${nameOrProperty}"]`);
+    if (!element) {
+      element = document.createElement('meta');
+      element.setAttribute(attr, nameOrProperty);
+      document.head.appendChild(element);
     }
-    document.head.appendChild(element);
+    element.setAttribute('content', String(value));
+  } catch (err) {
+    console.warn(`[SEO] Failed to set meta tag ${nameOrProperty}:`, err);
   }
-  element.setAttribute(attribute, value);
 }
 
 function setCanonical(url) {
-  if (typeof document === 'undefined') return;
-  let link = document.querySelector('link[rel=canonical]');
-  if (!link) {
-    link = document.createElement('link');
-    link.setAttribute('rel', 'canonical');
-    document.head.appendChild(link);
+  if (typeof document === 'undefined' || !url) return;
+  try {
+    let link = document.head.querySelector('link[rel="canonical"]');
+    if (!link) {
+      link = document.createElement('link');
+      link.setAttribute('rel', 'canonical');
+      document.head.appendChild(link);
+    }
+    link.setAttribute('href', String(url));
+  } catch (err) {
+    console.warn('[SEO] Failed to set canonical URL:', err);
   }
-  link.setAttribute('href', url);
 }
 
 function setSchemaJson(schemaObj) {
   if (typeof document === 'undefined') return;
-  let script = document.getElementById('movora-page-schema');
-  if (!script) {
-    script = document.createElement('script');
-    script.setAttribute('type', 'application/ld+json');
-    script.setAttribute('id', 'movora-page-schema');
-    document.head.appendChild(script);
-  }
-  if (schemaObj) {
-    script.textContent = JSON.stringify(schemaObj);
-  } else {
-    script.remove();
+  try {
+    let script = document.getElementById('movora-page-schema');
+    if (!script) {
+      script = document.createElement('script');
+      script.setAttribute('type', 'application/ld+json');
+      script.setAttribute('id', 'movora-page-schema');
+      document.head.appendChild(script);
+    }
+    if (schemaObj) {
+      script.textContent = JSON.stringify(schemaObj);
+    } else {
+      script.remove();
+    }
+  } catch (err) {
+    console.warn('[SEO] Failed to set Schema JSON:', err);
   }
 }
 
@@ -63,42 +71,52 @@ export function updatePageSEO({
 } = {}) {
   if (typeof document === 'undefined') return;
 
-  // Title
-  document.title = title;
+  try {
+    // Title
+    if (title) {
+      document.title = title;
+    }
 
-  // Standard Meta
-  setMetaTag('meta[name=description]', 'content', description);
-  setMetaTag('meta[name=keywords]', 'content', keywords);
-  setCanonical(canonicalUrl);
+    // Standard Meta
+    setMetaTag('description', description, false);
+    setMetaTag('keywords', keywords, false);
+    setCanonical(canonicalUrl);
 
-  // Open Graph
-  setMetaTag('meta[property=og:title]', 'content', title);
-  setMetaTag('meta[property=og:description]', 'content', description);
-  setMetaTag('meta[property=og:image]', 'content', ogImage);
-  setMetaTag('meta[property=og:url]', 'content', canonicalUrl);
-  setMetaTag('meta[property=og:type]', 'content', ogType);
+    // Open Graph (property)
+    setMetaTag('og:title', title, true);
+    setMetaTag('og:description', description, true);
+    setMetaTag('og:image', ogImage, true);
+    setMetaTag('og:url', canonicalUrl, true);
+    setMetaTag('og:type', ogType, true);
 
-  // Twitter Cards
-  setMetaTag('meta[name=twitter:card]', 'content', 'summary_large_image');
-  setMetaTag('meta[name=twitter:title]', 'content', title);
-  setMetaTag('meta[name=twitter:description]', 'content', description);
-  setMetaTag('meta[name=twitter:image]', 'content', ogImage);
+    // Twitter Cards (name)
+    setMetaTag('twitter:card', 'summary_large_image', false);
+    setMetaTag('twitter:title', title, false);
+    setMetaTag('twitter:description', description, false);
+    setMetaTag('twitter:image', ogImage, false);
 
-  // Schema.org Structured Data
-  if (schema) {
-    setSchemaJson(schema);
-  } else {
-    setSchemaJson(null);
+    // Schema.org Structured Data
+    if (schema) {
+      setSchemaJson(schema);
+    } else {
+      setSchemaJson(null);
+    }
+  } catch (err) {
+    console.warn('[SEO] updatePageSEO error caught safely:', err);
   }
 }
 
 export function resetPageSEO() {
-  updatePageSEO({
-    title: DEFAULT_TITLE,
-    description: DEFAULT_DESC,
-    canonicalUrl: DEFAULT_URL,
-    ogType: 'website',
-    ogImage: DEFAULT_IMAGE,
-    schema: null,
-  });
+  try {
+    updatePageSEO({
+      title: DEFAULT_TITLE,
+      description: DEFAULT_DESC,
+      canonicalUrl: DEFAULT_URL,
+      ogType: 'website',
+      ogImage: DEFAULT_IMAGE,
+      schema: null,
+    });
+  } catch (err) {
+    console.warn('[SEO] resetPageSEO error caught safely:', err);
+  }
 }
