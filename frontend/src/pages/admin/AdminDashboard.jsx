@@ -247,7 +247,7 @@ export default function AdminDashboard() {
                 <Eye size={18} />
               </div>
             </div>
-            <div className="kpi-value">{Number(data.totalVisits || 0).toLocaleString('ar-EG')}</div>
+            <div className="kpi-value">{(data.totalVisits || 0).toLocaleString('en-US')}</div>
             <div className="kpi-footer">
               <span className="kpi-trend positive">
                 <CheckCircle2 size={13} /> عداد مباشر
@@ -264,7 +264,7 @@ export default function AdminDashboard() {
                 <Users size={18} />
               </div>
             </div>
-            <div className="kpi-value">{Number(data.uniqueVisitorsCount || 0).toLocaleString('ar-EG')}</div>
+            <div className="kpi-value">{(data.uniqueVisitorsCount || 0).toLocaleString('en-US')}</div>
             <div className="kpi-footer">
               <span className="kpi-trend positive">
                 <CheckCircle2 size={13} /> أجهزة فعلية
@@ -281,7 +281,7 @@ export default function AdminDashboard() {
                 <Film size={18} />
               </div>
             </div>
-            <div className="kpi-value">{Number(data.totalStreams || 0).toLocaleString('ar-EG')}</div>
+            <div className="kpi-value">{(data.totalStreams || 0).toLocaleString('en-US')}</div>
             <div className="kpi-footer">
               <span className="kpi-trend positive">
                 <CheckCircle2 size={13} /> تشغيل فعلي
@@ -478,7 +478,7 @@ export default function AdminDashboard() {
                         </td>
                         <td>
                           <span className="streams-count-tag">
-                            {movie.streams.toLocaleString('ar-EG')} مشاهدة
+                            {movie.streams.toLocaleString('en-US')} مشاهدة
                           </span>
                         </td>
                         <td>
