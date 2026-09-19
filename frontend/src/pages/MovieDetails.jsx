@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Play, Download, Star, ArrowRight, Film, Clock, Calendar, Server } from 'lucide-react';
+import { Play, Download, Star, ArrowRight, Film, Clock, Calendar, Server, Languages, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { fetchMovieDetails, fetchMovieVideos, getPosterUrl, getBackdropUrl } from '../services/tmdb';
 import '../styles/Details.css';
 
@@ -10,7 +10,8 @@ export default function MovieDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentServer, setCurrentServer] = useState('primary'); // 'primary' | 'backup' | 'trailer'
+  const [currentServer, setCurrentServer] = useState('primary'); // 'primary' | 'multiembed' | 'backup' | 'trailer'
+  const [shieldActive, setShieldActive] = useState(true);
   const [trailerKey, setTrailerKey] = useState(null);
   const [imgError, setImgError] = useState(false);
 
@@ -80,15 +81,22 @@ export default function MovieDetails() {
     { quality: '4K Ultra HD', size: '6.8 GB', url: '#' },
   ];
 
-  // Streaming source url based on server selection
-  let playerSrc = `https://vidsrc.sbs/embed/movie/${movie.id}`;
-  if (currentServer === 'backup') {
-    playerSrc = `https://embed.su/embed/movie/${movie.id}`;
+  // Streaming source url based on server selection (Original English Audio Guaranteed)
+  let playerSrc = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
+  if (currentServer === 'multiembed') {
+    playerSrc = `https://multiembed.mov/?video_id=${movie.id}&tmdb=1`;
+  } else if (currentServer === 'backup') {
+    playerSrc = `https://vidsrc.to/embed/movie/${movie.id}`;
   } else if (currentServer === 'trailer') {
     playerSrc = trailerKey 
       ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0` 
       : 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1';
   }
+
+  // Ad Shield Sandbox rules
+  const sandboxRules = shieldActive && currentServer !== 'trailer'
+    ? "allow-forms allow-scripts allow-same-origin allow-presentation"
+    : undefined;
 
   return (
     <div className="details-page" dir="rtl">
@@ -106,37 +114,78 @@ export default function MovieDetails() {
               <ArrowRight size={20} /> العودة لتفاصيل الفيلم
             </button>
             <div className="server-selector">
-              <span><Server size={15} /> اختر السيرفر:</span>
+              <span><Server size={15} /> السيرفر:</span>
               <button 
                 className={currentServer === 'primary' ? 'active' : ''} 
                 onClick={() => setCurrentServer('primary')}
               >
-                السيرفر الرئيسي (VidSrc)
+                سيرفر رئيسي (VidSrc)
+              </button>
+              <button 
+                className={currentServer === 'multiembed' ? 'active' : ''} 
+                onClick={() => setCurrentServer('multiembed')}
+              >
+                سيرفر الترجمة (MultiEmbed)
               </button>
               <button 
                 className={currentServer === 'backup' ? 'active' : ''} 
                 onClick={() => setCurrentServer('backup')}
               >
-                سيرفر بديل (EmbedSu)
+                سيرفر بديل (VidSrc Pro)
               </button>
               <button 
                 className={currentServer === 'trailer' ? 'active' : ''} 
                 onClick={() => setCurrentServer('trailer')}
               >
-                التريلر الرسمي
+                التريلر
+              </button>
+              <button 
+                className={`ad-shield-badge ${shieldActive ? 'active' : 'inactive'}`}
+                onClick={() => setShieldActive(!shieldActive)}
+                title={shieldActive ? "الحماية الذكية مفعّلة لمنع الإعلانات والنوافذ المنبثقة" : "الحماية معطلة"}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: shieldActive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                  border: `1px solid ${shieldActive ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                  color: shieldActive ? '#4ade80' : '#f87171',
+                  borderRadius: '6px',
+                  padding: '5px 9px',
+                  fontSize: '11px',
+                  cursor: 'pointer'
+                }}
+              >
+                {shieldActive ? <ShieldCheck size={13} /> : <ShieldAlert size={13} />}
+                <span>{shieldActive ? 'درع الحماية: نشط' : 'الحماية: متوقف'}</span>
               </button>
             </div>
           </div>
           <div className="iframe-wrapper">
             <iframe
-              key={currentServer}
+              key={`${currentServer}-${shieldActive}`}
               src={playerSrc}
               title={title}
               allowFullScreen
               allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
               referrerPolicy="no-referrer"
-              sandbox={currentServer !== 'trailer' ? "allow-forms allow-scripts allow-same-origin allow-presentation" : undefined}
+              sandbox={sandboxRules}
             />
+          </div>
+          <div style={{
+            background: '#0e1017',
+            padding: '10px 18px',
+            borderTop: '1px solid #1a1d28',
+            fontSize: '12px',
+            color: '#94a3b8',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Languages size={15} style={{ color: '#ff315a', flexShrink: 0 }} />
+            <span>
+              <strong style={{ color: '#fff' }}>الصوت الأساسي: إنجليزي أصلي.</strong> لاختيار الترجمة باللغة العربية أو أي لغة، انقر على زر الترجمة <strong style={{ color: '#ff315a' }}>(CC أو Subtitles)</strong> داخل شاشة المشغل ثم اختر <strong style={{ color: '#fff' }}>Arabic</strong>.
+            </span>
           </div>
         </div>
       ) : (

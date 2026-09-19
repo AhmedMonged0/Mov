@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Film, Play, Star, ShieldCheck, ShieldAlert, Sparkles } from 'lucide-react';
+import { X, Server, Film, Play, Star, ShieldCheck, ShieldAlert, Sparkles, Languages } from 'lucide-react';
 import { fetchMovieVideos } from '../../services/tmdb';
 import '../../styles/VideoModal.css';
 
 export default function VideoModal({ movie, onClose }) {
-  const [activeServer, setActiveServer] = useState('primary'); // 'primary' | 'backup' | 'trailer'
+  const [activeServer, setActiveServer] = useState('primary'); // 'primary' | 'multiembed' | 'backup' | 'trailer'
   const [shieldActive, setShieldActive] = useState(true); // Chic Anti-Popup Ad Shield
   const [trailerKey, setTrailerKey] = useState(null);
   const [loadingTrailer, setLoadingTrailer] = useState(true);
@@ -64,12 +64,17 @@ export default function VideoModal({ movie, onClose }) {
   const releaseYear = movie.release_date ? movie.release_date.split('-')[0] : (movie.year || '');
   const rating = movie.vote_average ? movie.vote_average.toFixed(1) : (movie.rating || null);
 
-  // Sources selection
+  // Sources selection with Original English Audio guaranteed
   let iframeSrc = '';
   if (activeServer === 'primary') {
-    iframeSrc = `https://vidsrc.sbs/embed/movie/${movie.id}`;
+    // Flagship VidSrc: Always original English audio with CC subtitle selector
+    iframeSrc = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
+  } else if (activeServer === 'multiembed') {
+    // MultiEmbed: English audio + prominent multi-language subtitle track menu (including Arabic)
+    iframeSrc = `https://multiembed.mov/?video_id=${movie.id}&tmdb=1`;
   } else if (activeServer === 'backup') {
-    iframeSrc = `https://embed.su/embed/movie/${movie.id}`;
+    // VidSrc Pro: Clean English original audio
+    iframeSrc = `https://vidsrc.to/embed/movie/${movie.id}`;
   } else if (activeServer === 'trailer') {
     iframeSrc = trailerKey 
       ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0` 
@@ -102,7 +107,7 @@ export default function VideoModal({ movie, onClose }) {
                     <Star size={12} fill="currentColor" /> {rating}
                   </span>
                 )}
-                <span className="modal-badge-movora">Movora Cinema</span>
+                <span className="modal-badge-movora">Movora Cinema (English Audio)</span>
               </div>
             </div>
           </div>
@@ -134,7 +139,7 @@ export default function VideoModal({ movie, onClose }) {
         <div className="video-modal-servers">
           <div className="server-label">
             <Server size={15} />
-            <span>اختر سيرفر المشاهدة:</span>
+            <span>سيرفرات الصوت الإنجليزي:</span>
           </div>
 
           <div className="server-buttons">
@@ -143,7 +148,15 @@ export default function VideoModal({ movie, onClose }) {
               onClick={() => setActiveServer('primary')}
             >
               <span className="server-dot"></span>
-              سيرفر المشاهدة الرئيسي
+              سيرفر إنجليزي رئيسي (VidSrc)
+            </button>
+
+            <button
+              className={`server-btn ${activeServer === 'multiembed' ? 'active' : ''}`}
+              onClick={() => setActiveServer('multiembed')}
+            >
+              <span className="server-dot multi"></span>
+              سيرفر الترجمة المتعددة (MultiEmbed)
             </button>
 
             <button
@@ -151,7 +164,7 @@ export default function VideoModal({ movie, onClose }) {
               onClick={() => setActiveServer('backup')}
             >
               <span className="server-dot backup"></span>
-              سيرفر بديل (EmbedSu)
+              سيرفر إنجليزي بديل (VidSrc Pro)
             </button>
 
             <button
@@ -179,11 +192,13 @@ export default function VideoModal({ movie, onClose }) {
           />
         </div>
 
-        {/* Player Bottom Info Bar */}
+        {/* Player Bottom Info Bar with Subtitle Guidance */}
         <div className="video-modal-footer">
           <div className="player-hint">
-            <Sparkles size={14} style={{ color: '#ff315a', verticalAlign: 'middle', marginLeft: 4 }} />
-            <span>نظام Movora المحمي: تم تعطيل الإعلانات المنبثقة والتحويلات الإجبارية لتوفير مشاهدة سلسة وسينمائية.</span>
+            <Languages size={15} style={{ color: '#ff315a', verticalAlign: 'middle', marginLeft: 6, flexShrink: 0 }} />
+            <span>
+              <strong>الصوت الأساسي: إنجليزي أصلي.</strong> لاختيار أو تفعيل الترجمة للعربية أو أي لغة، اضغط على زر الترجمة <strong>(CC أو Subtitles)</strong> داخل شاشة المشغل واختر <strong>Arabic</strong>.
+            </span>
           </div>
           <button className="close-bottom-btn" onClick={onClose}>
             إغلاق المشغل
