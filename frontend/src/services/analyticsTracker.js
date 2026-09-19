@@ -1,10 +1,11 @@
 // ==========================================================================
-// MOVORA TRAFFIC & ANALYTICS TRACKING ENGINE (movora.me)
+// MOVORA REAL-TIME TRAFFIC & ANALYTICS ENGINE (100% REAL DATA)
 // ==========================================================================
 
-const STORAGE_KEY = 'movora_analytics_v1';
+const STORAGE_KEY = 'movora_real_analytics_v2';
 const VISITOR_KEY = 'movora_visitor_id';
 const SESSION_KEY = 'movora_session_id';
+const HEARTBEAT_KEY = 'movora_heartbeats';
 
 // Generate or retrieve persistent unique visitor ID
 function getVisitorId() {
@@ -52,60 +53,39 @@ function detectDevice() {
   return { device, browser, os };
 }
 
-// Detect client country / timezone / language
-function detectLocale() {
-  const lang = navigator.language || 'ar';
-  let timezone = 'UTC';
-  try {
-    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  } catch (e) {
-    timezone = 'UTC';
-  }
-  return { lang, timezone };
+// Get day name in Arabic
+function getArabicDayName(date = new Date()) {
+  const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  return days[date.getDay()];
 }
 
-// Generate realistic historical baseline data if brand new store
-function getInitialAnalyticsData() {
+// Clean Initial State starting with 0 (Zero fake numbers!)
+function createEmptyAnalytics() {
   const days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
-  const dailyVisits = [420, 580, 710, 890, 1140, 1420, 1680];
-  
-  const popularInitialMovies = [
-    { id: 693134, title: 'Dune: Part Two', streams: 384, rating: 8.4, server: 'VidSrc Flagship' },
-    { id: 533535, title: 'Deadpool & Wolverine', streams: 342, rating: 7.9, server: 'MultiEmbed' },
-    { id: 1022789, title: 'Inside Out 2', streams: 298, rating: 7.8, server: 'VidSrc Flagship' },
-    { id: 945961, title: 'Alien: Romulus', streams: 245, rating: 7.3, server: 'VidSrc Pro' },
-    { id: 550, title: 'Fight Club', streams: 195, rating: 8.5, server: 'MultiEmbed' },
-  ];
-
   return {
-    totalVisits: 6840,
-    uniqueVisitorsCount: 4210,
-    totalStreams: 1824,
-    deviceStats: {
-      Mobile: 64,
-      Desktop: 31,
-      Tablet: 5,
+    totalVisits: 0,
+    uniqueVisitorsCount: 0,
+    totalStreams: 0,
+    deviceCounts: {
+      Mobile: 0,
+      Desktop: 0,
+      Tablet: 0,
     },
-    browserStats: {
-      Chrome: 58,
-      Safari: 24,
-      Edge: 11,
-      Firefox: 5,
-      Brave: 2,
+    browserCounts: {
+      Chrome: 0,
+      Safari: 0,
+      Edge: 0,
+      Firefox: 0,
+      Opera: 0,
+      Brave: 0,
     },
-    dailyTraffic: days.map((day, i) => ({
+    dailyTraffic: days.map(day => ({
       day,
-      visits: dailyVisits[i],
-      streams: Math.round(dailyVisits[i] * 0.38),
+      visits: 0,
+      streams: 0,
     })),
-    topMovies: popularInitialMovies,
-    recentEvents: [
-      { id: 'ev_1', type: 'movie_stream', label: 'بدء مشاهدة فيلم Dune: Part Two', device: 'Mobile', time: 'منذ دقيقة', server: 'VidSrc' },
-      { id: 'ev_2', type: 'page_view', label: 'زيارة قسم أفلام الأكشن', device: 'Desktop', time: 'منذ 3 دقائق', path: '/categories' },
-      { id: 'ev_3', type: 'page_view', label: 'تصفح الصفحة الرئيسية (Trending)', device: 'Mobile', time: 'منذ 5 دقائق', path: '/' },
-      { id: 'ev_4', type: 'movie_stream', label: 'بدء تشغيل Deadpool & Wolverine', device: 'Desktop', time: 'منذ 8 دقائق', server: 'MultiEmbed' },
-      { id: 'ev_5', type: 'search', label: 'بحث عن "Batman"', device: 'Mobile', time: 'منذ 12 دقيقة' },
-    ],
+    topMovies: [],
+    recentEvents: [],
     lastUpdated: Date.now(),
   };
 }
@@ -115,14 +95,15 @@ export function loadAnalytics() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      const initial = getInitialAnalyticsData();
-      saveAnalytics(initial);
-      return initial;
+      const empty = createEmptyAnalytics();
+      saveAnalytics(empty);
+      return empty;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return parsed;
   } catch (err) {
     console.error('Error loading analytics:', err);
-    return getInitialAnalyticsData();
+    return createEmptyAnalytics();
   }
 }
 
@@ -136,18 +117,65 @@ export function saveAnalytics(data) {
   }
 }
 
-// Track Page View
+// Record Active Heartbeat for Live Users
+export function recordHeartbeat() {
+  try {
+    const sessionId = getSessionId();
+    const now = Date.now();
+    let heartbeats = {};
+    try {
+      heartbeats = JSON.parse(localStorage.getItem(HEARTBEAT_KEY) || '{}');
+    } catch (e) { heartbeats = {}; }
+
+    heartbeats[sessionId] = now;
+
+    // Prune stale sessions older than 5 minutes (300,000 ms)
+    const fiveMinutesAgo = now - 300000;
+    const active = {};
+    for (const [id, time] of Object.entries(heartbeats)) {
+      if (time > fiveMinutesAgo) {
+        active[id] = time;
+      }
+    }
+    localStorage.setItem(HEARTBEAT_KEY, JSON.stringify(active));
+    return Object.keys(active).length;
+  } catch (e) {
+    return 1;
+  }
+}
+
+// Get Real Active Live Users Count
+export function getLiveActiveUsersCount() {
+  try {
+    const now = Date.now();
+    const fiveMinutesAgo = now - 300000;
+    const heartbeats = JSON.parse(localStorage.getItem(HEARTBEAT_KEY) || '{}');
+    let count = 0;
+    for (const [, time] of Object.entries(heartbeats)) {
+      if (time > fiveMinutesAgo) {
+        count++;
+      }
+    }
+    // At least 1 active user if admin is currently viewing
+    return Math.max(1, count);
+  } catch (e) {
+    return 1;
+  }
+}
+
+// Track REAL Page View
 export function trackPageView(path = window.location.pathname) {
   try {
     const data = loadAnalytics();
     const visitorId = getVisitorId();
-    const sessionId = getSessionId();
     const { device, browser, os } = detectDevice();
+    const today = getArabicDayName();
 
+    // 1. Increment total visits
     data.totalVisits = (data.totalVisits || 0) + 1;
 
-    // Check if new unique visitor in this session
-    const seenVisitorsKey = 'movora_seen_vids';
+    // 2. Check unique visitor
+    const seenVisitorsKey = 'movora_real_seen_vids';
     let seenVids = [];
     try {
       seenVids = JSON.parse(localStorage.getItem(seenVisitorsKey) || '[]');
@@ -155,16 +183,32 @@ export function trackPageView(path = window.location.pathname) {
 
     if (!seenVids.includes(visitorId)) {
       seenVids.push(visitorId);
-      if (seenVids.length > 500) seenVids = seenVids.slice(-500);
       localStorage.setItem(seenVisitorsKey, JSON.stringify(seenVids));
       data.uniqueVisitorsCount = (data.uniqueVisitorsCount || 0) + 1;
     }
 
-    // Add recent event
+    // 3. Increment Device and Browser counters
+    if (!data.deviceCounts) data.deviceCounts = { Mobile: 0, Desktop: 0, Tablet: 0 };
+    data.deviceCounts[device] = (data.deviceCounts[device] || 0) + 1;
+
+    if (!data.browserCounts) data.browserCounts = {};
+    data.browserCounts[browser] = (data.browserCounts[browser] || 0) + 1;
+
+    // 4. Update Daily Traffic for today
+    if (!data.dailyTraffic || data.dailyTraffic.length === 0) {
+      data.dailyTraffic = createEmptyAnalytics().dailyTraffic;
+    }
+    const todayIndex = data.dailyTraffic.findIndex(d => d.day === today);
+    if (todayIndex > -1) {
+      data.dailyTraffic[todayIndex].visits = (data.dailyTraffic[todayIndex].visits || 0) + 1;
+    }
+
+    // 5. Add to real-time events stream
+    const pageLabel = path === '/' ? 'تصفح الصفحة الرئيسية' : `زيارة: ${path}`;
     const newEvent = {
-      id: 'ev_' + Date.now().toString(36),
+      id: 'ev_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
       type: 'page_view',
-      label: path === '/' ? 'تصفح الصفحة الرئيسية' : `زيارة صفحة: ${path}`,
+      label: pageLabel,
       device,
       browser,
       os,
@@ -173,25 +217,37 @@ export function trackPageView(path = window.location.pathname) {
       timestamp: Date.now(),
     };
 
-    data.recentEvents = [newEvent, ...(data.recentEvents || [])].slice(0, 25);
+    data.recentEvents = [newEvent, ...(data.recentEvents || [])].slice(0, 30);
 
     saveAnalytics(data);
+    recordHeartbeat();
   } catch (err) {
     console.warn('Track page view error:', err);
   }
 }
 
-// Track Movie Stream Playback
+// Track REAL Movie Stream Playback
 export function trackMovieStream(movie, server = 'primary') {
   if (!movie) return;
   try {
     const data = loadAnalytics();
     const { device, browser } = detectDevice();
     const title = movie.title || movie.original_title || 'فيلم بدون عنوان';
+    const today = getArabicDayName();
 
+    // 1. Increment total streams
     data.totalStreams = (data.totalStreams || 0) + 1;
 
-    // Update top movies count
+    // 2. Update Daily Traffic streams for today
+    if (!data.dailyTraffic || data.dailyTraffic.length === 0) {
+      data.dailyTraffic = createEmptyAnalytics().dailyTraffic;
+    }
+    const todayIndex = data.dailyTraffic.findIndex(d => d.day === today);
+    if (todayIndex > -1) {
+      data.dailyTraffic[todayIndex].streams = (data.dailyTraffic[todayIndex].streams || 0) + 1;
+    }
+
+    // 3. Update top movies count with REAL data
     let top = data.topMovies || [];
     const existingIndex = top.findIndex(m => m.id === movie.id);
     if (existingIndex > -1) {
@@ -207,15 +263,15 @@ export function trackMovieStream(movie, server = 'primary') {
       });
     }
 
-    // Sort descending by stream counts
+    // Sort descending by actual stream count
     top.sort((a, b) => (b.streams || 0) - (a.streams || 0));
-    data.topMovies = top.slice(0, 10);
+    data.topMovies = top.slice(0, 15);
 
-    // Add recent event
+    // 4. Add to real activity feed
     const newEvent = {
-      id: 'ev_' + Date.now().toString(36),
+      id: 'ev_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
       type: 'movie_stream',
-      label: `مشاهدة فيلم: ${title}`,
+      label: `بدء تشغيل فيلم: ${title}`,
       device,
       browser,
       time: 'الآن',
@@ -223,45 +279,61 @@ export function trackMovieStream(movie, server = 'primary') {
       timestamp: Date.now(),
     };
 
-    data.recentEvents = [newEvent, ...(data.recentEvents || [])].slice(0, 25);
+    data.recentEvents = [newEvent, ...(data.recentEvents || [])].slice(0, 30);
 
     saveAnalytics(data);
+    recordHeartbeat();
   } catch (err) {
     console.warn('Track movie stream error:', err);
   }
 }
 
-// Calculate active live users (real-time heartbeat calculation)
-export function getLiveActiveUsersCount() {
-  // Returns realistic dynamic active users count based on current hour
-  const hour = new Date().getHours();
-  // Peak between 18:00 and 01:00
-  let base = 28;
-  if (hour >= 18 || hour <= 2) {
-    base = 65;
-  } else if (hour >= 12 && hour < 18) {
-    base = 42;
+// Compute Device Percentages from Real Counts
+export function getDevicePercentages(deviceCounts = {}) {
+  const mobile = deviceCounts.Mobile || 0;
+  const desktop = deviceCounts.Desktop || 0;
+  const tablet = deviceCounts.Tablet || 0;
+  const total = mobile + desktop + tablet;
+
+  if (total === 0) {
+    return { Mobile: 0, Desktop: 0, Tablet: 0 };
   }
-  const variance = Math.floor(Math.random() * 9) - 4;
-  return Math.max(12, base + variance);
+
+  return {
+    Mobile: Math.round((mobile / total) * 100),
+    Desktop: Math.round((desktop / total) * 100),
+    Tablet: Math.round((tablet / total) * 100),
+  };
 }
 
-// Reset Analytics (Admin Action)
+// Compute Browser Percentages from Real Counts
+export function getBrowserPercentages(browserCounts = {}) {
+  const total = Object.values(browserCounts).reduce((a, b) => a + b, 0);
+  if (total === 0) return {};
+
+  const pcts = {};
+  for (const [b, count] of Object.entries(browserCounts)) {
+    if (count > 0) {
+      pcts[b] = Math.round((count / total) * 100);
+    }
+  }
+  return pcts;
+}
+
+// Reset Analytics to Clean Zero
 export function resetAnalyticsData() {
-  const initial = getInitialAnalyticsData();
-  initial.totalVisits = 1;
-  initial.uniqueVisitorsCount = 1;
-  initial.totalStreams = 0;
-  initial.recentEvents = [{
+  const empty = createEmptyAnalytics();
+  empty.recentEvents = [{
     id: 'ev_' + Date.now().toString(36),
     type: 'system',
-    label: 'تمت إعادة ضبط إحصائيات الترافيك بواسطة الأدمن',
+    label: 'تمت تصفية وبدء تسجيل الترافيك الحقيقي من الصفر',
     device: 'Desktop',
     time: 'الآن',
     timestamp: Date.now(),
   }];
-  saveAnalytics(initial);
-  return initial;
+  saveAnalytics(empty);
+  localStorage.removeItem('movora_real_seen_vids');
+  return empty;
 }
 
 // Export Analytics Data as JSON
@@ -271,7 +343,7 @@ export function exportAnalyticsJson() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `movora-traffic-report-${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `movora-real-traffic-${new Date().toISOString().split('T')[0]}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -281,7 +353,10 @@ export default {
   saveAnalytics,
   trackPageView,
   trackMovieStream,
+  recordHeartbeat,
   getLiveActiveUsersCount,
+  getDevicePercentages,
+  getBrowserPercentages,
   resetAnalyticsData,
   exportAnalyticsJson,
 };
