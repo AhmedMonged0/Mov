@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Film, Play, Star, ShieldCheck, ShieldAlert, Sparkles, Languages } from 'lucide-react';
+import { X, Server, Film, Play, Star, ShieldCheck, Languages } from 'lucide-react';
 import { fetchMovieVideos } from '../../services/tmdb';
 import '../../styles/VideoModal.css';
 
 export default function VideoModal({ movie, onClose }) {
   const [activeServer, setActiveServer] = useState('primary'); // 'primary' | 'multiembed' | 'backup' | 'trailer'
-  const [shieldActive, setShieldActive] = useState(true); // Chic Anti-Popup Ad Shield
   const [trailerKey, setTrailerKey] = useState(null);
   const [loadingTrailer, setLoadingTrailer] = useState(true);
 
@@ -24,6 +23,16 @@ export default function VideoModal({ movie, onClose }) {
     return () => {
       document.body.style.overflow = 'auto';
     };
+  }, []);
+
+  // Prevent third-party iframe from hijacking parent window (Top-Redirect Hijack Protection)
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
   // Fetch Trailer from TMDB
@@ -81,11 +90,6 @@ export default function VideoModal({ movie, onClose }) {
       : 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1';
   }
 
-  // Sandbox permissions: When shield is active, block top-navigation (page redirect hijack) and popups
-  const sandboxRules = shieldActive && activeServer !== 'trailer'
-    ? "allow-forms allow-scripts allow-same-origin allow-presentation"
-    : undefined;
-
   return (
     <div className="video-modal-overlay" onClick={onClose} dir="rtl">
       <div 
@@ -113,15 +117,14 @@ export default function VideoModal({ movie, onClose }) {
           </div>
 
           <div className="modal-header-actions">
-            {/* Chic Smart Ad Shield Toggle */}
-            <button 
-              className={`ad-shield-badge ${shieldActive ? 'active' : 'inactive'}`}
-              onClick={() => setShieldActive(!shieldActive)}
-              title={shieldActive ? "الحماية الذكية مفعّلة لمنع النوافذ المنبثقة والإعلانات المزعجة" : "انقر لتفعيل الحماية الذكية"}
+            {/* Movora Secure Stream Badge */}
+            <div 
+              className="ad-shield-badge active"
+              title="نظام موفورا الذكي لحماية مسار البث وتوفير الصوت الإنجليزي الأصلي"
             >
-              {shieldActive ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
-              <span>{shieldActive ? 'درع الحماية: مفعّل' : 'درع الحماية: متوقف'}</span>
-            </button>
+              <ShieldCheck size={14} />
+              <span>بث آمن ومباشر</span>
+            </div>
 
             {/* Close Button */}
             <button 
@@ -178,17 +181,15 @@ export default function VideoModal({ movie, onClose }) {
           </div>
         </div>
 
-        {/* Video Player Iframe Container (Responsive aspect-video with Anti-Popup Shield) */}
+        {/* Video Player Iframe Container (Responsive aspect-video) */}
         <div className="video-player-frame-wrapper">
           <iframe
-            key={`${activeServer}-${movie.id}-${shieldActive}`}
+            key={`${activeServer}-${movie.id}`}
             src={iframeSrc}
             title={title}
             className="video-player-iframe"
             allowFullScreen
             allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-            referrerPolicy="no-referrer"
-            sandbox={sandboxRules}
           />
         </div>
 

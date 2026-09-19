@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Play, Download, Star, ArrowRight, Film, Clock, Calendar, Server, Languages, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Play, Download, Star, ArrowRight, Film, Clock, Calendar, Server, Languages, ShieldCheck } from 'lucide-react';
 import { fetchMovieDetails, fetchMovieVideos, getPosterUrl, getBackdropUrl } from '../services/tmdb';
 import '../styles/Details.css';
 
@@ -11,9 +11,19 @@ export default function MovieDetails() {
   const [error, setError] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentServer, setCurrentServer] = useState('primary'); // 'primary' | 'multiembed' | 'backup' | 'trailer'
-  const [shieldActive, setShieldActive] = useState(true);
   const [trailerKey, setTrailerKey] = useState(null);
   const [imgError, setImgError] = useState(false);
+
+  // Prevent third-party iframe from hijacking parent window when playing
+  useEffect(() => {
+    if (!isPlaying) return;
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isPlaying]);
 
   useEffect(() => {
     const getMovie = async () => {
@@ -93,11 +103,6 @@ export default function MovieDetails() {
       : 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1';
   }
 
-  // Ad Shield Sandbox rules
-  const sandboxRules = shieldActive && currentServer !== 'trailer'
-    ? "allow-forms allow-scripts allow-same-origin allow-presentation"
-    : undefined;
-
   return (
     <div className="details-page" dir="rtl">
       {backdropUrl && (
@@ -139,37 +144,33 @@ export default function MovieDetails() {
               >
                 التريلر
               </button>
-              <button 
-                className={`ad-shield-badge ${shieldActive ? 'active' : 'inactive'}`}
-                onClick={() => setShieldActive(!shieldActive)}
-                title={shieldActive ? "الحماية الذكية مفعّلة لمنع الإعلانات والنوافذ المنبثقة" : "الحماية معطلة"}
+              <div 
+                className="ad-shield-badge active"
+                title="نظام موفورا الذكي لحماية مسار البث وتوفير الصوت الإنجليزي الأصلي"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: shieldActive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                  border: `1px solid ${shieldActive ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
-                  color: shieldActive ? '#4ade80' : '#f87171',
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  border: '1px solid rgba(34, 197, 94, 0.4)',
+                  color: '#4ade80',
                   borderRadius: '6px',
                   padding: '5px 9px',
-                  fontSize: '11px',
-                  cursor: 'pointer'
+                  fontSize: '11px'
                 }}
               >
-                {shieldActive ? <ShieldCheck size={13} /> : <ShieldAlert size={13} />}
-                <span>{shieldActive ? 'درع الحماية: نشط' : 'الحماية: متوقف'}</span>
-              </button>
+                <ShieldCheck size={13} />
+                <span>بث آمن ومباشر</span>
+              </div>
             </div>
           </div>
           <div className="iframe-wrapper">
             <iframe
-              key={`${currentServer}-${shieldActive}`}
+              key={currentServer}
               src={playerSrc}
               title={title}
               allowFullScreen
               allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-              referrerPolicy="no-referrer"
-              sandbox={sandboxRules}
             />
           </div>
           <div style={{
