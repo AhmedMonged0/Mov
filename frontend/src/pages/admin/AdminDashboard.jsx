@@ -25,6 +25,7 @@ import {
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { 
   loadAnalytics, 
+  fetchGlobalAnalytics,
   getLiveActiveUsersCount, 
   getDevicePercentages,
   getBrowserPercentages,
@@ -37,7 +38,7 @@ import '../../styles/AdminDashboard.css';
 export default function AdminDashboard() {
   const { logoutAdmin, changeAdminSecret } = useAdminAuth();
 
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => loadAnalytics());
   const [liveUsers, setLiveUsers] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('ar-EG'));
@@ -48,34 +49,41 @@ export default function AdminDashboard() {
   const [newSecret, setNewSecret] = useState('');
   const [pwdFeedback, setPwdFeedback] = useState(null);
 
-  // Load real analytics data
-  const refreshData = useCallback(() => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      recordHeartbeat();
-      const current = loadAnalytics();
-      setData(current);
+  // Load real global analytics data from cloud
+  const refreshData = useCallback(async (showSpinner = true) => {
+    if (showSpinner) setIsRefreshing(true);
+    recordHeartbeat();
+    try {
+      const current = await fetchGlobalAnalytics();
+      if (current) {
+        setData(current);
+        setLiveUsers(current.liveActiveCount || 1);
+      }
+    } catch (e) {
+      const local = loadAnalytics();
+      setData(local);
       setLiveUsers(getLiveActiveUsersCount());
-      setIsRefreshing(false);
-    }, 250);
+    } finally {
+      if (showSpinner) setIsRefreshing(false);
+    }
   }, []);
 
-  // Initial load and live clock interval
+  // Initial load and live intervals
   useEffect(() => {
-    refreshData();
+    refreshData(false);
 
     const timeInterval = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString('ar-EG'));
     }, 1000);
 
-    // Live heartbeat pulse update every 10 seconds
-    const heartbeatInterval = setInterval(() => {
-      setLiveUsers(getLiveActiveUsersCount());
-    }, 10000);
+    // Auto-fetch real-time cloud data every 6 seconds silently
+    const cloudPollInterval = setInterval(() => {
+      refreshData(false);
+    }, 6000);
 
     return () => {
       clearInterval(timeInterval);
-      clearInterval(heartbeatInterval);
+      clearInterval(cloudPollInterval);
     };
   }, [refreshData]);
 
@@ -96,9 +104,9 @@ export default function AdminDashboard() {
   };
 
   // Handle data reset
-  const handleResetData = () => {
+  const handleResetData = async () => {
     if (window.confirm('هل تريد تصفية وبدء تسجيل الترافيك الحقيقي من الصفر (0)؟')) {
-      const fresh = resetAnalyticsData();
+      const fresh = await resetAnalyticsData();
       setData(fresh);
       setLiveUsers(1);
       alert('تمت تصفية الإحصائيات وبدء الحساب الحقيقي من الصفر.');

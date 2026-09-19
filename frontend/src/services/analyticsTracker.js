@@ -1,14 +1,15 @@
 // ==========================================================================
-// MOVORA REAL-TIME TRAFFIC & ANALYTICS ENGINE (100% REAL DATA)
+// MOVORA REAL-TIME GLOBAL TRAFFIC & ANALYTICS ENGINE (100% REAL CLOUD DATA)
+// Syncs seamlessly across all mobile phones, PCs, tablets, and devices worldwide
 // ==========================================================================
 
-const STORAGE_KEY = 'movora_real_analytics_v2';
+const STORAGE_KEY = 'movora_real_analytics_v3';
 const VISITOR_KEY = 'movora_visitor_id';
 const SESSION_KEY = 'movora_session_id';
-const HEARTBEAT_KEY = 'movora_heartbeats';
+const CLOUD_ENDPOINT = 'https://api.restful-api.dev/objects/ff808181a09d98f701a0b8c87b4240e0';
 
 // Generate or retrieve persistent unique visitor ID
-function getVisitorId() {
+export function getVisitorId() {
   let id = localStorage.getItem(VISITOR_KEY);
   if (!id) {
     id = 'v_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
@@ -18,7 +19,7 @@ function getVisitorId() {
 }
 
 // Generate or retrieve current browser session ID
-function getSessionId() {
+export function getSessionId() {
   let sid = sessionStorage.getItem(SESSION_KEY);
   if (!sid) {
     sid = 's_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
@@ -28,8 +29,8 @@ function getSessionId() {
 }
 
 // Detect client device information
-function detectDevice() {
-  const ua = navigator.userAgent || '';
+export function detectDevice() {
+  const ua = (navigator.userAgent || '').toLowerCase();
   let device = 'Desktop';
   if (/tablet|ipad|playbook|silk/i.test(ua)) {
     device = 'Tablet';
@@ -54,17 +55,18 @@ function detectDevice() {
 }
 
 // Get day name in Arabic
-function getArabicDayName(date = new Date()) {
+export function getArabicDayName(date = new Date()) {
   const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   return days[date.getDay()];
 }
 
 // Clean Initial State starting with 0 (Zero fake numbers!)
-function createEmptyAnalytics() {
+export function createEmptyAnalytics() {
   const days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
   return {
     totalVisits: 0,
     uniqueVisitorsCount: 0,
+    uniqueVisitorIds: [],
     totalStreams: 0,
     deviceCounts: {
       Mobile: 0,
@@ -86,11 +88,13 @@ function createEmptyAnalytics() {
     })),
     topMovies: [],
     recentEvents: [],
+    activeSessions: {},
+    liveActiveCount: 1,
     lastUpdated: Date.now(),
   };
 }
 
-// Load current analytics state from storage
+// Load current analytics state from local cache
 export function loadAnalytics() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -99,200 +103,340 @@ export function loadAnalytics() {
       saveAnalytics(empty);
       return empty;
     }
-    const parsed = JSON.parse(raw);
-    return parsed;
+    return JSON.parse(raw);
   } catch (err) {
-    console.error('Error loading analytics:', err);
     return createEmptyAnalytics();
   }
 }
 
-// Save analytics state to storage
+// Save analytics state to local cache
 export function saveAnalytics(data) {
   try {
     data.lastUpdated = Date.now();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (err) {
-    console.error('Error saving analytics:', err);
+    console.warn('Error saving local analytics:', err);
   }
 }
 
-// Record Active Heartbeat for Live Users
-export function recordHeartbeat() {
+// Convert cloud flat record to normalized frontend object
+function normalizeCloudData(cloudObj) {
+  const empty = createEmptyAnalytics();
+  if (!cloudObj || !cloudObj.data) return empty;
+  const d = cloudObj.data;
+
+  let topMovies = [];
   try {
-    const sessionId = getSessionId();
-    const now = Date.now();
-    let heartbeats = {};
-    try {
-      heartbeats = JSON.parse(localStorage.getItem(HEARTBEAT_KEY) || '{}');
-    } catch (e) { heartbeats = {}; }
+    topMovies = d.topMoviesJson ? JSON.parse(d.topMoviesJson) : [];
+  } catch (e) { topMovies = []; }
 
-    heartbeats[sessionId] = now;
-
-    // Prune stale sessions older than 5 minutes (300,000 ms)
-    const fiveMinutesAgo = now - 300000;
-    const active = {};
-    for (const [id, time] of Object.entries(heartbeats)) {
-      if (time > fiveMinutesAgo) {
-        active[id] = time;
-      }
-    }
-    localStorage.setItem(HEARTBEAT_KEY, JSON.stringify(active));
-    return Object.keys(active).length;
-  } catch (e) {
-    return 1;
-  }
-}
-
-// Get Real Active Live Users Count
-export function getLiveActiveUsersCount() {
+  let recentEvents = [];
   try {
-    const now = Date.now();
-    const fiveMinutesAgo = now - 300000;
-    const heartbeats = JSON.parse(localStorage.getItem(HEARTBEAT_KEY) || '{}');
-    let count = 0;
-    for (const [, time] of Object.entries(heartbeats)) {
-      if (time > fiveMinutesAgo) {
-        count++;
-      }
+    recentEvents = d.recentEventsJson ? JSON.parse(d.recentEventsJson) : [];
+  } catch (e) { recentEvents = []; }
+
+  let dailyTraffic = empty.dailyTraffic;
+  try {
+    if (d.dailyTrafficJson) {
+      dailyTraffic = JSON.parse(d.dailyTrafficJson);
     }
-    // At least 1 active user if admin is currently viewing
-    return Math.max(1, count);
-  } catch (e) {
-    return 1;
+  } catch (e) { dailyTraffic = empty.dailyTraffic; }
+
+  let activeSessions = {};
+  try {
+    activeSessions = d.liveSessionsJson ? JSON.parse(d.liveSessionsJson) : {};
+  } catch (e) { activeSessions = {}; }
+
+  let uniqueVisitorIds = [];
+  try {
+    uniqueVisitorIds = d.uniqueVisitorIdsJson ? JSON.parse(d.uniqueVisitorIdsJson) : [];
+  } catch (e) { uniqueVisitorIds = []; }
+
+  // Prune sessions older than 5 minutes
+  const now = Date.now();
+  let liveCount = 0;
+  const prunedSessions = {};
+  for (const [sid, time] of Object.entries(activeSessions)) {
+    if (now - time < 300000) {
+      prunedSessions[sid] = time;
+      liveCount++;
+    }
+  }
+
+  return {
+    totalVisits: Number(d.totalVisits) || 0,
+    uniqueVisitorsCount: Number(d.uniqueVisitorsCount) || 0,
+    uniqueVisitorIds,
+    totalStreams: Number(d.totalStreams) || 0,
+    deviceCounts: {
+      Mobile: Number(d.deviceMobile) || 0,
+      Desktop: Number(d.deviceDesktop) || 0,
+      Tablet: Number(d.deviceTablet) || 0,
+    },
+    browserCounts: {
+      Chrome: Number(d.browserChrome) || 0,
+      Safari: Number(d.browserSafari) || 0,
+      Edge: Number(d.browserEdge) || 0,
+      Firefox: Number(d.browserFirefox) || 0,
+      Opera: Number(d.browserOpera) || 0,
+      Brave: Number(d.browserBrave) || 0,
+    },
+    dailyTraffic,
+    topMovies,
+    recentEvents,
+    activeSessions: prunedSessions,
+    liveActiveCount: Math.max(1, liveCount),
+    lastUpdated: d.lastUpdated || now,
+  };
+}
+
+// Convert normalized frontend object back to cloud flat record
+function serializeCloudPayload(data) {
+  return {
+    name: 'movora_production_cloud_analytics_v1',
+    data: {
+      totalVisits: data.totalVisits || 0,
+      uniqueVisitorsCount: data.uniqueVisitorsCount || 0,
+      totalStreams: data.totalStreams || 0,
+      deviceMobile: data.deviceCounts?.Mobile || 0,
+      deviceDesktop: data.deviceCounts?.Desktop || 0,
+      deviceTablet: data.deviceCounts?.Tablet || 0,
+      browserChrome: data.browserCounts?.Chrome || 0,
+      browserSafari: data.browserCounts?.Safari || 0,
+      browserEdge: data.browserCounts?.Edge || 0,
+      browserFirefox: data.browserCounts?.Firefox || 0,
+      browserOpera: data.browserCounts?.Opera || 0,
+      browserBrave: data.browserCounts?.Brave || 0,
+      uniqueVisitorIdsJson: JSON.stringify(data.uniqueVisitorIds || []),
+      dailyTrafficJson: JSON.stringify(data.dailyTraffic || []),
+      topMoviesJson: JSON.stringify((data.topMovies || []).slice(0, 20)),
+      recentEventsJson: JSON.stringify((data.recentEvents || []).slice(0, 30)),
+      liveSessionsJson: JSON.stringify(data.activeSessions || {}),
+      lastUpdated: Date.now(),
+    },
+  };
+}
+
+// Fetch Global Live Analytics from Cloud
+export async function fetchGlobalAnalytics() {
+  if (!CLOUD_ENDPOINT) return loadAnalytics();
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+
+    const res = await fetch(CLOUD_ENDPOINT, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    if (res.ok) {
+      const raw = await res.json();
+      const normalized = normalizeCloudData(raw);
+      saveAnalytics(normalized);
+      return normalized;
+    }
+  } catch (err) {
+    // Graceful offline fallback
+  }
+  return loadAnalytics();
+}
+
+// Push Global Live Analytics to Cloud
+async function pushGlobalAnalytics(data) {
+  if (!CLOUD_ENDPOINT) return false;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+
+    const payload = serializeCloudPayload(data);
+    const res = await fetch(CLOUD_ENDPOINT, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    return res.ok;
+  } catch (err) {
+    return false;
   }
 }
 
-// Track REAL Page View
+// Track REAL Page View (Called on every page navigation)
 export function trackPageView(path = window.location.pathname) {
   try {
-    const data = loadAnalytics();
     const visitorId = getVisitorId();
+    const sessionId = getSessionId();
     const { device, browser, os } = detectDevice();
     const today = getArabicDayName();
 
-    // 1. Increment total visits
-    data.totalVisits = (data.totalVisits || 0) + 1;
+    // 1. Immediately update local cache for zero delay
+    const local = loadAnalytics();
+    local.totalVisits = (local.totalVisits || 0) + 1;
+    saveAnalytics(local);
 
-    // 2. Check unique visitor
-    const seenVisitorsKey = 'movora_real_seen_vids';
-    let seenVids = [];
-    try {
-      seenVids = JSON.parse(localStorage.getItem(seenVisitorsKey) || '[]');
-    } catch (e) { seenVids = []; }
+    // 2. Asynchronously sync to global cloud
+    setTimeout(async () => {
+      try {
+        const globalData = await fetchGlobalAnalytics();
+        globalData.totalVisits = (globalData.totalVisits || 0) + 1;
 
-    if (!seenVids.includes(visitorId)) {
-      seenVids.push(visitorId);
-      localStorage.setItem(seenVisitorsKey, JSON.stringify(seenVids));
-      data.uniqueVisitorsCount = (data.uniqueVisitorsCount || 0) + 1;
-    }
+        // Unique visitor check
+        if (!globalData.uniqueVisitorIds) globalData.uniqueVisitorIds = [];
+        if (!globalData.uniqueVisitorIds.includes(visitorId)) {
+          globalData.uniqueVisitorIds.push(visitorId);
+          globalData.uniqueVisitorsCount = globalData.uniqueVisitorIds.length;
+        }
 
-    // 3. Increment Device and Browser counters
-    if (!data.deviceCounts) data.deviceCounts = { Mobile: 0, Desktop: 0, Tablet: 0 };
-    data.deviceCounts[device] = (data.deviceCounts[device] || 0) + 1;
+        // Device & Browser counts
+        if (!globalData.deviceCounts) globalData.deviceCounts = { Mobile: 0, Desktop: 0, Tablet: 0 };
+        globalData.deviceCounts[device] = (globalData.deviceCounts[device] || 0) + 1;
 
-    if (!data.browserCounts) data.browserCounts = {};
-    data.browserCounts[browser] = (data.browserCounts[browser] || 0) + 1;
+        if (!globalData.browserCounts) globalData.browserCounts = {};
+        globalData.browserCounts[browser] = (globalData.browserCounts[browser] || 0) + 1;
 
-    // 4. Update Daily Traffic for today
-    if (!data.dailyTraffic || data.dailyTraffic.length === 0) {
-      data.dailyTraffic = createEmptyAnalytics().dailyTraffic;
-    }
-    const todayIndex = data.dailyTraffic.findIndex(d => d.day === today);
-    if (todayIndex > -1) {
-      data.dailyTraffic[todayIndex].visits = (data.dailyTraffic[todayIndex].visits || 0) + 1;
-    }
+        // Daily traffic for today
+        if (globalData.dailyTraffic) {
+          const idx = globalData.dailyTraffic.findIndex(d => d.day === today);
+          if (idx > -1) {
+            globalData.dailyTraffic[idx].visits = (globalData.dailyTraffic[idx].visits || 0) + 1;
+          }
+        }
 
-    // 5. Add to real-time events stream
-    const pageLabel = path === '/' ? 'تصفح الصفحة الرئيسية' : `زيارة: ${path}`;
-    const newEvent = {
-      id: 'ev_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
-      type: 'page_view',
-      label: pageLabel,
-      device,
-      browser,
-      os,
-      time: 'الآن',
-      path,
-      timestamp: Date.now(),
-    };
+        // Active session heartbeat
+        if (!globalData.activeSessions) globalData.activeSessions = {};
+        globalData.activeSessions[sessionId] = Date.now();
 
-    data.recentEvents = [newEvent, ...(data.recentEvents || [])].slice(0, 30);
+        // Recent event log
+        const label = path === '/' ? 'تصفح الصفحة الرئيسية' : `زيارة: ${path}`;
+        const newEvent = {
+          id: 'ev_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
+          type: 'page_view',
+          label,
+          device,
+          browser,
+          os,
+          time: 'الآن',
+          path,
+          timestamp: Date.now(),
+        };
+        globalData.recentEvents = [newEvent, ...(globalData.recentEvents || [])].slice(0, 30);
 
-    saveAnalytics(data);
-    recordHeartbeat();
+        saveAnalytics(globalData);
+        await pushGlobalAnalytics(globalData);
+      } catch (e) {
+        console.warn('Sync page view warning:', e);
+      }
+    }, 100);
   } catch (err) {
     console.warn('Track page view error:', err);
   }
 }
 
-// Track REAL Movie Stream Playback
+// Track REAL Movie Stream Playback (Called whenever any user plays a movie)
 export function trackMovieStream(movie, server = 'primary') {
   if (!movie) return;
   try {
-    const data = loadAnalytics();
+    const sessionId = getSessionId();
     const { device, browser } = detectDevice();
     const title = movie.title || movie.original_title || 'فيلم بدون عنوان';
     const today = getArabicDayName();
 
-    // 1. Increment total streams
-    data.totalStreams = (data.totalStreams || 0) + 1;
+    // 1. Immediately update local cache
+    const local = loadAnalytics();
+    local.totalStreams = (local.totalStreams || 0) + 1;
+    saveAnalytics(local);
 
-    // 2. Update Daily Traffic streams for today
-    if (!data.dailyTraffic || data.dailyTraffic.length === 0) {
-      data.dailyTraffic = createEmptyAnalytics().dailyTraffic;
-    }
-    const todayIndex = data.dailyTraffic.findIndex(d => d.day === today);
-    if (todayIndex > -1) {
-      data.dailyTraffic[todayIndex].streams = (data.dailyTraffic[todayIndex].streams || 0) + 1;
-    }
+    // 2. Asynchronously sync to global cloud
+    setTimeout(async () => {
+      try {
+        const globalData = await fetchGlobalAnalytics();
+        globalData.totalStreams = (globalData.totalStreams || 0) + 1;
 
-    // 3. Update top movies count with REAL data
-    let top = data.topMovies || [];
-    const existingIndex = top.findIndex(m => m.id === movie.id);
-    if (existingIndex > -1) {
-      top[existingIndex].streams = (top[existingIndex].streams || 0) + 1;
-      top[existingIndex].server = server;
-    } else {
-      top.push({
-        id: movie.id,
-        title,
-        streams: 1,
-        rating: movie.vote_average ? movie.vote_average.toFixed(1) : '8.0',
-        server,
-      });
-    }
+        // Update daily traffic streams
+        if (globalData.dailyTraffic) {
+          const idx = globalData.dailyTraffic.findIndex(d => d.day === today);
+          if (idx > -1) {
+            globalData.dailyTraffic[idx].streams = (globalData.dailyTraffic[idx].streams || 0) + 1;
+          }
+        }
 
-    // Sort descending by actual stream count
-    top.sort((a, b) => (b.streams || 0) - (a.streams || 0));
-    data.topMovies = top.slice(0, 15);
+        // Update top movies table
+        let top = globalData.topMovies || [];
+        const existingIndex = top.findIndex(m => String(m.id) === String(movie.id));
+        if (existingIndex > -1) {
+          top[existingIndex].streams = (top[existingIndex].streams || 0) + 1;
+          top[existingIndex].server = server;
+        } else {
+          top.push({
+            id: movie.id,
+            title,
+            streams: 1,
+            rating: movie.vote_average ? movie.vote_average.toFixed(1) : '8.0',
+            server,
+          });
+        }
+        top.sort((a, b) => (b.streams || 0) - (a.streams || 0));
+        globalData.topMovies = top.slice(0, 20);
 
-    // 4. Add to real activity feed
-    const newEvent = {
-      id: 'ev_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
-      type: 'movie_stream',
-      label: `بدء تشغيل فيلم: ${title}`,
-      device,
-      browser,
-      time: 'الآن',
-      server,
-      timestamp: Date.now(),
-    };
+        // Active session heartbeat
+        if (!globalData.activeSessions) globalData.activeSessions = {};
+        globalData.activeSessions[sessionId] = Date.now();
 
-    data.recentEvents = [newEvent, ...(data.recentEvents || [])].slice(0, 30);
+        // Recent stream event
+        const newEvent = {
+          id: 'ev_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
+          type: 'movie_stream',
+          label: `بدء تشغيل فيلم: ${title}`,
+          device,
+          browser,
+          time: 'الآن',
+          server,
+          timestamp: Date.now(),
+        };
+        globalData.recentEvents = [newEvent, ...(globalData.recentEvents || [])].slice(0, 30);
 
-    saveAnalytics(data);
-    recordHeartbeat();
+        saveAnalytics(globalData);
+        await pushGlobalAnalytics(globalData);
+      } catch (e) {
+        console.warn('Sync movie stream warning:', e);
+      }
+    }, 100);
   } catch (err) {
     console.warn('Track movie stream error:', err);
   }
 }
 
+// Record Active Heartbeat for Live Users
+export function recordHeartbeat() {
+  const sessionId = getSessionId();
+  try {
+    const local = loadAnalytics();
+    if (!local.activeSessions) local.activeSessions = {};
+    local.activeSessions[sessionId] = Date.now();
+    saveAnalytics(local);
+  } catch (e) {}
+}
+
+// Get Real Active Live Users Count
+export function getLiveActiveUsersCount() {
+  try {
+    const data = loadAnalytics();
+    return data.liveActiveCount || 1;
+  } catch (e) {
+    return 1;
+  }
+}
+
 // Compute Device Percentages from Real Counts
 export function getDevicePercentages(deviceCounts = {}) {
-  const mobile = deviceCounts.Mobile || 0;
-  const desktop = deviceCounts.Desktop || 0;
-  const tablet = deviceCounts.Tablet || 0;
+  const mobile = deviceCounts?.Mobile || 0;
+  const desktop = deviceCounts?.Desktop || 0;
+  const tablet = deviceCounts?.Tablet || 0;
   const total = mobile + desktop + tablet;
 
   if (total === 0) {
@@ -308,7 +452,8 @@ export function getDevicePercentages(deviceCounts = {}) {
 
 // Compute Browser Percentages from Real Counts
 export function getBrowserPercentages(browserCounts = {}) {
-  const total = Object.values(browserCounts).reduce((a, b) => a + b, 0);
+  if (!browserCounts) return {};
+  const total = Object.values(browserCounts).reduce((a, b) => a + Number(b), 0);
   if (total === 0) return {};
 
   const pcts = {};
@@ -320,19 +465,19 @@ export function getBrowserPercentages(browserCounts = {}) {
   return pcts;
 }
 
-// Reset Analytics to Clean Zero
-export function resetAnalyticsData() {
+// Reset Analytics to Clean Zero in both Local and Cloud
+export async function resetAnalyticsData() {
   const empty = createEmptyAnalytics();
   empty.recentEvents = [{
     id: 'ev_' + Date.now().toString(36),
     type: 'system',
-    label: 'تمت تصفية وبدء تسجيل الترافيك الحقيقي من الصفر',
+    label: 'تمت تصفية وبدء تسجيل الترافيك الحقيقي من الصفر (0)',
     device: 'Desktop',
     time: 'الآن',
     timestamp: Date.now(),
   }];
   saveAnalytics(empty);
-  localStorage.removeItem('movora_real_seen_vids');
+  await pushGlobalAnalytics(empty);
   return empty;
 }
 
@@ -350,6 +495,7 @@ export function exportAnalyticsJson() {
 
 export default {
   loadAnalytics,
+  fetchGlobalAnalytics,
   saveAnalytics,
   trackPageView,
   trackMovieStream,
