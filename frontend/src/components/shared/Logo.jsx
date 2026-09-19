@@ -127,6 +127,7 @@ export default function Logo({
           />
           {showBadge && (
             <span
+              className="logo-badge-pill"
               style={{
                 fontSize: '9px',
                 fontWeight: 800,
@@ -146,6 +147,7 @@ export default function Logo({
 
         {showDomain && (
           <span 
+            className="logo-domain-label"
             style={{
               fontSize: dimensions.domainSize,
               color: '#64748b',

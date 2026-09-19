@@ -7,6 +7,7 @@ import '../../styles/Navbar.css';
 
 export default function Navbar() {
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [previewResults, setPreviewResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -16,6 +17,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const searchWrapperRef = useRef(null);
+  const searchInputRef = useRef(null);
   const debounceTimerRef = useRef(null);
 
   // Handle scroll effect for glassmorphic navbar
@@ -37,9 +39,11 @@ export default function Navbar() {
   }, [location.search]);
 
   // Keep dropdown open even during ad popups or outside clicks
-  // Close only on route change or Escape key
+  // Close on route change or Escape key
   useEffect(() => {
     setShowDropdown(false);
+    setMobileSearchOpen(false);
+    setMobileMenu(false);
   }, [location.pathname]);
 
   // Close dropdown on Escape key
@@ -47,11 +51,29 @@ export default function Navbar() {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         setShowDropdown(false);
+        setMobileSearchOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Open mobile full-width search
+  const openMobileSearch = () => {
+    setMobileSearchOpen(true);
+    setMobileMenu(false);
+    setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 120);
+  };
+
+  // Close mobile full-width search
+  const closeMobileSearch = () => {
+    setMobileSearchOpen(false);
+    setShowDropdown(false);
+  };
 
   // Debounced Live Search Autocomplete
   const handleQueryChange = (e) => {
@@ -75,7 +97,7 @@ export default function Navbar() {
     debounceTimerRef.current = setTimeout(async () => {
       try {
         const results = await searchMovies(val.trim(), 1);
-        setPreviewResults(Array.isArray(results) ? results.slice(0, 5) : []);
+        setPreviewResults(Array.isArray(results) ? results.slice(0, 6) : []);
       } catch (err) {
         setPreviewResults([]);
       } finally {
@@ -93,6 +115,7 @@ export default function Navbar() {
     if (searchQuery.trim()) {
       setShowDropdown(false);
       setMobileMenu(false);
+      setMobileSearchOpen(false);
       navigate(`/?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
@@ -101,6 +124,7 @@ export default function Navbar() {
   const handleSelectMovie = (movie) => {
     setShowDropdown(false);
     setMobileMenu(false);
+    setMobileSearchOpen(false);
     setSearchQuery('');
     navigate(`/movie/${movie.id}`);
   };
@@ -123,7 +147,7 @@ export default function Navbar() {
   ];
 
   return (
-    <header className={`navbar ${isScrolled ? 'scrolled' : ''}`} dir="rtl">
+    <header className={`navbar ${isScrolled ? 'scrolled' : ''} ${mobileSearchOpen ? 'mobile-search-active' : ''}`} dir="rtl">
       {/* Brand Logo with Custom Cinema Icon */}
       <div className="nav-brand-group">
         <Logo size="medium" showDomain={true} showBadge={true} badgeText="CINEMA" />
@@ -146,10 +170,26 @@ export default function Navbar() {
         })}
       </nav>
 
-      {/* Global Live Instant Search Bar */}
-      {/* Global Live Instant Search Bar */}
+      {/* Global Live Instant Search Bar & Actions */}
       <div className="nav-actions" ref={searchWrapperRef} onClick={(e) => e.stopPropagation()}>
-        <form onSubmit={handleSearchSubmit} className={`search ${showDropdown ? 'active-focus' : ''}`}>
+        {/* Mobile Search Trigger Icon (Visible only on mobile when search is NOT open) */}
+        {!mobileSearchOpen && (
+          <button 
+            type="button" 
+            className="mobile-search-trigger-btn"
+            onClick={openMobileSearch}
+            aria-label="فتح البحث"
+            title="بحث عن فيلم أو ممثل"
+          >
+            <Search size={19} />
+          </button>
+        )}
+
+        {/* Search Form (Always visible on desktop, or on mobile in mobile-search-active mode) */}
+        <form 
+          onSubmit={handleSearchSubmit} 
+          className={`search ${showDropdown ? 'active-focus' : ''} ${mobileSearchOpen ? 'mobile-expanded' : ''}`}
+        >
           <button type="submit" className="search-btn-icon" aria-label="بحث">
             {isSearching ? (
               <Loader2 size={16} className="search-spinner" />
@@ -159,6 +199,7 @@ export default function Navbar() {
           </button>
 
           <input 
+            ref={searchInputRef}
             value={searchQuery} 
             onChange={handleQueryChange}
             onFocus={() => {
@@ -188,6 +229,17 @@ export default function Navbar() {
               title="مسح البحث"
             >
               <X size={14} />
+            </button>
+          )}
+
+          {/* Cancel button in mobile search mode */}
+          {mobileSearchOpen && (
+            <button 
+              type="button" 
+              className="mobile-cancel-search-btn"
+              onClick={closeMobileSearch}
+            >
+              إلغاء
             </button>
           )}
         </form>
@@ -289,14 +341,16 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Mobile Menu Toggle */}
-        <button 
-          className="menu" 
-          onClick={() => setMobileMenu(!mobileMenu)}
-          aria-label="القائمة"
-        >
-          {mobileMenu ? <X size={22} /> : <Menu size={22} />}
-        </button>
+        {/* Mobile Menu Toggle (Hidden when mobile search is open) */}
+        {!mobileSearchOpen && (
+          <button 
+            className="menu" 
+            onClick={() => setMobileMenu(!mobileMenu)}
+            aria-label="القائمة"
+          >
+            {mobileMenu ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        )}
       </div>
     </header>
   );
