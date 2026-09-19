@@ -22,9 +22,14 @@ import {
   ShieldCheck,
   BarChart3,
   Cloud,
-  Database
+  Database,
+  DollarSign,
+  Sparkles,
+  Shield,
+  AlertCircle
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { getAdSettings, saveAdSettingsToCloud, extractVerificationCode } from '../../services/adShield';
 import { 
   loadAnalytics, 
   fetchGlobalAnalytics,
@@ -59,6 +64,12 @@ export default function AdminDashboard() {
   const [cloudStatus, setCloudStatus] = useState(true);
   const [cloudFeedback, setCloudFeedback] = useState(null);
 
+  // Monetag & Ads Modal State
+  const [showAdsModal, setShowAdsModal] = useState(false);
+  const [adSettings, setAdSettings] = useState(() => getAdSettings());
+  const [isSavingAds, setIsSavingAds] = useState(false);
+  const [adsFeedback, setAdsFeedback] = useState(null);
+
   // Load real global analytics data from cloud
   const refreshData = useCallback(async (showSpinner = true) => {
     if (showSpinner) setIsRefreshing(true);
@@ -68,6 +79,9 @@ export default function AdminDashboard() {
       if (current) {
         setData(current);
         setLiveUsers(current.liveActiveCount || 1);
+        if (current.adSettings) {
+          setAdSettings(prev => ({ ...prev, ...current.adSettings }));
+        }
       }
     } catch (e) {
       const local = loadAnalytics();
@@ -145,6 +159,28 @@ export default function AdminDashboard() {
     }
   };
 
+  // Handle Monetag Ads Settings Save
+  const handleSaveAds = async (e) => {
+    e.preventDefault();
+    setIsSavingAds(true);
+    setAdsFeedback(null);
+    try {
+      const res = await saveAdSettingsToCloud(adSettings);
+      if (res.success) {
+        setAdsFeedback({ success: true, message: 'تم حفظ وتفعيل إعدادات الإعلانات سحابياً بنجاح!' });
+        setTimeout(() => {
+          setAdsFeedback(null);
+        }, 3000);
+      } else {
+        setAdsFeedback({ success: false, message: 'حدث خطأ أثناء الحفظ في السحابة.' });
+      }
+    } catch (err) {
+      setAdsFeedback({ success: false, message: err.message });
+    } finally {
+      setIsSavingAds(false);
+    }
+  };
+
   if (!data) {
     return (
       <div className="admin-loading-screen" dir="rtl">
@@ -209,6 +245,20 @@ export default function AdminDashboard() {
           </button>
 
           <button 
+            className="admin-action-btn ads-btn"
+            onClick={() => setShowAdsModal(true)}
+            title="إدارة إعلانات Monetag وأرباح الموقع ودرع الحماية"
+            style={{
+              borderColor: 'rgba(234, 179, 8, 0.4)',
+              background: 'rgba(234, 179, 8, 0.1)',
+              color: '#facc15'
+            }}
+          >
+            <DollarSign size={15} style={{ color: '#facc15' }} />
+            <span>إعلانات Monetag والأرباح 💰</span>
+          </button>
+
+          <button 
             className="admin-action-btn"
             onClick={() => setShowCloudModal(true)}
             title="سحابة Movora متصلة وتعمل تلقائياً"
@@ -255,7 +305,7 @@ export default function AdminDashboard() {
           border: '1px solid rgba(34, 197, 94, 0.25)',
           borderRadius: '12px',
           padding: '12px 18px',
-          marginBottom: '22px',
+          marginBottom: '16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -291,6 +341,88 @@ export default function AdminDashboard() {
               <span>تحليلات Vercel السحابية لمشروع Movora (كافة الموبايلات والأجهزة)</span>
             </a>
           </div>
+        </div>
+
+        {/* Monetag Ads & Revenue Bar */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0%, rgba(15, 23, 42, 0.7) 100%)',
+          border: '1px solid rgba(234, 179, 8, 0.25)',
+          borderRadius: '12px',
+          padding: '14px 20px',
+          marginBottom: '22px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '14px',
+          flexWrap: 'wrap'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              background: 'rgba(234, 179, 8, 0.2)',
+              border: '1px solid rgba(234, 179, 8, 0.4)',
+              borderRadius: '8px',
+              padding: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#facc15'
+            }}>
+              <DollarSign size={20} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <strong style={{ fontSize: '15px', color: '#fff' }}>أرباح الموقع وإعلانات Monetag</strong>
+                <span style={{
+                  fontSize: '11px',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  background: adSettings.enabled ? 'rgba(34, 197, 94, 0.2)' : 'rgba(148, 163, 184, 0.15)',
+                  color: adSettings.enabled ? '#4ade80' : '#94a3b8',
+                  border: `1px solid ${adSettings.enabled ? 'rgba(34, 197, 94, 0.4)' : 'rgba(148, 163, 184, 0.3)'}`,
+                  fontWeight: 'bold'
+                }}>
+                  {adSettings.enabled ? 'إعلاناتك نشطة 🟢' : 'الإعلانات متوقفة ⚪'}
+                </span>
+                <span style={{
+                  fontSize: '11px',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  background: 'rgba(56, 189, 248, 0.15)',
+                  color: '#38bdf8',
+                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <ShieldCheck size={12} /> درع حظر الإعلانات الإباحية: مفعّل 🛡️
+                </span>
+              </div>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#94a3b8' }}>
+                تحكم بإعلانات موني تاج الخاصة بك، ضع كود التحقق والأرباح، وتأمين الزوار من إعلانات البث الخارجية.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowAdsModal(true)}
+            style={{
+              background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+              color: '#000',
+              fontWeight: 'bold',
+              border: 'none',
+              padding: '8px 18px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 4px 12px rgba(234, 179, 8, 0.25)'
+            }}
+          >
+            <Sparkles size={15} />
+            <span>إعداد وتفعيل Monetag</span>
+          </button>
         </div>
         
         {/* Row 1: 4 Vital KPI Cards (100% REAL) */}
@@ -753,6 +885,158 @@ export default function AdminDashboard() {
                 </button>
                 <button type="submit" className="btn-save" style={{ background: '#22c55e', color: '#000', fontWeight: 'bold' }}>
                   حفظ الإعدادات
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Monetag & Ads Management Modal */}
+      {showAdsModal && (
+        <div className="admin-modal-backdrop" onClick={() => setShowAdsModal(false)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} dir="rtl" style={{ maxWidth: '640px' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <DollarSign size={22} style={{ color: '#facc15' }} />
+                <h3>إدارة إعلانات Monetag وأرباح الموقع 💰</h3>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowAdsModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Anti-Adult Protection Shield Alert */}
+            <div style={{
+              background: 'rgba(56, 189, 248, 0.08)',
+              border: '1px solid rgba(56, 189, 248, 0.25)',
+              borderRadius: '8px',
+              padding: '12px 14px',
+              fontSize: '13px',
+              color: '#cbd5e1',
+              lineHeight: '1.6',
+              marginBottom: '16px'
+            }}>
+              🛡️ <strong>درع حماية موفورا من الإعلانات الإباحية مفعّل تلقائياً:</strong><br />
+              تم توجيه مشغل الأفلام لسيرفر <strong>VidLink HD</strong> النقي الخالي من النوافذ المنبثقة الإباحية، مع تفعيل حظر تلقائي لكافة النوافذ المنبثقة العشوائية ومحاولات التحويل الإجباري من سيرفرات البث الخارجية.
+            </div>
+
+            {adsFeedback && (
+              <div className={`modal-feedback ${adsFeedback.success ? 'success' : 'error'}`}>
+                {adsFeedback.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                <span>{adsFeedback.message}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveAds} className="modal-form">
+              {/* Toggle Enable Ads */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '16px'
+              }}>
+                <div>
+                  <strong style={{ fontSize: '14px', color: '#fff', display: 'block' }}>
+                    تفعيل إعلانات Monetag في الموقع
+                  </strong>
+                  <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                    عند التفعيل، ستظهر إعلاناتك أنت فقط لجميع زوار موقع movora.me لتحقيق الأرباح.
+                  </span>
+                </div>
+                <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={adSettings.enabled || false}
+                    onChange={(e) => setAdSettings({ ...adSettings, enabled: e.target.checked })}
+                    style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#eab308' }}
+                  />
+                </label>
+              </div>
+
+              {/* Verification Code Input */}
+              <div className="form-group" style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>كود التحقق من ملكية الموقع (Monetag Verification Tag):</span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>مطلوب لتأكيد موقعك في Monetag</span>
+                </label>
+                <input
+                  type="text"
+                  value={adSettings.monetagVerification || ''}
+                  onChange={(e) => setAdSettings({ ...adSettings, monetagVerification: e.target.value })}
+                  placeholder='مثال: <meta name="monetag" content="c03264b123..." /> أو الكود فقط'
+                  style={{ direction: 'ltr', textAlign: 'left', fontFamily: 'monospace', fontSize: '12px' }}
+                />
+                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  يمكنك لصق كود الميتا كاملاً أو المعرّف فقط، وسيتم دمجه فوراً في ترويسة الموقع تلقائياً.
+                </span>
+              </div>
+
+              {/* Main Monetag Script (MultiTag / Popunder / In-Page Push) */}
+              <div className="form-group" style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>كود إعلان Monetag MultiTag أو الكود العام:</span>
+                  <span style={{ fontSize: '11px', color: '#38bdf8' }}>MultiTag / In-Page Push / Popunder</span>
+                </label>
+                <textarea
+                  rows="4"
+                  value={adSettings.monetagScript || ''}
+                  onChange={(e) => setAdSettings({ ...adSettings, monetagScript: e.target.value })}
+                  placeholder='الصق كود الـ <script> الذي نسخته من موقع Monetag هنا...'
+                  style={{ direction: 'ltr', textAlign: 'left', fontFamily: 'monospace', fontSize: '12px', resize: 'vertical' }}
+                />
+                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  كود الجافاسكريبت المخصص من Monetag. يتم تنفيذه لجميع الزوار بشكل آمن ومحمي.
+                </span>
+              </div>
+
+              {/* Optional Player Banner Slot */}
+              <div className="form-group" style={{ marginBottom: '18px' }}>
+                <label>كود بانر مخصص أسفل مشغل الأفلام (Player Banner - اختياري):</label>
+                <textarea
+                  rows="2"
+                  value={adSettings.bannerPlayerCode || ''}
+                  onChange={(e) => setAdSettings({ ...adSettings, bannerPlayerCode: e.target.value })}
+                  placeholder='الصق كود إعلان البانر لو أردت ظهوره تحت الفيديو مباشرة...'
+                  style={{ direction: 'ltr', textAlign: 'left', fontFamily: 'monospace', fontSize: '12px', resize: 'vertical' }}
+                />
+              </div>
+
+              {/* Quick Start Guide */}
+              <div style={{
+                background: 'rgba(234, 179, 8, 0.05)',
+                border: '1px solid rgba(234, 179, 8, 0.2)',
+                borderRadius: '8px',
+                padding: '12px 14px',
+                fontSize: '12px',
+                color: '#cbd5e1',
+                lineHeight: '1.7',
+                marginBottom: '18px'
+              }}>
+                <strong style={{ color: '#facc15' }}>💡 خطوات الربح من Monetag لموقعك movora.me:</strong>
+                <ol style={{ paddingRight: '18px', margin: '6px 0 0 0' }}>
+                  <li>ادخل إلى <a href="https://monetag.com" target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8' }}>Monetag.com</a> وأنشئ حساب ناشر، ثم أضف موقعك <code>movora.me</code>.</li>
+                  <li>انسخ كود التحقق (Verification Meta Tag) وضعه في الحقل الأول واضغط "حفظ".</li>
+                  <li>بعد تأكيد الموقع، أنشئ إعلان من نوع <strong>MultiTag</strong> أو <strong>In-Page Push</strong> (وهي إعلانات نظيفة وموثوقة).</li>
+                  <li>انسخ كود الإعلان وضعه في الحقل الثاني وفعل خيار "تفعيل إعلانات Monetag" ثم اضغط حفظ.</li>
+                </ol>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowAdsModal(false)}>
+                  إغلاق
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-save" 
+                  disabled={isSavingAds}
+                  style={{ background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)', color: '#000', fontWeight: 'bold' }}
+                >
+                  {isSavingAds ? 'جاري الحفظ في السحابة...' : 'حفظ وتفعيل سحابي فوراً 🚀'}
                 </button>
               </div>
             </form>

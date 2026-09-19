@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Server, Film, Play, Star, ShieldCheck, Languages } from 'lucide-react';
 import { fetchMovieVideos } from '../../services/tmdb';
 import { trackMovieStream } from '../../services/analyticsTracker';
+import AdBannerSlot from './AdBannerSlot';
 import '../../styles/VideoModal.css';
 
 export default function VideoModal({ movie, initialServer = 'primary', onClose }) {
@@ -81,17 +82,20 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
   const releaseYear = movie.release_date ? movie.release_date.split('-')[0] : (movie.year || '');
   const rating = movie.vote_average ? movie.vote_average.toFixed(1) : (movie.rating || null);
 
-  // Sources selection with Original English Audio guaranteed
+  // Sources selection with Original English Audio guaranteed (Prioritizing Ad-Free VidLink)
   let iframeSrc = '';
   if (activeServer === 'primary') {
-    // Flagship VidSrc: Always original English audio with CC subtitle selector
-    iframeSrc = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
+    // Flagship VidLink HD: Ultra-clean, ad-free player, original English audio + built-in Arabic CC subtitles
+    iframeSrc = `https://vidlink.pro/movie/${movie.id}`;
+  } else if (activeServer === 'autoembed') {
+    // Fast clean alternative
+    iframeSrc = `https://player.autoembed.cc/embed/movie/${movie.id}`;
   } else if (activeServer === 'multiembed') {
-    // MultiEmbed: English audio + prominent multi-language subtitle track menu (including Arabic)
+    // MultiEmbed: English audio + prominent multi-language subtitle track menu
     iframeSrc = `https://multiembed.mov/?video_id=${movie.id}&tmdb=1`;
   } else if (activeServer === 'backup') {
-    // VidSrc Pro: Clean English original audio
-    iframeSrc = `https://vidsrc.to/embed/movie/${movie.id}`;
+    // VidSrc: Classic backup
+    iframeSrc = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
   } else if (activeServer === 'trailer') {
     iframeSrc = trailerKey 
       ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0` 
@@ -119,7 +123,7 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
                     <Star size={12} fill="currentColor" /> {rating}
                   </span>
                 )}
-                <span className="modal-badge-movora">Movora Cinema (English Audio)</span>
+                <span className="modal-badge-movora">Movora Cinema (VidLink HD)</span>
               </div>
             </div>
           </div>
@@ -128,10 +132,10 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
             {/* Movora Secure Stream Badge */}
             <div 
               className="ad-shield-badge active"
-              title="نظام موفورا الذكي لحماية مسار البث وتوفير الصوت الإنجليزي الأصلي"
+              title="درع موفورا الذكي: حظر الإعلانات الإباحية والنوافذ المنبثقة الخبيثة وتوفير الصوت الإنجليزي الأصلي"
             >
               <ShieldCheck size={14} />
-              <span>بث آمن ومباشر</span>
+              <span>درع الحماية نشط 🛡️</span>
             </div>
 
             {/* Close Button */}
@@ -150,32 +154,41 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
         <div className="video-modal-servers">
           <div className="server-label">
             <Server size={15} />
-            <span>سيرفرات الصوت الإنجليزي:</span>
+            <span>سيرفرات المشاهدة:</span>
           </div>
 
           <div className="server-buttons">
             <button
               className={`server-btn ${activeServer === 'primary' ? 'active' : ''}`}
               onClick={() => setActiveServer('primary')}
+              title="سيرفر نقي عالي الجودة بدون إعلانات مزعجة"
             >
               <span className="server-dot"></span>
-              سيرفر إنجليزي رئيسي (VidSrc)
+              سيرفر سينما نقي (VidLink HD) ⭐
+            </button>
+
+            <button
+              className={`server-btn ${activeServer === 'autoembed' ? 'active' : ''}`}
+              onClick={() => setActiveServer('autoembed')}
+            >
+              <span className="server-dot multi"></span>
+              سيرفر سريع (AutoEmbed)
             </button>
 
             <button
               className={`server-btn ${activeServer === 'multiembed' ? 'active' : ''}`}
               onClick={() => setActiveServer('multiembed')}
             >
-              <span className="server-dot multi"></span>
-              سيرفر الترجمة المتعددة (MultiEmbed)
+              <span className="server-dot backup"></span>
+              سيرفر الترجمة (MultiEmbed)
             </button>
 
             <button
               className={`server-btn ${activeServer === 'backup' ? 'active' : ''}`}
               onClick={() => setActiveServer('backup')}
             >
-              <span className="server-dot backup"></span>
-              سيرفر إنجليزي بديل (VidSrc Pro)
+              <span className="server-dot"></span>
+              سيرفر احتياطي (VidSrc)
             </button>
 
             <button
@@ -201,12 +214,15 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
           />
         </div>
 
+        {/* Optional Monetag Sponsored Banner Slot */}
+        <AdBannerSlot slot="player" />
+
         {/* Player Bottom Info Bar with Subtitle Guidance */}
         <div className="video-modal-footer">
           <div className="player-hint">
             <Languages size={15} style={{ color: '#ff315a', verticalAlign: 'middle', marginLeft: 6, flexShrink: 0 }} />
             <span>
-              <strong>الصوت الأساسي: إنجليزي أصلي.</strong> لاختيار أو تفعيل الترجمة للعربية أو أي لغة، اضغط على زر الترجمة <strong>(CC أو Subtitles)</strong> داخل شاشة المشغل واختر <strong>Arabic</strong>.
+              <strong>الصوت الأساسي: إنجليزي أصلي.</strong> لاختيار أو تفعيل الترجمة للعربية، اضغط على زر الترجمة <strong>(CC أو Subtitles)</strong> داخل المشغل واختر <strong>Arabic</strong>.
             </span>
           </div>
           <button className="close-bottom-btn" onClick={onClose}>

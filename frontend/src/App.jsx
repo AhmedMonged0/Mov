@@ -10,6 +10,12 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminLogin from './pages/admin/AdminLogin';
 import { AdminAuthProvider, AdminProtectedRoute } from './context/AdminAuthContext';
 import { trackPageView } from './services/analyticsTracker';
+import { initAdShield } from './services/adShield';
+
+// Initialize AdShield (blocks offensive popups & activates Monetag ads)
+if (typeof window !== 'undefined') {
+  initAdShield();
+}
 
 // Automatic global telemetry listener: logs page views across routes
 function AnalyticsListener() {

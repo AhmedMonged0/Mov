@@ -23,6 +23,14 @@ function createEmptyAnalytics() {
     recentEvents: [],
     activeSessions: {},
     liveActiveCount: 1,
+    adSettings: {
+      enabled: false,
+      monetagVerification: '',
+      monetagScript: '',
+      bannerPlayerCode: '',
+      antiAdultShield: true,
+      lastUpdated: Date.now()
+    },
     lastUpdated: Date.now()
   };
 }
@@ -79,6 +87,18 @@ function autoHealAnalytics(data) {
       const v = Number(dayItem.visits) || 0;
       if (v < s) dayItem.visits = s;
     });
+  }
+
+  // Ensure adSettings exists
+  if (!data.adSettings) {
+    data.adSettings = {
+      enabled: false,
+      monetagVerification: '',
+      monetagScript: '',
+      bannerPlayerCode: '',
+      antiAdultShield: true,
+      lastUpdated: Date.now()
+    };
   }
 
   return data;
@@ -170,6 +190,23 @@ export default async function handler(req, res) {
           cacheControlMaxAge: 0
         });
         return res.status(200).json(empty);
+      }
+
+      // Handle Monetag & Ad Settings Update
+      if (action === 'update_ads') {
+        current.adSettings = {
+          ...(current.adSettings || {}),
+          ...(body.adSettings || {}),
+          lastUpdated: now
+        };
+        await put(BLOB_PATH, JSON.stringify(current), {
+          access: 'public',
+          token: process.env.BLOB_READ_WRITE_TOKEN,
+          addRandomSuffix: false,
+          allowOverwrite: true,
+          cacheControlMaxAge: 0
+        });
+        return res.status(200).json(current);
       }
 
       // Robust device detection (Client-provided or User-Agent fallback)

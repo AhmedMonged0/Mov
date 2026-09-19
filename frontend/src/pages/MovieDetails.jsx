@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Play, Download, Star, ArrowRight, Film, Clock, Calendar, Server, Languages, ShieldCheck } from 'lucide-react';
 import { fetchMovieDetails, fetchMovieVideos, getPosterUrl, getBackdropUrl } from '../services/tmdb';
 import { trackMovieStream } from '../services/analyticsTracker';
+import AdBannerSlot from '../components/shared/AdBannerSlot';
 import '../styles/Details.css';
 
 export default function MovieDetails() {
@@ -99,12 +100,14 @@ export default function MovieDetails() {
     { quality: '4K Ultra HD', size: '6.8 GB', url: '#' },
   ];
 
-  // Streaming source url based on server selection (Original English Audio Guaranteed)
-  let playerSrc = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
-  if (currentServer === 'multiembed') {
+  // Streaming source url based on server selection (Prioritizing Ad-Free VidLink HD)
+  let playerSrc = `https://vidlink.pro/movie/${movie.id}`;
+  if (currentServer === 'autoembed') {
+    playerSrc = `https://player.autoembed.cc/embed/movie/${movie.id}`;
+  } else if (currentServer === 'multiembed') {
     playerSrc = `https://multiembed.mov/?video_id=${movie.id}&tmdb=1`;
   } else if (currentServer === 'backup') {
-    playerSrc = `https://vidsrc.to/embed/movie/${movie.id}`;
+    playerSrc = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
   } else if (currentServer === 'trailer') {
     playerSrc = trailerKey 
       ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0` 
@@ -131,8 +134,15 @@ export default function MovieDetails() {
               <button 
                 className={currentServer === 'primary' ? 'active' : ''} 
                 onClick={() => setCurrentServer('primary')}
+                title="سيرفر نقي بدون إعلانات مزعجة وبدقة عالية"
               >
-                سيرفر رئيسي (VidSrc)
+                سيرفر سينما نقي (VidLink HD) ⭐
+              </button>
+              <button 
+                className={currentServer === 'autoembed' ? 'active' : ''} 
+                onClick={() => setCurrentServer('autoembed')}
+              >
+                سيرفر سريع (AutoEmbed)
               </button>
               <button 
                 className={currentServer === 'multiembed' ? 'active' : ''} 
@@ -144,7 +154,7 @@ export default function MovieDetails() {
                 className={currentServer === 'backup' ? 'active' : ''} 
                 onClick={() => setCurrentServer('backup')}
               >
-                سيرفر بديل (VidSrc Pro)
+                سيرفر احتياطي (VidSrc)
               </button>
               <button 
                 className={currentServer === 'trailer' ? 'active' : ''} 
@@ -154,7 +164,7 @@ export default function MovieDetails() {
               </button>
               <div 
                 className="ad-shield-badge active"
-                title="نظام موفورا الذكي لحماية مسار البث وتوفير الصوت الإنجليزي الأصلي"
+                title="درع موفورا الذكي: حظر الإعلانات الإباحية والنوافذ المنبثقة الخبيثة وتوفير الصوت الإنجليزي الأصلي"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -168,7 +178,7 @@ export default function MovieDetails() {
                 }}
               >
                 <ShieldCheck size={13} />
-                <span>بث آمن ومباشر</span>
+                <span>درع الحماية نشط 🛡️</span>
               </div>
             </div>
           </div>
@@ -181,6 +191,8 @@ export default function MovieDetails() {
               allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
             />
           </div>
+          {/* Optional Monetag Sponsored Banner Slot */}
+          <AdBannerSlot slot="player" />
           <div style={{
             background: '#0e1017',
             padding: '10px 18px',
