@@ -1,4 +1,4 @@
-import { put } from '@vercel/blob';
+import { put, get } from '@vercel/blob';
 
 const BLOB_URL = 'https://gbawmvigpohlszyw.public.blob.vercel-storage.com/analytics/traffic.json';
 const BLOB_PATH = 'analytics/traffic.json';
@@ -44,15 +44,28 @@ export default async function handler(req, res) {
   // Helper to fetch current analytics from Blob
   async function getCurrentData() {
     try {
-      const response = await fetch(`${BLOB_URL}?t=${Date.now()}`, {
-        headers: { 'Cache-Control': 'no-cache' }
+      const blobRes = await get(BLOB_PATH, {
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+        access: 'public',
+        headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
       });
-      if (response.ok) {
-        const json = await response.json();
-        if (json && typeof json === 'object') return json;
+      if (blobRes && blobRes.statusCode === 200 && blobRes.stream) {
+        const text = await new Response(blobRes.stream).text();
+        if (text) {
+          const json = JSON.parse(text);
+          if (json && typeof json === 'object') return json;
+        }
       }
     } catch (e) {
-      console.warn('Error fetching blob:', e);
+      try {
+        const response = await fetch(`${BLOB_URL}?t=${Date.now()}`, {
+          headers: { 'Cache-Control': 'no-cache, no-store' }
+        });
+        if (response.ok) {
+          const json = await response.json();
+          if (json && typeof json === 'object') return json;
+        }
+      } catch (err) {}
     }
     return createEmptyAnalytics();
   }
