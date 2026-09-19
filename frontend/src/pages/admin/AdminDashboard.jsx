@@ -217,12 +217,12 @@ export default function AdminDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <CheckCircle2 size={18} style={{ color: '#22c55e' }} />
             <span style={{ fontSize: '13.5px', color: '#e2e8f0' }}>
-              <strong>نظام التتبع المباشر 100% نشط:</strong> يتم رصد كل زيارة حقيقية ومشاهدة فيلم لحظة بلحظة دون أي أرقام وهمية.
+              <strong>نظام التتبع المباشر 100% نشط:</strong> رصد دقيق وتلقائي لجميع الزيارات وتشغيل الأفلام.
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <a 
-              href="https://vercel.com/dashboard" 
+              href="https://vercel.com/ahmed-mongeds-projects/movr/analytics" 
               target="_blank" 
               rel="noopener noreferrer"
               style={{
@@ -232,15 +232,15 @@ export default function AdminDashboard() {
                 background: '#000',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
                 color: '#fff',
-                padding: '5px 12px',
+                padding: '6px 14px',
                 borderRadius: '8px',
                 fontSize: '12px',
                 fontWeight: '700',
                 textDecoration: 'none'
               }}
             >
-              <BarChart3 size={13} />
-              <span>تحليلات Vercel السحابية الرسمية</span>
+              <BarChart3 size={14} style={{ color: '#22c55e' }} />
+              <span>تحليلات Vercel السحابية لمشروع Movora (كافة الموبايلات والأجهزة)</span>
             </a>
           </div>
         </div>
