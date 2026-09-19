@@ -104,6 +104,16 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
 
   return (
     <div className="video-modal-overlay" onClick={onClose} dir="rtl">
+      {/* Floating Universal Close Button (Always visible on screen) */}
+      <button 
+        className="floating-close-modal-btn" 
+        onClick={onClose} 
+        title="إغلاق المشغل (Esc)"
+        aria-label="إغلاق المشغل"
+      >
+        <X size={22} />
+      </button>
+
       <div 
         className="video-modal-content" 
         onClick={(e) => e.stopPropagation()}
@@ -138,14 +148,15 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
               <span>درع الحماية نشط 🛡️</span>
             </div>
 
-            {/* Close Button */}
+            {/* Prominent Header Close Button */}
             <button 
               className="video-modal-close-btn" 
               onClick={onClose} 
               title="إغلاق المشغل (Esc)"
               aria-label="إغلاق"
             >
-              <X size={20} />
+              <X size={18} />
+              <span className="close-text-label">إغلاق</span>
             </button>
           </div>
         </div>

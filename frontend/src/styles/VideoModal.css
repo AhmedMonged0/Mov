@@ -2,38 +2,71 @@
 .video-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 5, 8, 0.90);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: rgba(4, 5, 8, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  z-index: 2000;
+  padding: 24px 16px 40px;
+  animation: modalFadeIn 0.25s ease-out;
+}
+
+/* Floating Universal Close Button (Always visible on screen top-left) */
+.floating-close-modal-btn {
+  position: fixed;
+  top: 18px;
+  left: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 49, 90, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-  animation: modalFadeIn 0.25s ease-out;
+  cursor: pointer;
+  z-index: 2100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 49, 90, 0.5);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-close-modal-btn:hover {
+  background: #ff1244;
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 10px 30px rgba(255, 49, 90, 0.8);
 }
 
 .video-modal-content {
   background: #0d0f15;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 20px;
   width: 100%;
-  max-width: 980px;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 49, 90, 0.15);
+  max-width: 1000px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.85), 0 0 40px rgba(255, 49, 90, 0.15);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  margin: 10px auto;
+  position: relative;
   animation: modalScaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Modal Header */
+/* Modal Header - Sticky at top of modal */
 .video-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 22px;
+  padding: 14px 20px;
   background: #12141c;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .video-modal-title-group {
@@ -130,24 +163,32 @@
 }
 
 .video-modal-close-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #a0a5b8;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 99px;
+  background: rgba(255, 49, 90, 0.15);
+  border: 1px solid rgba(255, 49, 90, 0.4);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
 }
 
 .video-modal-close-btn:hover {
   background: #ff315a;
-  color: #fff;
   border-color: #ff315a;
-  transform: rotate(90deg);
+  color: #ffffff;
+  transform: scale(1.05);
+  box-shadow: 0 4px 14px rgba(255, 49, 90, 0.45);
+}
+
+.close-text-label {
+  font-size: 12.5px;
+  font-weight: 700;
 }
 
 /* Server Switcher Controls */
@@ -222,6 +263,8 @@
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
+  max-height: calc(85vh - 160px);
+  min-height: 260px;
   background: #000;
   overflow: hidden;
 }
@@ -291,23 +334,37 @@
 
 @media (max-width: 680px) {
   .video-modal-overlay {
-    padding: 10px;
+    padding: 10px 8px 30px;
+  }
+  .floating-close-modal-btn {
+    top: 10px;
+    left: 10px;
+    width: 38px;
+    height: 38px;
   }
   .video-modal-header {
-    padding: 12px 16px;
-  }
-  .video-modal-title {
-    font-size: 15px;
-  }
-  .video-modal-servers {
     padding: 10px 14px;
   }
+  .video-modal-title {
+    font-size: 14.5px;
+  }
+  .video-modal-servers {
+    padding: 8px 12px;
+    gap: 8px;
+  }
   .server-btn {
-    font-size: 11.5px;
+    font-size: 11px;
     padding: 5px 10px;
   }
   .ad-shield-badge span {
     display: none;
+  }
+  .close-text-label {
+    display: none;
+  }
+  .video-modal-close-btn {
+    padding: 6px;
+    border-radius: 50%;
   }
   .player-hint {
     font-size: 11px;
