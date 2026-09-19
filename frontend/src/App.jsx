@@ -8,6 +8,7 @@ import Categories from './pages/Categories';
 import SearchResults from './pages/SearchResults';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminLogin from './pages/admin/AdminLogin';
+import ErrorBoundary from './components/shared/ErrorBoundary';
 import { AdminAuthProvider, AdminProtectedRoute } from './context/AdminAuthContext';
 import { trackPageView } from './services/analyticsTracker';
 import { initAdShield } from './services/adShield';
@@ -39,7 +40,7 @@ function App() {
         <Analytics />
         <Routes>
           {/* Public Platform Routes */}
-          <Route path="/" element={<MainLayout />}>
+          <Route path="/" element={<ErrorBoundary><MainLayout /></ErrorBoundary>}>
             <Route index element={<Home />} />
             <Route path="movie/:id" element={<MovieDetails />} />
             <Route path="series/:id" element={<MovieDetails />} />

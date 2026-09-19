@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Lock } from 'lucide-react';
 import Logo from '../shared/Logo';
 import '../../styles/Footer.css';
 
