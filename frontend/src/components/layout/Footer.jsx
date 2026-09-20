@@ -36,19 +36,19 @@ export default function Footer() {
             <span className="footer-tg-cta">انضم الآن 🚀</span>
           </a>
 
-          {/* Legal DMCA Disclaimer Box */}
+          {/* Legal Disclaimer Box */}
           <div className="footer-disclaimer-box">
             <p className="footer-disclaimer-text">
-              <strong>إخلاء مسؤولية (DMCA):</strong> منصة موفورا (movora.me) محرك بحث وفهرسة للمحتوى السحابي ولا تقوم برفع أو تخزين أي ملفات فيديو على خوادمها إطلاقاً. كافة المحتويات والمشغلات مستدعاة عبر تقنية التضمين (Embed) من أطراف ثالثة ومصادر متاحة علناً.
+              <strong>إخلاء مسؤولية:</strong> منصة موفورا (movora.me) محرك بحث وفهرسة للمحتوى السحابي ولا تقوم برفع أو تخزين أي ملفات فيديو على خوادمها إطلاقاً. كافة المحتويات والمشغلات مستدعاة عبر تقنية التضمين (Embed) من أطراف ثالثة ومصادر متاحة علناً.
             </p>
             <button 
               type="button" 
               className="footer-dmca-btn"
               onClick={() => setShowDmcaModal(true)}
-              title="عرض سياسة حقوق الملكية الفكرية وطلبات الإزالة"
+              title="عرض إخلاء المسؤولية القانونية"
             >
               <ShieldCheck size={14} />
-              <span>سياسة حقوق الملكية وطلبات الإزالة (DMCA Policy)</span>
+              <span>إخلاء المسؤولية القانونية</span>
             </button>
           </div>
 

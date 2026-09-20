@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ShieldCheck, Scale, AlertTriangle, ExternalLink, Send, Mail, CheckCircle2 } from 'lucide-react';
+import { X, ShieldCheck, Scale, AlertTriangle, Info } from 'lucide-react';
 import '../../styles/DmcaModal.css';
 
 export default function DmcaModal({ isOpen, onClose }) {
@@ -41,8 +41,8 @@ export default function DmcaModal({ isOpen, onClose }) {
             <ShieldCheck size={26} className="dmca-header-icon" />
           </div>
           <div className="dmca-header-titles">
-            <h2 id="dmca-modal-title">إخلاء المسؤولية وحقوق الملكية الفكرية</h2>
-            <span className="dmca-subtitle">DMCA & Copyright Compliance Policy</span>
+            <h2 id="dmca-modal-title">إخلاء المسؤولية القانونية</h2>
+            <span className="dmca-subtitle">Legal Disclaimer & Content Notice</span>
           </div>
           <button 
             type="button" 
@@ -69,62 +69,33 @@ export default function DmcaModal({ isOpen, onClose }) {
           <div className="dmca-section">
             <div className="dmca-section-title">
               <Scale size={18} />
-              <h3>1. طبيعة المنصة وعمل المشغلات (Non-Hosting Platform)</h3>
+              <h3>1. طبيعة المنصة وعدم الاستضافة (Non-Hosting Platform)</h3>
             </div>
             <p>
-              جميع الروابط والمشغلات المعروضة في موفورا هي روابط تضمين خارجية <code>(Embed Iframes)</code> مستدعاة من مزودي طرف ثالث خارجيين وشبكات استضافة عامة على شبكة الإنترنت 
-              (مثل VidSrc, SuperEmbed ومصادر عامة مماثلة). هذه الخوادم مستقلة تماماً ولا تخضع لأي إدارة أو تحكم من قبل إدارة موفورا.
+              موفورا هو محرك فهرسة وواجهة تصفح لتنظيم العروض، ولا يحتوي سيرفر الموقع على بايت واحد من ملفات الفيديو. الموقع لا يستضيف، لا يرفع، ولا يقوم بإعادة بث أي مادة فلمية أو مسلسل من خوادمه المحلية.
             </p>
           </div>
 
-          {/* Section 2: Respect for Intellectual Property */}
+          {/* Section 2: Third-Party Embeds */}
+          <div className="dmca-section">
+            <div className="dmca-section-title">
+              <Info size={18} />
+              <h3>2. التضمين والمشغلات الخارجية (Third-Party Embeds)</h3>
+            </div>
+            <p>
+              كافة المشغلات والروابط المعروضة تعمل بتقنية التضمين <code>(Embed Iframes)</code> من مزودين وسيرفرات استضافة خارجية متاحة علناً على شبكة الإنترنت وتتبع أطرافاً ثالثة مستقلة لا ترتبط بإدارة موفورا بأي شكل من الأشكال.
+            </p>
+          </div>
+
+          {/* Section 3: Intellectual Property & Trademarks */}
           <div className="dmca-section">
             <div className="dmca-section-title">
               <ShieldCheck size={18} />
-              <h3>2. الامتثال لقانون الألفية لحقوق النشر الرقمية (DMCA Compliance)</h3>
+              <h3>3. حقوق الملكية الفكرية والعلامات التجارية</h3>
             </div>
             <p>
-              نحن نحترم حقوق الملكية الفكرية لكافة الشركات والمنتجين وأصحاب الحقوق في جميع أنحاء العالم. ونلتزم بالاستجابة السريعة لأي إخطار رسمي بانتهاك حقوق الطبع والنشر بموجب أحكام قانون حقوق النشر الرقمية (DMCA).
+              جميع الصور، البوسترات، العناوين، والعلامات التجارية المعروضة في الموقع هي ملك حصري لأصحابها وشركات الإنتاج والتوزيع الأصلية، واستخدامها في الموقع هو لأغراض الفهرسة والتعريف الفني والإعلامي فقط.
             </p>
-          </div>
-
-          {/* Section 3: Takedown Instructions */}
-          <div className="dmca-section">
-            <div className="dmca-section-title">
-              <CheckCircle2 size={18} />
-              <h3>3. متطلبات تقديم طلب إزالة المحتوى (Takedown Notice)</h3>
-            </div>
-            <p>إذا كنت المالك القانوني لحقوق عمل معين أو وكيلاً رسمياً مفوضاً، وترغب في إزالة صفحة الفيلم أو المسلسل من الفهرس، يُرجى تزويدنا بالتالي:</p>
-            <ul className="dmca-list">
-              <li>إثبات رسمي واضح لملكية العمل أو توكيل قانوني معتمد من جهة الإنتاج.</li>
-              <li>رابط العمل الرسمي الأصلي لإثبات الملكية.</li>
-              <li>رابط أو روابط الصفحات المحددة على موقع موفورا المطلوب حذفها.</li>
-              <li>وسيلة اتصال رسمية للتحقق من هوية مقدم الطلب.</li>
-            </ul>
-          </div>
-
-          {/* Contact Box */}
-          <div className="dmca-contact-card">
-            <h4>قنوات التواصل الرسمية لطلبات الإزالة والمصنفات:</h4>
-            <div className="dmca-contact-actions">
-              <a 
-                href="https://t.me/movora_me" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="dmca-btn-tg"
-              >
-                <Send size={16} />
-                <span>التواصل المباشر عبر تليجرام (@movora_me)</span>
-              </a>
-              <a 
-                href="mailto:dmca@movora.me?subject=DMCA%20Takedown%20Request%20-%20Movora" 
-                className="dmca-btn-mail"
-              >
-                <Mail size={16} />
-                <span>إرسال بريد إلكتروني (dmca@movora.me)</span>
-              </a>
-            </div>
-            <span className="dmca-sla-badge">⚡ نلتزم بمراجعة الطلبات وحذف الروابط المخالفة خلال أقل من 24-48 ساعة عمل.</span>
           </div>
         </div>
 
