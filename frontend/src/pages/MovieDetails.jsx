@@ -334,7 +334,7 @@ export default function MovieDetails() {
                 onClick={() => setShowVipModal(true)}
               >
                 <Sparkles size={14} />
-                <span>اشترك في Movora VIP (35 ج) 🚀</span>
+                <span>جرب Movora VIP مجاناً (24 ساعة) 🎁</span>
               </button>
             </div>
           )}

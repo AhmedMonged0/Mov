@@ -1,14 +1,14 @@
 /* ==========================================================================
-   MOVORA VIP & PROMO CODE MODAL STYLING
-   Luxury Golden Cinema Glassmorphism Theme
+   MOVORA VIP & VIRAL REWARDS MODAL STYLING
+   Luxury Golden Cinema & Neon Glassmorphism Theme
    ========================================================================== */
 
 .vip-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 7, 13, 0.82);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(4, 7, 13, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   z-index: 999999;
   display: flex;
   align-items: center;
@@ -24,13 +24,13 @@
 
 .vip-modal-dialog {
   background: linear-gradient(145deg, #101522 0%, #0a0d14 100%);
-  border: 1px solid rgba(250, 204, 21, 0.25);
+  border: 1px solid rgba(250, 204, 21, 0.28);
   border-radius: 24px;
   width: 100%;
-  max-width: 620px;
+  max-width: 640px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(250, 204, 21, 0.12);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(250, 204, 21, 0.12);
   color: #f1f5f9;
   position: relative;
   animation: vipSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -83,7 +83,7 @@
 
 .vip-modal-header h2 {
   margin: 0;
-  font-size: 21px;
+  font-size: 20px;
   font-weight: 800;
   color: #ffffff;
   display: flex;
@@ -122,337 +122,685 @@
 /* Tabs */
 .vip-modal-tabs {
   display: flex;
-  padding: 6px 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0 24px;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  overflow-x: auto;
 }
 
 .vip-tab-btn {
-  flex: 1;
   background: transparent;
   border: 0;
-  padding: 12px 14px;
-  border-radius: 10px;
   color: #94a3b8;
+  padding: 14px 16px;
   font-size: 13.5px;
   font-weight: 700;
-  cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
   transition: all 0.2s ease;
+  white-space: nowrap;
   font-family: inherit;
 }
 
+.vip-tab-btn:hover {
+  color: #f1f5f9;
+}
+
 .vip-tab-btn.active {
-  background: rgba(250, 204, 21, 0.14);
   color: #facc15;
-  border: 1px solid rgba(250, 204, 21, 0.3);
-  box-shadow: 0 2px 12px rgba(250, 204, 21, 0.15);
+  border-bottom-color: #facc15;
 }
 
 .vip-modal-body {
-  padding: 24px 28px 30px;
+  padding: 24px 28px;
 }
 
-/* Active Membership Banner */
-.vip-active-banner {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 20, 30, 0.95) 100%);
+/* Feedback Box */
+.vip-feedback {
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  animation: vipSlideUp 0.25s ease;
+}
+
+.vip-feedback.success {
+  background: rgba(34, 197, 94, 0.15);
   border: 1px solid rgba(34, 197, 94, 0.4);
-  border-radius: 16px;
-  padding: 18px 22px;
-  margin-bottom: 22px;
+  color: #4ade80;
+}
+
+.vip-feedback.error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+/* -------------------------------------------------------------
+   1. FREE 24H TRIAL HERO (UNSUBSCRIBED USER)
+   ------------------------------------------------------------- */
+.vip-free-trial-hero {
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.14) 0%, rgba(234, 179, 8, 0.04) 50%, rgba(16, 22, 34, 0.95) 100%);
+  border: 1px solid rgba(250, 204, 21, 0.45);
+  border-radius: 20px;
+  padding: 26px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(250, 204, 21, 0.15);
+  margin-bottom: 28px;
+}
+
+.vip-trial-hero-glow {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  height: 120px;
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.25), transparent 70%);
+  pointer-events: none;
+}
+
+.vip-trial-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(250, 204, 21, 0.2);
+  border: 1px solid rgba(250, 204, 21, 0.5);
+  color: #facc15;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.vip-trial-heading {
+  font-size: 22px;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.4px;
+}
+
+.vip-trial-desc {
+  font-size: 14px;
+  color: #cbd5e1;
+  line-height: 1.6;
+  max-width: 480px;
+  margin: 0 auto 20px auto;
+}
+
+.vip-activate-trial-btn {
+  background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+  color: #0f172a;
+  border: 0;
+  padding: 16px 36px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6px 24px rgba(250, 204, 21, 0.4);
+  font-family: inherit;
+  margin-bottom: 20px;
+}
+
+.vip-activate-trial-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: 0 8px 30px rgba(250, 204, 21, 0.55);
+}
+
+.vip-perks-mini-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.vip-perk-mini {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+/* -------------------------------------------------------------
+   2. ACTIVE VIP STATUS CARD (SUBSCRIBED USER)
+   ------------------------------------------------------------- */
+.vip-active-card {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(16, 22, 34, 0.95) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  border-radius: 20px;
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(34, 197, 94, 0.15);
+}
+
+.vip-active-card-glow {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.2), transparent 70%);
+  pointer-events: none;
+}
+
+.vip-active-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
-.vip-active-content h3 {
-  margin: 0;
-  font-size: 17px;
+.vip-active-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(250, 204, 21, 0.18);
+  border: 1px solid rgba(250, 204, 21, 0.45);
+  color: #facc15;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
   font-weight: 800;
+}
+
+.vip-active-plan-title {
+  font-size: 13px;
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.vip-countdown-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vip-countdown-item {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px 18px;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vip-countdown-num {
+  font-size: 26px;
+  font-weight: 900;
   color: #4ade80;
+  font-family: monospace;
+  line-height: 1.1;
+}
+
+.vip-countdown-lbl {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.vip-countdown-colon {
+  font-size: 24px;
+  font-weight: 900;
+  color: #64748b;
+}
+
+.vip-active-note {
+  font-size: 12.5px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* -------------------------------------------------------------
+   3. VIRAL REWARDS SECTION (QUESTS & REFERRALS)
+   ------------------------------------------------------------- */
+.vip-viral-section {
+  margin-top: 10px;
+}
+
+.vip-viral-header {
+  margin-bottom: 16px;
+}
+
+.vip-viral-title-group {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.vip-active-content p {
-  margin: 4px 0 0 0;
-  font-size: 13px;
-  color: #cbd5e1;
-}
-
-.vip-days-badge {
-  background: rgba(34, 197, 94, 0.2);
-  border: 1px solid rgba(34, 197, 94, 0.5);
-  color: #4ade80;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 12.5px;
+.vip-viral-title-group h4 {
+  margin: 0;
+  font-size: 16px;
   font-weight: 800;
-  white-space: nowrap;
+  color: #ffffff;
 }
 
-/* Features Grid */
-.vip-perks-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin-bottom: 24px;
+.vip-viral-sub {
+  font-size: 12.5px;
+  color: #94a3b8;
+  display: block;
+  margin-top: 4px;
 }
 
-.vip-perk-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 14px;
-  padding: 14px 16px;
+.vip-quests-grid {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.vip-quest-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 18px 20px;
+  position: relative;
   transition: all 0.2s ease;
 }
 
-.vip-perk-card:hover {
-  border-color: rgba(250, 204, 21, 0.3);
-  background: rgba(250, 204, 21, 0.04);
-  transform: translateY(-2px);
+.vip-quest-card:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.045);
 }
 
-.vip-perk-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: rgba(250, 204, 21, 0.12);
+.vip-quest-card.featured {
+  border-color: rgba(37, 211, 102, 0.35);
+  background: linear-gradient(135deg, rgba(37, 211, 102, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+.vip-quest-badge-tag {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  background: rgba(250, 204, 21, 0.15);
+  border: 1px solid rgba(250, 204, 21, 0.4);
   color: #facc15;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.vip-quest-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding-left: 90px;
+}
+
+.vip-quest-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.vip-perk-info h4 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: #ffffff;
+.vip-quest-icon.whatsapp {
+  background: rgba(37, 211, 102, 0.18);
+  color: #25d366;
+  border: 1px solid rgba(37, 211, 102, 0.4);
 }
 
-.vip-perk-info p {
-  margin: 3px 0 0 0;
-  font-size: 12px;
-  color: #94a3b8;
-  line-height: 1.45;
+.vip-quest-icon.telegram {
+  background: rgba(14, 165, 233, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(14, 165, 233, 0.4);
 }
 
-/* Plans Pricing Cards */
-.vip-plans-title {
-  font-size: 15px;
-  font-weight: 800;
-  color: #ffffff;
-  margin: 0 0 12px 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.vip-plans-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.vip-plan-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 16px 12px;
-  text-align: center;
-  position: relative;
-  transition: all 0.2s ease;
-}
-
-.vip-plan-card.featured {
-  background: linear-gradient(145deg, rgba(250, 204, 21, 0.12) 0%, rgba(234, 179, 8, 0.03) 100%);
-  border-color: rgba(250, 204, 21, 0.5);
-  box-shadow: 0 4px 20px rgba(250, 204, 21, 0.15);
-}
-
-.vip-popular-tag {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
-  color: #0f172a;
-  font-size: 10px;
-  font-weight: 900;
-  padding: 2px 10px;
-  border-radius: 12px;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-}
-
-.vip-plan-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: #cbd5e1;
-  margin-bottom: 6px;
-}
-
-.vip-plan-price {
-  font-size: 22px;
-  font-weight: 900;
+.vip-quest-icon.bookmark {
+  background: rgba(250, 204, 21, 0.18);
   color: #facc15;
-  margin-bottom: 4px;
+  border: 1px solid rgba(250, 204, 21, 0.4);
 }
 
-.vip-plan-price span {
-  font-size: 12px;
-  font-weight: 600;
-  color: #94a3b8;
-}
-
-.vip-plan-desc {
-  font-size: 11px;
-  color: #64748b;
-}
-
-/* Payment Instructions Box */
-.vip-payment-box {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 18px;
-  padding: 20px;
-  margin-bottom: 20px;
-}
-
-.vip-payment-title {
-  font-size: 14px;
+.vip-quest-info h5 {
+  margin: 0 0 4px 0;
+  font-size: 14.5px;
   font-weight: 800;
   color: #ffffff;
-  margin: 0 0 14px 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
-.vip-pay-methods-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
+.vip-quest-info p {
+  margin: 0;
+  font-size: 12.5px;
+  color: #94a3b8;
+  line-height: 1.5;
 }
 
-.vip-pay-method-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* Referral link box */
+.vip-ref-box {
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
 }
 
-.vip-pay-method-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.vip-pay-method-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 13px;
-}
-
-.vip-pay-method-icon.vodafone {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.vip-pay-method-icon.instapay {
-  background: rgba(168, 85, 247, 0.15);
-  color: #c084fc;
-  border: 1px solid rgba(168, 85, 247, 0.3);
-}
-
-.vip-pay-label {
-  font-size: 12px;
+.vip-ref-label {
+  font-size: 11px;
   color: #94a3b8;
+  display: block;
+  margin-bottom: 4px;
 }
 
-.vip-pay-value {
-  font-size: 14px;
-  font-weight: 800;
-  color: #ffffff;
+.vip-ref-input-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vip-ref-link-text {
+  font-size: 12px;
+  color: #38bdf8;
   font-family: monospace;
   direction: ltr;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.vip-copy-btn {
+.vip-ref-copy-btn {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #cbd5e1;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 11.5px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
+  gap: 4px;
   font-family: inherit;
+  flex-shrink: 0;
+  transition: all 0.2s;
 }
 
-.vip-copy-btn:hover {
+.vip-ref-copy-btn:hover {
   background: rgba(250, 204, 21, 0.2);
-  border-color: rgba(250, 204, 21, 0.5);
   color: #facc15;
+  border-color: rgba(250, 204, 21, 0.4);
 }
 
-.vip-copy-btn.copied {
+.vip-ref-copy-btn.copied {
   background: rgba(34, 197, 94, 0.2);
-  border-color: #22c55e;
   color: #4ade80;
+  border-color: #22c55e;
 }
 
-/* Telegram CTA */
-.vip-telegram-cta {
+/* CTA buttons */
+.vip-quest-cta-btn {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 13.5px;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  background: linear-gradient(135deg, #0088cc 0%, #006699 100%);
-  color: #ffffff;
-  text-decoration: none;
-  padding: 14px 22px;
-  border-radius: 14px;
-  font-size: 14px;
-  font-weight: 800;
+  gap: 8px;
+  cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 18px rgba(0, 136, 204, 0.35);
+  font-family: inherit;
 }
 
-.vip-telegram-cta:hover {
+.vip-quest-cta-btn.whatsapp {
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(37, 211, 102, 0.3);
+}
+
+.vip-quest-cta-btn.whatsapp:hover {
   transform: translateY(-2px);
   filter: brightness(1.1);
-  box-shadow: 0 6px 24px rgba(0, 136, 204, 0.5);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.45);
+}
+
+.vip-quest-cta-btn.telegram {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
+}
+
+.vip-quest-cta-btn.telegram:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.45);
+}
+
+.vip-quest-cta-btn.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+}
+
+.vip-quest-cta-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(250, 204, 21, 0.4);
+}
+
+.vip-quest-cta-btn.completed {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+  cursor: default;
 }
 
 /* -------------------------------------------------------------
-   Redeem Code Section
+   4. LUCKY SPIN WHEEL (عجلة الحظ اليومية)
+   ------------------------------------------------------------- */
+.vip-wheel-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.vip-wheel-header-intro h3 {
+  font-size: 20px;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+}
+
+.vip-wheel-header-intro p {
+  font-size: 13px;
+  color: #94a3b8;
+  max-width: 440px;
+  margin: 0 0 24px 0;
+}
+
+/* Wheel Wrapper */
+.vip-wheel-wrapper {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin: 0 auto 24px auto;
+}
+
+.vip-wheel-pointer {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+.vip-pointer-triangle {
+  width: 0;
+  height: 0;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 26px solid #facc15;
+}
+
+.vip-wheel-disc {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  border: 6px solid #facc15;
+  box-shadow: 0 0 32px rgba(250, 204, 21, 0.35), 0 10px 30px rgba(0, 0, 0, 0.8);
+  background: #0b0f19;
+}
+
+.vip-wheel-slice {
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  top: 0;
+  right: 0;
+  transform-origin: 0% 100%;
+  overflow: hidden;
+}
+
+.vip-slice-content {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  border-radius: 50%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 20px;
+  box-sizing: border-box;
+  transform: skew(-30deg) rotate(-60deg);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.vip-slice-text {
+  font-size: 12px;
+  font-weight: 800;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  transform: rotate(30deg);
+  display: inline-block;
+}
+
+/* Center Hub */
+.vip-wheel-center-hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  border: 3px solid #facc15;
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  cursor: pointer;
+}
+
+.vip-spin-btn {
+  background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+  color: #0f172a;
+  border: 0;
+  padding: 14px 34px;
+  border-radius: 14px;
+  font-size: 15.5px;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 6px 24px rgba(250, 204, 21, 0.4);
+  font-family: inherit;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vip-spin-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(250, 204, 21, 0.55);
+}
+
+.vip-spin-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.vip-wheel-cooldown-box {
+  background: rgba(250, 204, 21, 0.1);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #facc15;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vip-wheel-win-alert {
+  margin-top: 18px;
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.18) 0%, rgba(34, 197, 94, 0.12) 100%);
+  border: 1px solid rgba(250, 204, 21, 0.45);
+  border-radius: 14px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: right;
+  animation: vipSlideUp 0.3s ease;
+}
+
+.vip-wheel-win-alert strong {
+  display: block;
+  font-size: 14px;
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+
+.vip-wheel-win-alert p {
+  margin: 0;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+/* -------------------------------------------------------------
+   5. REDEEM GIFT CODE TAB
    ------------------------------------------------------------- */
 .vip-redeem-container {
   display: flex;
@@ -460,11 +808,21 @@
   gap: 18px;
 }
 
-.vip-redeem-lead {
-  font-size: 13.5px;
-  color: #94a3b8;
-  line-height: 1.6;
+.vip-redeem-lead-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px 18px;
+}
+
+.vip-redeem-lead-box p {
   margin: 0;
+  font-size: 13.5px;
+  color: #cbd5e1;
+  line-height: 1.5;
 }
 
 .vip-input-wrap {
@@ -533,30 +891,56 @@
   cursor: not-allowed;
 }
 
-.vip-feedback-alert {
-  padding: 14px 18px;
-  border-radius: 12px;
-  font-size: 13.5px;
-  font-weight: 700;
+.vip-telegram-hint-card {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  border-radius: 16px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  animation: vipSlideUp 0.2s ease;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.vip-feedback-alert.success {
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.4);
-  color: #4ade80;
+.vip-telegram-hint-card h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
 }
 
-.vip-feedback-alert.error {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #f87171;
+.vip-telegram-hint-card p {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
 }
 
-/* Navbar VIP Badge & Trigger */
+.vip-telegram-sub-btn {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 800;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.3);
+  transition: all 0.2s ease;
+}
+
+.vip-telegram-sub-btn:hover {
+  transform: translateY(-1.5px);
+  filter: brightness(1.1);
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.45);
+}
+
+/* -------------------------------------------------------------
+   6. NAVBAR & GLOBAL PROMOS
+   ------------------------------------------------------------- */
 .nav-vip-badge-btn {
   display: inline-flex;
   align-items: center;
@@ -588,12 +972,6 @@
   box-shadow: 0 2px 10px rgba(34, 197, 94, 0.2);
 }
 
-.nav-vip-badge-btn.active-member:hover {
-  border-color: #4ade80;
-  box-shadow: 0 4px 18px rgba(34, 197, 94, 0.4);
-}
-
-/* Movie Details Player VIP Banner */
 .details-vip-promo-banner {
   margin-top: 14px;
   background: linear-gradient(135deg, rgba(250, 204, 21, 0.08) 0%, rgba(16, 20, 30, 0.9) 100%);
@@ -640,23 +1018,26 @@
 }
 
 @media (max-width: 640px) {
-  .vip-perks-grid {
-    grid-template-columns: 1fr;
-  }
-  .vip-plans-row {
-    grid-template-columns: 1fr;
-  }
-  .vip-input-wrap {
-    flex-direction: column;
-  }
   .vip-modal-dialog {
     padding: 0;
+    max-height: 94vh;
   }
   .vip-modal-header,
   .vip-modal-tabs,
   .vip-modal-body {
-    padding-left: 18px;
-    padding-right: 18px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .vip-quest-info {
+    padding-left: 0;
+    margin-top: 24px;
+  }
+  .vip-input-wrap {
+    flex-direction: column;
+  }
+  .vip-telegram-hint-card {
+    flex-direction: column;
+    text-align: center;
   }
   .details-vip-promo-banner {
     flex-direction: column;

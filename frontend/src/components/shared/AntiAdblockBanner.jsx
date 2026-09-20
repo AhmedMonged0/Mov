@@ -126,7 +126,7 @@ export default function AntiAdblockBanner() {
               fontFamily: 'inherit'
             }}
           >
-            باقات VIP (35 ج)
+            تجربة VIP مجانية (24 ساعة) 🎁
           </button>
           <button
             type="button"

@@ -297,10 +297,10 @@ export default function Navbar() {
             type="button"
             className={`nav-vip-badge-btn ${vipStatus.isVip ? 'active-member' : ''}`}
             onClick={() => setShowVipModal(true)}
-            title={vipStatus.isVip ? `أنت مشترك VIP (متبقي ${vipStatus.remainingDays} يوم)` : 'اشترك في Movora VIP بدون إعلانات'}
+            title={vipStatus.isVip ? `أنت مشترك VIP (متبقي ${vipStatus.remainingDays} يوم)` : 'احصل على تجربة VIP مجانية 24 ساعة بدون إعلانات'}
           >
             <Crown size={14} />
-            <span>{vipStatus.isVip ? 'مشترك VIP' : 'Movora VIP'}</span>
+            <span>{vipStatus.isVip ? 'مشترك VIP 👑' : 'تجربة VIP مجاناً 🎁'}</span>
           </button>
         )}
 
