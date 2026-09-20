@@ -8,6 +8,7 @@ import {
   Check, 
   ExternalLink, 
   Film, 
+  Tv,
   Star, 
   Eye, 
   EyeOff, 
@@ -16,13 +17,19 @@ import {
   CheckCircle2, 
   Loader2 
 } from 'lucide-react';
-import { fetchTrendingMovies, searchMovies, getPosterUrl } from '../../services/tmdb';
+import { 
+  fetchTrendingMovies, 
+  fetchTrendingSeries, 
+  searchMovies, 
+  searchSeries, 
+  getPosterUrl 
+} from '../../services/tmdb';
 import '../../styles/TelegramPublisher.css';
 
 const DEFAULT_CHANNEL = '@movora_me';
 const DEFAULT_BOT_TOKEN = '8961203516:AAFVsKyB-9VHLOhy5BqBS3-87xun8WZ46EQ';
 
-const HOOKS = [
+const MOVIE_HOOKS = [
   '🍿 فيلم سهرة الليلة',
   '🔥 متاح الآن للمشاهدة الحصرية',
   '🎬 فيلم جديد ومميز أضيف للموقع',
@@ -30,21 +37,30 @@ const HOOKS = [
   '⚡️ حصرياً بجودة فائقة 1080p'
 ];
 
+const SERIES_HOOKS = [
+  '📺 مسلسل سهرة الليلة',
+  '🔥 متاح الآن للمشاهدة الحصرية (جميع الحلقات)',
+  '⚡️ حلقات جديدة ومترجمة بدقة عالية 1080p',
+  '⭐️ من أقوى وأعلى المسلسلات تقييماً',
+  '🍿 مسلسل درامي مميز أضيف للموقع'
+];
+
 export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
   const [botToken, setBotToken] = useState(() => localStorage.getItem('movora_tg_bot_token') || DEFAULT_BOT_TOKEN);
   const [channelId, setChannelId] = useState(() => localStorage.getItem('movora_tg_channel') || DEFAULT_CHANNEL);
   const [showToken, setShowToken] = useState(false);
 
-  // Movie Selection
-  const [trendingMovies, setTrendingMovies] = useState([]);
+  // Filter & Media Selection
+  const [mediaTypeFilter, setMediaTypeFilter] = useState('all'); // 'all' | 'movie' | 'tv'
+  const [trendingItems, setTrendingItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState(() => initialQuery || '');
   const [searchResults, setSearchResults] = useState([]);
-  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [selectedMedia, setSelectedMedia] = useState(null);
   const [loadingTrending, setLoadingTrending] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
 
   // Caption Customization
-  const [selectedHook, setSelectedHook] = useState(HOOKS[0]);
+  const [selectedHook, setSelectedHook] = useState(MOVIE_HOOKS[0]);
   const [customSynopsis, setCustomSynopsis] = useState('');
 
   // Status & Feedback
@@ -55,21 +71,41 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
 
   const searchTimerRef = useRef(null);
 
+  // Determine if current selected media is TV series
+  const isTv = selectedMedia?.media_type === 'tv' || Boolean(
+    selectedMedia?.first_air_date || (selectedMedia && !selectedMedia?.release_date && selectedMedia?.name)
+  );
+
   // Ensure token and channel are permanently cached on mount
   useEffect(() => {
     localStorage.setItem('movora_tg_bot_token', botToken.trim() || DEFAULT_BOT_TOKEN);
     localStorage.setItem('movora_tg_channel', channelId.trim() || DEFAULT_CHANNEL);
   }, []);
 
-  // Load trending movies on mount
+  // Load trending movies AND TV series on mount
   useEffect(() => {
     const loadTrending = async () => {
       setLoadingTrending(true);
       try {
-        const list = await fetchTrendingMovies('day');
-        if (Array.isArray(list) && list.length > 0) {
-          setTrendingMovies(list.slice(0, 12));
-          setSelectedMovie(list[0]);
+        const [movies, series] = await Promise.all([
+          fetchTrendingMovies('day').catch(() => []),
+          fetchTrendingSeries('day').catch(() => [])
+        ]);
+
+        const taggedMovies = (movies || []).map(m => ({ ...m, media_type: 'movie' }));
+        const taggedSeries = (series || []).map(s => ({ ...s, media_type: 'tv' }));
+
+        // Interleave top movies and series for variety
+        const mixed = [];
+        const maxLen = Math.max(taggedMovies.length, taggedSeries.length);
+        for (let i = 0; i < maxLen; i++) {
+          if (taggedMovies[i]) mixed.push(taggedMovies[i]);
+          if (taggedSeries[i]) mixed.push(taggedSeries[i]);
+        }
+
+        setTrendingItems(mixed.slice(0, 24));
+        if (mixed.length > 0 && !initialQuery) {
+          setSelectedMedia(mixed[0]);
         }
       } catch (err) {
         console.error('Failed to load trending for Telegram publisher:', err);
@@ -80,32 +116,54 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
     loadTrending();
   }, []);
 
-  // Auto search and select if initialQuery passed (e.g. from requested movies)
+  // Auto search both Movies & Series if initialQuery passed (e.g. from requested movies)
   useEffect(() => {
     if (initialQuery && initialQuery.trim()) {
       setIsSearching(true);
-      searchMovies(initialQuery.trim(), 1)
-        .then(results => {
-          if (Array.isArray(results) && results.length > 0) {
-            setSearchResults(results);
-            setSelectedMovie(results[0]);
+      const query = initialQuery.trim();
+      Promise.all([
+        searchMovies(query, 1).catch(() => []),
+        searchSeries(query, 1).catch(() => [])
+      ])
+        .then(([movies, series]) => {
+          const taggedMovies = (movies || []).map(m => ({ ...m, media_type: 'movie' }));
+          const taggedSeries = (series || []).map(s => ({ ...s, media_type: 'tv' }));
+          const combined = [...taggedSeries, ...taggedMovies].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+          if (combined.length > 0) {
+            setSearchResults(combined);
+            setSelectedMedia(combined[0]);
           }
         })
-        .catch(() => {})
         .finally(() => {
           setIsSearching(false);
         });
     }
   }, [initialQuery]);
 
-  // Sync synopsis when movie changes
+  // Sync synopsis and appropriate hook when media changes
   useEffect(() => {
-    if (selectedMovie) {
-      setCustomSynopsis(selectedMovie.overview || 'فيلم مميز يستحق المشاهدة الآن على منصة موفورا بجودة فائقة.');
-    }
-  }, [selectedMovie]);
+    if (selectedMedia) {
+      const itemIsTv = selectedMedia.media_type === 'tv' || Boolean(selectedMedia.first_air_date || (!selectedMedia.release_date && selectedMedia.name));
+      const defaultDesc = itemIsTv 
+        ? 'مسلسل مميز وشيق متاح للمشاهدة الآن بجميع حلقاته على منصة موفورا بجودة عالية.'
+        : 'فيلم مميز يستحق المشاهدة الآن على منصة موفورا بجودة فائقة.';
+      
+      setCustomSynopsis(selectedMedia.overview || defaultDesc);
 
-  // Debounced search
+      // Pick suitable hook
+      if (itemIsTv) {
+        if (!SERIES_HOOKS.includes(selectedHook)) {
+          setSelectedHook(SERIES_HOOKS[0]);
+        }
+      } else {
+        if (!MOVIE_HOOKS.includes(selectedHook)) {
+          setSelectedHook(MOVIE_HOOKS[0]);
+        }
+      }
+    }
+  }, [selectedMedia]);
+
+  // Debounced search for BOTH Movies & Series
   const handleSearchChange = (e) => {
     const q = e.target.value;
     setSearchQuery(q);
@@ -121,8 +179,21 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
     setIsSearching(true);
     searchTimerRef.current = setTimeout(async () => {
       try {
-        const results = await searchMovies(q.trim(), 1);
-        setSearchResults(Array.isArray(results) ? results.slice(0, 8) : []);
+        const query = q.trim();
+        const [movies, series] = await Promise.all([
+          searchMovies(query, 1).catch(() => []),
+          searchSeries(query, 1).catch(() => [])
+        ]);
+
+        const taggedMovies = (movies || []).map(m => ({ ...m, media_type: 'movie' }));
+        const taggedSeries = (series || []).map(s => ({ ...s, media_type: 'tv' }));
+
+        // Combine and prioritize high popularity
+        const combined = [...taggedSeries, ...taggedMovies].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+        setSearchResults(combined.slice(0, 16));
+        if (combined.length > 0) {
+          setSelectedMedia(combined[0]);
+        }
       } catch (err) {
         console.error('Search error in publisher:', err);
       } finally {
@@ -133,13 +204,31 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
 
   // Build the Telegram formatted message
   const buildCaption = () => {
-    if (!selectedMovie) return '';
-    const title = selectedMovie.title || selectedMovie.original_title || 'فيلم سينمائي';
-    const year = selectedMovie.release_date ? selectedMovie.release_date.split('-')[0] : '2025';
-    const rating = selectedMovie.vote_average ? Number(selectedMovie.vote_average).toFixed(1) : '8.0';
+    if (!selectedMedia) return '';
+    const itemIsTv = selectedMedia.media_type === 'tv' || Boolean(selectedMedia.first_air_date || (!selectedMedia.release_date && selectedMedia.name));
+    const title = itemIsTv 
+      ? (selectedMedia.name || selectedMedia.original_name || 'مسلسل')
+      : (selectedMedia.title || selectedMedia.original_title || 'فيلم سينمائي');
+    const year = (itemIsTv ? selectedMedia.first_air_date : selectedMedia.release_date)?.split('-')[0] || '2025';
+    const rating = selectedMedia.vote_average ? Number(selectedMedia.vote_average).toFixed(1) : '8.0';
     const synopsis = customSynopsis.length > 280 ? customSynopsis.slice(0, 275) + '...' : customSynopsis;
-    const movieUrl = `https://movora.me/movie/${selectedMovie.id}`;
+    const watchUrl = itemIsTv 
+      ? `https://movora.me/series/${selectedMedia.id}` 
+      : `https://movora.me/movie/${selectedMedia.id}`;
     const channelDisplay = channelId.startsWith('@') ? channelId : `@${channelId}`;
+
+    if (itemIsTv) {
+      return `<b>${selectedHook}: ${title} (${year})</b>\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `⭐️ <b>التقييم:</b> ${rating} / 10 | 📅 <b>السنة:</b> ${year}\n` +
+        `🎙️ <b>الصوت:</b> أصلي مترجم | 📺 <b>جميع المواسم والحلقات</b>\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `📖 <b>القصة:</b>\n${synopsis}\n\n` +
+        `👇 <b>رابط مشاهدة جميع حلقات المسلسل بجودة 1080p:</b>\n` +
+        `🔗 ${watchUrl}\n\n` +
+        `🍿 <b>انضم لقناة موفورا:</b> ${channelDisplay}\n` +
+        `#مسلسلات #موفورا #مسلسل #Series`;
+    }
 
     return `<b>${selectedHook}: ${title} (${year})</b>\n` +
       `━━━━━━━━━━━━━━━━━━━\n` +
@@ -148,15 +237,14 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
       `━━━━━━━━━━━━━━━━━━━\n` +
       `📖 <b>القصة:</b>\n${synopsis}\n\n` +
       `👇 <b>رابط المشاهدة المباشر بجودة 1080p و 4K:</b>\n` +
-      `🔗 ${movieUrl}\n\n` +
+      `🔗 ${watchUrl}\n\n` +
       `🍿 <b>انضم لقناة موفورا:</b> ${channelDisplay}\n` +
       `#أفلام #موفورا #سينما #Movies`;
   };
 
   // Build Plain Text for Copying
   const buildPlainText = () => {
-    return buildCaption()
-      .replace(/<[^>]+>/g, '');
+    return buildCaption().replace(/<[^>]+>/g, '');
   };
 
   // Copy caption to clipboard
@@ -177,8 +265,8 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
       setFeedback({ type: 'error', text: 'يرجى تحديد معرف أو يوزر القناة (مثال: @movora_me).' });
       return;
     }
-    if (!selectedMovie) {
-      setFeedback({ type: 'error', text: 'يرجى اختيار فيلم للنشر.' });
+    if (!selectedMedia) {
+      setFeedback({ type: 'error', text: 'يرجى اختيار فيلم أو مسلسل للنشر.' });
       return;
     }
 
@@ -189,12 +277,22 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
     setIsPublishing(true);
     setFeedback(null);
 
+    const itemIsTv = selectedMedia.media_type === 'tv' || Boolean(selectedMedia.first_air_date || (!selectedMedia.release_date && selectedMedia.name));
+    const title = itemIsTv 
+      ? (selectedMedia.name || selectedMedia.original_name)
+      : (selectedMedia.title || selectedMedia.original_title);
+    const watchUrl = itemIsTv 
+      ? `https://movora.me/series/${selectedMedia.id}` 
+      : `https://movora.me/movie/${selectedMedia.id}`;
+    const watchButtonLabel = itemIsTv 
+      ? '▶️ مشاهدة حلقات المسلسل كاملة بجودة 1080p' 
+      : '▶️ مشاهدة الفيلم كامل بجودة 1080p';
+
     try {
-      const posterUrl = selectedMovie.poster_path 
-        ? getPosterUrl(selectedMovie.poster_path, 'w780') 
+      const posterUrl = selectedMedia.poster_path 
+        ? getPosterUrl(selectedMedia.poster_path, 'w780') 
         : 'https://movora.me/favicon.svg';
 
-      const movieUrl = `https://movora.me/movie/${selectedMovie.id}`;
       const channelClean = channelId.startsWith('@') ? channelId.slice(1) : channelId;
       const channelUrl = `https://t.me/${channelClean}`;
 
@@ -206,7 +304,7 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
         reply_markup: {
           inline_keyboard: [
             [
-              { text: '▶️ مشاهدة الفيلم كامل بجودة 1080p', url: movieUrl }
+              { text: watchButtonLabel, url: watchUrl }
             ],
             [
               { text: '🍿 انضم لقناة موفورا الرسمية', url: channelUrl }
@@ -226,7 +324,7 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
       if (resData.ok) {
         setFeedback({ 
           type: 'success', 
-          text: `تم نشر الفيلم "${selectedMovie.title || selectedMovie.original_title}" في قناتك بنجاح! 🚀`,
+          text: `تم نشر ${itemIsTv ? 'المسلسل' : 'الفيلم'} "${title}" في قناتك بنجاح! 🚀`,
           messageId: resData.result?.message_id
         });
       } else {
@@ -248,9 +346,18 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
     }
   };
 
-  const currentPoster = selectedMovie?.poster_path 
-    ? getPosterUrl(selectedMovie.poster_path, 'w500') 
+  const currentPoster = selectedMedia?.poster_path 
+    ? getPosterUrl(selectedMedia.poster_path, 'w500') 
     : null;
+
+  // Filter items by media type tabs
+  const rawList = searchResults.length > 0 ? searchResults : trendingItems;
+  const displayList = rawList.filter(item => {
+    const itemIsTv = item.media_type === 'tv' || Boolean(item.first_air_date || (!item.release_date && item.name));
+    if (mediaTypeFilter === 'movie') return !itemIsTv;
+    if (mediaTypeFilter === 'tv') return itemIsTv;
+    return true;
+  });
 
   return (
     <div className="tg-publisher-overlay" onClick={onClose} dir="rtl">
@@ -264,7 +371,7 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
             </div>
             <div>
               <h2 className="tg-modal-title">أداة النشر الذكي على تليجرام 📢</h2>
-              <p className="tg-modal-sub">نشر الأفلام تلقائياً ببوستراتها وأزرار المشاهدة المباشرة في قناتك</p>
+              <p className="tg-modal-sub">نشر الأفلام والمسلسلات تلقائياً ببوستراتها وأزرار المشاهدة المباشرة في قناتك</p>
             </div>
           </div>
 
@@ -347,7 +454,7 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
         {/* Main 2-Column Workspace */}
         <div className="tg-workspace-grid">
           
-          {/* Left Column: Movie Picker & Controls */}
+          {/* Left Column: Media Picker & Controls */}
           <div className="tg-left-col">
             
             {/* Search Bar */}
@@ -357,7 +464,7 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
                 type="text" 
                 value={searchQuery} 
                 onChange={handleSearchChange} 
-                placeholder="ابحث عن أي فيلم بالاسم..." 
+                placeholder="ابحث عن أي فيلم أو مسلسل (مثال: ارطغرل، الهيبة، Oppenheimer)..." 
                 dir="rtl"
               />
               {isSearching && <Loader2 size={16} className="tg-spinner" />}
@@ -372,37 +479,77 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
               )}
             </div>
 
-            {/* Movies List / Selector */}
+            {/* Media Type Filter Pills (الكل / أفلام / مسلسلات) */}
+            <div className="tg-media-filter-row">
+              <button 
+                type="button"
+                className={`tg-media-filter-btn ${mediaTypeFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setMediaTypeFilter('all')}
+              >
+                الكل 🎬📺
+              </button>
+              <button 
+                type="button"
+                className={`tg-media-filter-btn ${mediaTypeFilter === 'movie' ? 'active' : ''}`}
+                onClick={() => setMediaTypeFilter('movie')}
+              >
+                أفلام فقط 🎬
+              </button>
+              <button 
+                type="button"
+                className={`tg-media-filter-btn ${mediaTypeFilter === 'tv' ? 'active' : ''}`}
+                onClick={() => setMediaTypeFilter('tv')}
+              >
+                مسلسلات فقط 📺
+              </button>
+            </div>
+
+            {/* Movies & Series List / Selector */}
             <div className="tg-movies-selector">
               <div className="tg-list-header">
                 {searchResults.length > 0 ? (
-                  <span>نتائج البحث ({searchResults.length}):</span>
+                  <span>نتائج البحث ({displayList.length}):</span>
                 ) : (
-                  <span>أقوى الأفلام الرائجة اليوم في السينما:</span>
+                  <span>أقوى الأعمال الرائجة اليوم (أفلام ومسلسلات):</span>
                 )}
               </div>
 
               <div className="tg-movies-scroll">
                 {loadingTrending ? (
-                  <div className="tg-loading-state">جاري تحميل الأفلام...</div>
-                ) : (searchResults.length > 0 ? searchResults : trendingMovies).map(movie => {
-                  const isSelected = selectedMovie?.id === movie.id;
-                  const poster = movie.poster_path ? getPosterUrl(movie.poster_path, 'w92') : null;
-                  const year = movie.release_date ? movie.release_date.split('-')[0] : '';
-                  const rating = movie.vote_average ? Number(movie.vote_average).toFixed(1) : null;
+                  <div className="tg-loading-state">جاري تحميل الأعمال الفنية...</div>
+                ) : displayList.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '30px 10px', color: '#64748b', fontSize: '13px' }}>
+                    لا توجد نتائج مطابقة لبحثك.
+                  </div>
+                ) : displayList.map(item => {
+                  const isSelected = selectedMedia?.id === item.id;
+                  const poster = item.poster_path ? getPosterUrl(item.poster_path, 'w92') : null;
+                  const itemIsTv = item.media_type === 'tv' || Boolean(item.first_air_date || (!item.release_date && item.name));
+                  const title = itemIsTv ? (item.name || item.original_name) : (item.title || item.original_title);
+                  const year = (itemIsTv ? item.first_air_date : item.release_date)?.split('-')[0] || '';
+                  const rating = item.vote_average ? Number(item.vote_average).toFixed(1) : null;
 
                   return (
                     <div 
-                      key={movie.id} 
+                      key={`${item.id}-${item.media_type || 'media'}`} 
                       className={`tg-movie-item ${isSelected ? 'selected' : ''}`}
-                      onClick={() => setSelectedMovie(movie)}
+                      onClick={() => setSelectedMedia(item)}
                     >
                       <div className="tg-item-poster">
-                        {poster ? <img src={poster} alt={movie.title} /> : <Film size={18} />}
+                        {poster ? (
+                          <img src={poster} alt={title} />
+                        ) : itemIsTv ? (
+                          <Tv size={18} />
+                        ) : (
+                          <Film size={18} />
+                        )}
                       </div>
                       <div className="tg-item-info">
-                        <div className="tg-item-title">{movie.title || movie.original_title}</div>
+                        <div className="tg-item-title">{title}</div>
                         <div className="tg-item-meta">
+                          <span className={itemIsTv ? 'tg-badge-tv' : 'tg-badge-movie'}>
+                            {itemIsTv ? 'مسلسل 📺' : 'فيلم 🎬'}
+                          </span>
                           {year && <span>{year}</span>}
                           {rating && (
                             <span className="tg-item-rating">
@@ -425,7 +572,7 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
                 value={selectedHook} 
                 onChange={(e) => setSelectedHook(e.target.value)}
               >
-                {HOOKS.map(h => (
+                {(isTv ? SERIES_HOOKS : MOVIE_HOOKS).map(h => (
                   <option key={h} value={h}>{h}</option>
                 ))}
               </select>
@@ -433,7 +580,7 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
 
             {/* Synopsis Editor */}
             <div className="tg-synopsis-editor">
-              <label>قصة الفيلم المشوقة (قابلة للتعديل):</label>
+              <label>{isTv ? 'قصة المسلسل المشوقة (قابلة للتعديل):' : 'قصة الفيلم المشوقة (قابلة للتعديل):'}</label>
               <textarea 
                 rows={3} 
                 value={customSynopsis} 
@@ -475,8 +622,8 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
                   <img src={currentPoster} alt="Poster" />
                 ) : (
                   <div className="tg-poster-placeholder">
-                    <Film size={36} />
-                    <span>اختر فيلماً للمعاينة</span>
+                    {isTv ? <Tv size={36} /> : <Film size={36} />}
+                    <span>اختر عملاً للمعاينة</span>
                   </div>
                 )}
               </div>
@@ -493,7 +640,7 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
               {/* Inline Action Buttons */}
               <div className="tg-mockup-buttons">
                 <div className="tg-mockup-btn primary-watch">
-                  <span>▶️ مشاهدة الفيلم كامل بجودة 1080p</span>
+                  <span>{isTv ? '▶️ مشاهدة حلقات المسلسل كاملة 1080p' : '▶️ مشاهدة الفيلم كامل بجودة 1080p'}</span>
                   <ExternalLink size={12} />
                 </div>
                 <div className="tg-mockup-btn secondary-channel">
@@ -527,7 +674,7 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
                 type="button" 
                 className="tg-main-publish-btn"
                 onClick={handlePublish}
-                disabled={isPublishing || !selectedMovie}
+                disabled={isPublishing || !selectedMedia}
               >
                 {isPublishing ? (
                   <>
@@ -537,7 +684,7 @@ export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
                 ) : (
                   <>
                     <Send size={18} />
-                    <span>نشر الفيلم في القناة الآن 📢</span>
+                    <span>{isTv ? 'نشر المسلسل في القناة الآن 📢' : 'نشر الفيلم في القناة الآن 📢'}</span>
                   </>
                 )}
               </button>
