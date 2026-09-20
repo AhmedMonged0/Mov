@@ -7,63 +7,6 @@ import { API_ENDPOINT, getVisitorId } from './analyticsTracker';
 
 const VIP_STORAGE_KEY = 'movora_vip_membership_v1';
 const VIP_CHANGE_EVENT = 'movora_vip_changed';
-
-// Get current VIP status from local storage
-export function getVipStatus() {
-  if (typeof window === 'undefined') return { isVip: false, hasClaimedTrial: false };
-
-  try {
-    const raw = localStorage.getItem(VIP_STORAGE_KEY);
-    const hasClaimedTrial = localStorage.getItem('movora_trial_claimed') === 'true';
-
-    if (!raw) return { isVip: false, hasClaimedTrial };
-
-    const data = JSON.parse(raw);
-    if (!data || !data.expiresAt) return { isVip: false, hasClaimedTrial };
-
-    const now = Date.now();
-    if (now > data.expiresAt) {
-      // Membership expired
-      return {
-        isVip: false,
-        isExpired: true,
-        expiredAt: data.expiresAt,
-        code: data.code,
-        planName: data.planName,
-        isTrial: !!data.isTrial,
-        hasClaimedTrial
-      };
-    }
-
-    const remainingMs = Math.max(0, data.expiresAt - now);
-    const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
-    const remainingHours = Math.floor(remainingMs / (1000 * 60 * 60));
-    const remainingMinutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
-
-    return {
-      isVip: true,
-      code: data.code,
-      expiresAt: data.expiresAt,
-      durationDays: data.durationDays,
-      planName: data.planName || 'عضوية مميزة',
-      redeemedAt: data.redeemedAt,
-      isTrial: !!data.isTrial,
-      hasClaimedTrial,
-      remainingDays: data.durationDays >= 9000 ? 9999 : remainingDays,
-      remainingHours,
-      remainingMinutes,
-      remainingMs
-    };
-  } catch (err) {
-    console.error('Error reading VIP status:', err);
-    return { isVip: false, hasClaimedTrial: false };
-  }
-}
-
-// ==========================================================================
-// ANTI-TAMPERING SECURITY ENGINE (Server Sync, Monotonic Clock, Signed Vault)
-// ==========================================================================
-
 const GIFT_VAULT_KEY = 'movora_gift_vault_v3';
 const GIFT_CHANGE_EVENT = 'movora_gift_changed';
 const VAULT_SALT = 'MOVORA_SECURE_GIFT_VAULT_2026_!@#';
@@ -73,7 +16,11 @@ let isServerSynced = false;
 let lastWallTime = Date.now();
 let lastMonotonicTime = typeof performance !== 'undefined' ? performance.now() : 0;
 
-// Deterministic Cryptographic Signature
+// ==========================================================================
+// ANTI-TAMPERING CRYPTOGRAPHIC ENGINE
+// ==========================================================================
+
+// Deterministic Cryptographic Signature (Vault Checksum)
 function computeVaultChecksum(payloadStr) {
   let hash1 = 0x811c9dc5;
   let hash2 = 0x5bd1e995;
@@ -115,6 +62,71 @@ function unpackVaultData(envelopeStr) {
   } catch (err) {
     console.warn('[Movora Anti-Tamper] Corrupted or manipulated storage envelope:', err);
     return null;
+  }
+}
+
+// Get current VIP status from signed tamper-proof local storage
+export function getVipStatus() {
+  if (typeof window === 'undefined') return { isVip: false, hasClaimedTrial: false };
+
+  try {
+    const raw = localStorage.getItem(VIP_STORAGE_KEY);
+    const hasClaimedTrial = localStorage.getItem('movora_trial_claimed') === 'true';
+
+    if (!raw) return { isVip: false, hasClaimedTrial };
+
+    let data = unpackVaultData(raw);
+
+    // Auto-migrate legacy unencrypted data once
+    if (!data) {
+      try {
+        const legacy = JSON.parse(raw);
+        if (legacy && legacy.expiresAt && legacy.code) {
+          data = legacy;
+          localStorage.setItem(VIP_STORAGE_KEY, packVaultData(legacy));
+        }
+      } catch (e) {}
+    }
+
+    if (!data || !data.expiresAt) return { isVip: false, hasClaimedTrial };
+
+    const now = getRealNow();
+    if (now > data.expiresAt) {
+      // Membership expired
+      return {
+        isVip: false,
+        isExpired: true,
+        expiredAt: data.expiresAt,
+        code: data.code,
+        planName: data.planName,
+        isTrial: !!data.isTrial,
+        hasClaimedTrial
+      };
+    }
+
+    const remainingMs = Math.max(0, data.expiresAt - now);
+    const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+    const remainingHours = Math.floor(remainingMs / (1000 * 60 * 60));
+    const remainingMinutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    return {
+      isVip: true,
+      code: data.code,
+      expiresAt: data.expiresAt,
+      durationDays: data.durationDays,
+      planName: data.planName || 'عضوية مميزة',
+      redeemedAt: data.redeemedAt,
+      isTrial: !!data.isTrial,
+      hasClaimedTrial,
+      serverToken: data.serverToken || null,
+      remainingDays: data.durationDays >= 9000 ? 9999 : remainingDays,
+      remainingHours,
+      remainingMinutes,
+      remainingMs
+    };
+  } catch (err) {
+    console.error('Error reading VIP status:', err);
+    return { isVip: false, hasClaimedTrial: false };
   }
 }
 
@@ -333,7 +345,7 @@ export async function claim12HourGift() {
     redeemedAt: now
   };
 
-  localStorage.setItem(VIP_STORAGE_KEY, JSON.stringify(membership));
+  localStorage.setItem(VIP_STORAGE_KEY, packVaultData(membership));
   window.__MOVORA_IS_VIP = true;
   notifyVipChange();
   notifyGiftChange();
@@ -397,20 +409,24 @@ export async function verifyVipWithCloud() {
   const current = getVipStatus();
   if (!current.isVip || !current.code) return current;
 
+  // Gift trials don't need cloud code validation
+  if (current.isTrial || current.code === 'GIFT-12H-WELCOME') return current;
+
   try {
     const res = await fetch(API_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'verify_vip_status',
-        code: current.code
+        code: current.code,
+        token: current.serverToken || ''
       })
     });
 
     if (res.ok) {
       const data = await res.json();
       if (!data.valid) {
-        console.warn('[Movora VIP] Subscription revoked or deleted by admin:', data.reason);
+        console.warn('[Movora VIP] Subscription revoked or tampered:', data.reason);
         cancelVipLocally();
         return { isVip: false, isRevoked: true };
       }
@@ -454,17 +470,18 @@ export async function redeemVipCode(code) {
       return { success: false, error: data.error || 'تعذر تفعيل الكود، تأكد من صحته' };
     }
 
-    // Save membership locally
+    // Save membership into tamper-proof signed vault
     const membership = {
       isVip: true,
       code: cleanCode,
       expiresAt: data.expiresAt,
       durationDays: data.durationDays,
       planName: data.planName,
-      redeemedAt: Date.now()
+      redeemedAt: Date.now(),
+      serverToken: data.vipToken || null
     };
 
-    localStorage.setItem(VIP_STORAGE_KEY, JSON.stringify(membership));
+    localStorage.setItem(VIP_STORAGE_KEY, packVaultData(membership));
     if (typeof window !== 'undefined') {
       window.__MOVORA_IS_VIP = true;
     }

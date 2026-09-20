@@ -508,13 +508,22 @@ export default async function handler(req, res) {
           cacheControlMaxAge: 0
         });
 
+        const vipToken = signGiftPayload({
+          code: targetCode.code,
+          durationDays: targetCode.durationDays,
+          planName: targetCode.planName,
+          expiresAt,
+          visitorId: visitorId || ''
+        });
+
         return res.status(200).json({
           success: true,
           valid: true,
           code: targetCode.code,
           durationDays: targetCode.durationDays,
           planName: targetCode.planName,
-          expiresAt
+          expiresAt,
+          vipToken
         });
       }
 
@@ -546,9 +555,19 @@ export default async function handler(req, res) {
       // 5. Verify VIP Membership Status (Client Heartbeat & Cancellation Sync)
       if (action === 'verify_vip_status') {
         const codeStr = (body.code || '').trim().toUpperCase();
+        const token = body.token;
         if (!codeStr) {
           return res.status(200).json({ valid: false, reason: 'no_code' });
         }
+
+        // Validate cryptographic server signature if token is passed
+        if (token) {
+          const verified = verifyGiftPayload(token);
+          if (!verified || verified.code !== codeStr) {
+            return res.status(200).json({ valid: false, reason: 'invalid_signature' });
+          }
+        }
+
         if (!Array.isArray(current.vipCodes)) current.vipCodes = [];
 
         const target = current.vipCodes.find(c => c.code && c.code.toUpperCase() === codeStr);
