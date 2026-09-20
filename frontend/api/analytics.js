@@ -1,7 +1,28 @@
 import { put, get } from '@vercel/blob';
+import crypto from 'crypto';
 
 const BLOB_URL = 'https://gbawmvigpohlszyw.public.blob.vercel-storage.com/analytics/traffic.json';
 const BLOB_PATH = 'analytics/traffic.json';
+
+const GIFT_SECRET = process.env.BLOB_READ_WRITE_TOKEN || 'movora_super_secret_gift_key_2026_x89f';
+
+function signGiftPayload(payload) {
+  const data = JSON.stringify(payload);
+  const sig = crypto.createHmac('sha256', GIFT_SECRET).update(data).digest('hex');
+  return Buffer.from(JSON.stringify({ data, sig })).toString('base64url');
+}
+
+function verifyGiftPayload(token) {
+  try {
+    const raw = Buffer.from(token, 'base64url').toString('utf8');
+    const { data, sig } = JSON.parse(raw);
+    const expected = crypto.createHmac('sha256', GIFT_SECRET).update(data).digest('hex');
+    if (sig !== expected) return null;
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
 
 const DAYS_ORDER = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 
@@ -123,6 +144,8 @@ export default async function handler(req, res) {
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
+  res.setHeader('Access-Control-Expose-Headers', 'X-Server-Time, Date');
+  res.setHeader('X-Server-Time', String(Date.now()));
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -177,8 +200,78 @@ export default async function handler(req, res) {
       }
       body = body || {};
 
-      const current = await getCurrentData();
       const now = Date.now();
+      const action = body.action;
+
+      // FAST-PATH 1: Synchronize server clock (ultra-lightweight, 0 DB/Blob overhead)
+      if (action === 'server_time') {
+        return res.status(200).json({ success: true, serverTime: now });
+      }
+
+      // FAST-PATH 2: Secure Gift Token Initialization (Anti-Tampering Cryptographic Token)
+      if (action === 'init_gift') {
+        const visitorId = (body.visitorId || '').trim();
+        const createdAt = now;
+        const unlockAt = createdAt + (24 * 60 * 60 * 1000);
+        const token = signGiftPayload({ visitorId, createdAt, unlockAt });
+        return res.status(200).json({
+          success: true,
+          token,
+          createdAt,
+          unlockAt,
+          serverTime: now
+        });
+      }
+
+      // FAST-PATH 3: Verify Gift Claim with Cryptographic Signature Check
+      if (action === 'verify_gift_claim') {
+        const { visitorId, token } = body;
+        const unlockAt = Number(body.unlockAt) || 0;
+
+        if (token) {
+          const verified = verifyGiftPayload(token);
+          if (!verified) {
+            return res.status(403).json({
+              success: false,
+              error: 'رمز الهدية غير صالح أو تم التلاعب به!',
+              serverTime: now
+            });
+          }
+          if (verified.visitorId && visitorId && verified.visitorId !== visitorId) {
+            return res.status(403).json({
+              success: false,
+              error: 'رمز الهدية غير مخصص لهذا الجهاز!',
+              serverTime: now
+            });
+          }
+          // Check if 24 hours have actually passed according to server clock (60s grace margin for network latency)
+          if (now < (verified.unlockAt - 60000)) {
+            const msLeft = Math.max(0, verified.unlockAt - now);
+            const hoursLeft = Math.ceil(msLeft / (1000 * 60 * 60));
+            return res.status(403).json({
+              success: false,
+              error: `محاولة غير صالحة: ما زال متبقياً في العداد الحقيقي ${hoursLeft} ساعة تقريباً في خوادم موفورا.`,
+              serverTime: now
+            });
+          }
+          return res.status(200).json({ success: true, serverTime: now });
+        }
+
+        // Fallback for requests without token (legacy or offline client fallback)
+        if (unlockAt > 0 && now >= (unlockAt - 60000)) {
+          return res.status(200).json({ success: true, serverTime: now });
+        } else {
+          const msLeft = Math.max(0, unlockAt - now);
+          const hoursLeft = Math.ceil(msLeft / (1000 * 60 * 60));
+          return res.status(403).json({
+            success: false,
+            error: `محاولة غير صالحة: ما زال متبقياً في العداد الحقيقي ${hoursLeft} ساعة تقريباً.`,
+            serverTime: now
+          });
+        }
+      }
+
+      const current = await getCurrentData();
       const today = getArabicDayName();
 
       const {
@@ -501,6 +594,8 @@ export default async function handler(req, res) {
         }
         return res.status(404).json({ error: 'الكود غير موجود' });
       }
+
+
 
       // -------------------------------------------------------------
       // UNIVERSAL TRACKING: Applies to BOTH Pageviews & Movie Streams

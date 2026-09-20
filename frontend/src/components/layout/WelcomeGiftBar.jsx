@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { 
   getWelcomeGiftTracker, 
+  getRealNow,
   subscribeToGiftTracker, 
   claim12HourGift, 
   dismissGiftBar, 
@@ -24,6 +25,7 @@ export default function WelcomeGiftBar({ onOpenVipModal }) {
   const [timeLeftStr, setTimeLeftStr] = useState('');
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [claimError, setClaimError] = useState('');
 
   // Subscribe to changes in gift status
   useEffect(() => {
@@ -33,11 +35,11 @@ export default function WelcomeGiftBar({ onOpenVipModal }) {
     return unsub;
   }, []);
 
-  // Live timer tick every 1000ms
+  // Live timer tick every 1000ms using trusted clock
   useEffect(() => {
     const updateTimer = () => {
       const current = getWelcomeGiftTracker();
-      const now = Date.now();
+      const now = getRealNow();
 
       if (current.status === 'waiting') {
         const ms = Math.max(0, current.unlockAt - now);
@@ -69,14 +71,24 @@ export default function WelcomeGiftBar({ onOpenVipModal }) {
 
   if (!tracker || tracker.status === 'hidden') return null;
 
-  // Claim 12h VIP
-  const handleClaim = () => {
+  // Claim 12h VIP with server validation feedback
+  const handleClaim = async () => {
     setIsClaiming(true);
-    setTimeout(() => {
-      claim12HourGift();
+    setClaimError('');
+    try {
+      const res = await claim12HourGift();
+      if (res && res.success) {
+        window.location.reload();
+      } else {
+        const msg = res?.error || 'تعذر استلام الهدية حالياً. يرجى إعادة المحاولة.';
+        setClaimError(msg);
+        alert(msg);
+      }
+    } catch (e) {
+      alert('حدث خطأ أثناء تفعيل الهدية.');
+    } finally {
       setIsClaiming(false);
-      window.location.reload();
-    }, 600);
+    }
   };
 
   // If dismissed by user, render a small floating mini-badge at top corner

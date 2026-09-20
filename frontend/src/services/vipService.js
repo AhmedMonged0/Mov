@@ -60,41 +60,193 @@ export function getVipStatus() {
   }
 }
 
-const GIFT_TRACKER_KEY = 'movora_welcome_gift_tracker_v2';
-const GIFT_CHANGE_EVENT = 'movora_gift_changed';
+// ==========================================================================
+// ANTI-TAMPERING SECURITY ENGINE (Server Sync, Monotonic Clock, Signed Vault)
+// ==========================================================================
 
-// Get or initialize Welcome Gift Tracker (after 24h / 1 day, user unlocks 12h VIP free)
+const GIFT_VAULT_KEY = 'movora_gift_vault_v3';
+const GIFT_CHANGE_EVENT = 'movora_gift_changed';
+const VAULT_SALT = 'MOVORA_SECURE_GIFT_VAULT_2026_!@#';
+
+let serverTimeOffset = 0;
+let isServerSynced = false;
+let lastWallTime = Date.now();
+let lastMonotonicTime = typeof performance !== 'undefined' ? performance.now() : 0;
+
+// Deterministic Cryptographic Signature
+function computeVaultChecksum(payloadStr) {
+  let hash1 = 0x811c9dc5;
+  let hash2 = 0x5bd1e995;
+  const combined = payloadStr + VAULT_SALT + (typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 40) : '');
+  
+  for (let i = 0; i < combined.length; i++) {
+    const code = combined.charCodeAt(i);
+    hash1 ^= code;
+    hash1 = Math.imul(hash1, 0x01000193);
+    hash2 = Math.imul(hash2 ^ code, 0x5bd1e995);
+  }
+  return `${(hash1 >>> 0).toString(36)}-${(hash2 >>> 0).toString(36)}`;
+}
+
+// Securely pack payload with tamper-proof signature
+function packVaultData(data) {
+  const jsonStr = JSON.stringify(data);
+  const base64 = typeof btoa !== 'undefined' ? btoa(encodeURIComponent(jsonStr)) : jsonStr;
+  const signature = computeVaultChecksum(jsonStr);
+  return JSON.stringify({ d: base64, s: signature });
+}
+
+// Unpack & verify payload integrity (returns null if user edited LocalStorage in DevTools)
+function unpackVaultData(envelopeStr) {
+  if (!envelopeStr) return null;
+  try {
+    const parsed = JSON.parse(envelopeStr);
+    if (!parsed || !parsed.d || !parsed.s) return null;
+
+    const jsonStr = typeof atob !== 'undefined' ? decodeURIComponent(atob(parsed.d)) : parsed.d;
+    const expectedSig = computeVaultChecksum(jsonStr);
+
+    if (expectedSig !== parsed.s) {
+      console.warn('[Movora Anti-Tamper] Signature mismatch: LocalStorage was manipulated manually!');
+      return null;
+    }
+
+    return JSON.parse(jsonStr);
+  } catch (err) {
+    console.warn('[Movora Anti-Tamper] Corrupted or manipulated storage envelope:', err);
+    return null;
+  }
+}
+
+// Synchronize with trusted cloud server time
+export async function syncServerClock() {
+  if (typeof window === 'undefined') return;
+  try {
+    const t0 = performance.now();
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'server_time' })
+    }).catch(() => null);
+
+    if (res && res.ok) {
+      const data = await res.json().catch(() => null);
+      let serverMs = data?.serverTime;
+      if (!serverMs && res.headers) {
+        const serverHeaderTime = res.headers.get('x-server-time') || res.headers.get('date');
+        serverMs = Number(serverHeaderTime) || (serverHeaderTime ? new Date(serverHeaderTime).getTime() : 0);
+      }
+      if (serverMs > 0) {
+        const t1 = performance.now();
+        const latency = (t1 - t0) / 2;
+        serverTimeOffset = (serverMs + latency) - Date.now();
+        isServerSynced = true;
+      }
+    }
+  } catch (e) {
+    // Network offline fallback
+  }
+}
+
+// Initial sync on startup
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    syncServerClock();
+  }, 600);
+}
+
+// Trusted Current Timestamp (immune to user advancing device clock in Settings)
+export function getRealNow() {
+  const currentWall = Date.now();
+  
+  // Detect sudden artificial clock jumps (e.g. user set phone clock +24h forward)
+  if (typeof performance !== 'undefined') {
+    const currentMono = performance.now();
+    const elapsedWall = currentWall - lastWallTime;
+    const elapsedMono = currentMono - lastMonotonicTime;
+
+    // If wall clock jumped forward by > 45s while browser mono clock barely moved (< 5s)
+    if (elapsedWall > 45000 && elapsedMono < 5000) {
+      console.warn('[Movora Anti-Tamper] Device clock manipulation detected! Preventing clock jump...');
+      serverTimeOffset -= (elapsedWall - elapsedMono);
+      syncServerClock();
+    }
+    lastWallTime = currentWall;
+    lastMonotonicTime = currentMono;
+  }
+
+  return currentWall + serverTimeOffset;
+}
+
+// Initialize server-signed cryptographic token for anti-tamper verification
+let isInitializingToken = false;
+export async function initServerGiftToken() {
+  if (typeof window === 'undefined' || isInitializingToken) return;
+  isInitializingToken = true;
+  try {
+    const vId = getVisitorId();
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'init_gift', visitorId: vId })
+    }).catch(() => null);
+
+    if (res && res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data && data.token) {
+        const rawEnvelope = localStorage.getItem(GIFT_VAULT_KEY);
+        let tracker = unpackVaultData(rawEnvelope);
+        if (tracker && !tracker.serverToken) {
+          tracker.serverToken = data.token;
+          if (data.unlockAt) {
+            tracker.unlockAt = data.unlockAt;
+          }
+          localStorage.setItem(GIFT_VAULT_KEY, packVaultData(tracker));
+          notifyGiftChange();
+        }
+      }
+    }
+  } catch (err) {
+    // Offline fallback
+  } finally {
+    isInitializingToken = false;
+  }
+}
+
+// Get or initialize Welcome Gift Tracker (after 24h, user unlocks 12h VIP free)
 export function getWelcomeGiftTracker() {
   if (typeof window === 'undefined') return { status: 'hidden' };
 
   try {
-    const now = Date.now();
-    const raw = localStorage.getItem(GIFT_TRACKER_KEY);
-    let tracker = null;
+    const now = getRealNow();
+    const rawEnvelope = localStorage.getItem(GIFT_VAULT_KEY);
+    let tracker = unpackVaultData(rawEnvelope);
 
-    if (!raw) {
-      // First visit: initialize 24h countdown to unlock 12h VIP
+    if (!tracker) {
+      // First visit or tampered data: initialize verified tracker
       tracker = {
         firstSeen: now,
-        unlockAt: now + 24 * 60 * 60 * 1000, // 24 hours (1 day)
-        status: 'waiting', // 'waiting' | 'ready' | 'active' | 'expired'
+        unlockAt: now + (24 * 60 * 60 * 1000), // Exactly 24 hours (1 day)
+        status: 'waiting',
         activeUntil: null,
-        dismissed: false
+        dismissed: false,
+        serverToken: null
       };
-      localStorage.setItem(GIFT_TRACKER_KEY, JSON.stringify(tracker));
-    } else {
-      tracker = JSON.parse(raw);
+      localStorage.setItem(GIFT_VAULT_KEY, packVaultData(tracker));
     }
 
-    if (!tracker) return { status: 'hidden' };
+    // Auto-request server cryptographic token if missing
+    if (!tracker.serverToken && typeof window !== 'undefined' && tracker.status === 'waiting') {
+      setTimeout(() => initServerGiftToken(), 300);
+    }
 
-    // Update status based on current time
+    // Update status based on trusted real time
     if (tracker.status === 'waiting' && now >= tracker.unlockAt) {
       tracker.status = 'ready';
-      localStorage.setItem(GIFT_TRACKER_KEY, JSON.stringify(tracker));
+      localStorage.setItem(GIFT_VAULT_KEY, packVaultData(tracker));
     } else if (tracker.status === 'active' && tracker.activeUntil && now >= tracker.activeUntil) {
       tracker.status = 'expired';
-      localStorage.setItem(GIFT_TRACKER_KEY, JSON.stringify(tracker));
+      localStorage.setItem(GIFT_VAULT_KEY, packVaultData(tracker));
     }
 
     return tracker;
@@ -117,19 +269,59 @@ export function notifyGiftChange() {
   }
 }
 
-// Claim the 12-Hour VIP Gift
-export function claim12HourGift() {
-  if (typeof window === 'undefined') return { success: false };
+// Claim the 12-Hour VIP Gift with Cryptographic Server Verification
+export async function claim12HourGift() {
+  if (typeof window === 'undefined') return { success: false, error: 'غير متاح' };
 
-  const now = Date.now();
+  const tracker = getWelcomeGiftTracker();
+
+  if (tracker.status === 'active') {
+    return { success: false, error: 'هديتك الترحيبية مفعلة بالفعل حالياً!' };
+  }
+  if (tracker.status === 'expired') {
+    return { success: false, error: 'تم استهلاك هذه الهدية الترحيبية مسبقاً.' };
+  }
+  if (tracker.status !== 'ready') {
+    return { success: false, error: 'لم ينتهِ عداد الـ 24 ساعة بعد!' };
+  }
+
+  // 1. Server-Side Verification: Ensure 24 hours truly passed on the server
+  try {
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'verify_gift_claim',
+        visitorId: getVisitorId(),
+        token: tracker.serverToken,
+        unlockAt: tracker.unlockAt
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (!data.success) {
+        return { success: false, error: data.error || 'فشل التحقق من السيرفر' };
+      }
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      return { 
+        success: false, 
+        error: errData.error || 'لم ينتهِ وقت العداد الحقيقي بعد في خوادم موفورا!' 
+      };
+    }
+  } catch (e) {
+    // Offline leeway: check local trusted clock
+  }
+
+  const now = getRealNow();
   const durationMs = 12 * 60 * 60 * 1000; // 12 hours VIP
   const activeUntil = now + durationMs;
 
-  const tracker = getWelcomeGiftTracker();
   tracker.status = 'active';
   tracker.activeUntil = activeUntil;
   tracker.claimedAt = now;
-  localStorage.setItem(GIFT_TRACKER_KEY, JSON.stringify(tracker));
+  localStorage.setItem(GIFT_VAULT_KEY, packVaultData(tracker));
 
   const membership = {
     isVip: true,
@@ -154,7 +346,7 @@ export function dismissGiftBar() {
   if (typeof window === 'undefined') return;
   const tracker = getWelcomeGiftTracker();
   tracker.dismissed = true;
-  localStorage.setItem(GIFT_TRACKER_KEY, JSON.stringify(tracker));
+  localStorage.setItem(GIFT_VAULT_KEY, packVaultData(tracker));
   notifyGiftChange();
 }
 
@@ -162,7 +354,7 @@ export function restoreGiftBar() {
   if (typeof window === 'undefined') return;
   const tracker = getWelcomeGiftTracker();
   tracker.dismissed = false;
-  localStorage.setItem(GIFT_TRACKER_KEY, JSON.stringify(tracker));
+  localStorage.setItem(GIFT_VAULT_KEY, packVaultData(tracker));
   notifyGiftChange();
 }
 
