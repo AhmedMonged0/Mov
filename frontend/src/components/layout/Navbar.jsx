@@ -160,8 +160,6 @@ export default function Navbar() {
 
   const navLinks = [
     { name: 'الرئيسية', path: '/' },
-    { name: 'الأفلام الشائعة', path: '/?type=popular' },
-    { name: 'عروض السينما', path: '/?type=now_playing' },
     { name: 'التصنيفات', path: '/categories' },
   ];
 
@@ -187,32 +185,6 @@ export default function Navbar() {
             </Link>
           );
         })}
-        <button 
-          type="button" 
-          className={`nav-link-btn random-btn ${isRollingDice ? 'dice-rolling' : ''}`}
-          onClick={() => {
-            setMobileMenu(false);
-            handleRandomMovie();
-          }}
-          title="اقترح لي فيلماً بجودة عالية 🎲"
-          disabled={isRollingDice}
-        >
-          <Dices size={15} className={isRollingDice ? 'spin-dice' : ''} />
-          <span>فيلم عشوائي 🎲</span>
-        </button>
-
-        <button 
-          type="button" 
-          className="nav-link-btn req-btn"
-          onClick={() => {
-            setMobileMenu(false);
-            setShowRequestModal(true);
-          }}
-          title="اطلب فيلماً أو مسلسلاً 🎬"
-        >
-          <Clapperboard size={15} />
-          <span>طلب فيلم 🎬</span>
-        </button>
 
         <a 
           href="https://t.me/movora_me" 
@@ -225,6 +197,34 @@ export default function Navbar() {
           <Send size={13} />
           <span>تليجرام</span>
         </a>
+
+        {/* Mobile Drawer Only Actions */}
+        <div className="mobile-drawer-actions">
+          <button 
+            type="button" 
+            className="mobile-drawer-btn random"
+            onClick={() => {
+              setMobileMenu(false);
+              handleRandomMovie();
+            }}
+            disabled={isRollingDice}
+          >
+            <Dices size={16} className={isRollingDice ? 'spin-dice' : ''} />
+            <span>فيلم عشوائي 🎲</span>
+          </button>
+
+          <button 
+            type="button" 
+            className="mobile-drawer-btn request"
+            onClick={() => {
+              setMobileMenu(false);
+              setShowRequestModal(true);
+            }}
+          >
+            <Clapperboard size={16} />
+            <span>طلب فيلم أو مسلسل 🎬</span>
+          </button>
+        </div>
       </nav>
 
       {/* Global Live Instant Search Bar & Actions */}

@@ -97,48 +97,25 @@
   display: none !important;
 }
 
-/* Navigation Link Buttons (Mobile menu & desktop) */
-.nav-link-btn {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 0;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  text-align: right;
+/* Mobile Drawer Actions (Hidden on Desktop) */
+.mobile-drawer-actions {
+  display: none;
 }
 
-.nav-link-btn:hover {
-  color: #ffffff;
-}
-
-.nav-link-btn.random-btn:hover {
-  color: #facc15;
-}
-
-.nav-link-btn.req-btn:hover {
-  color: #ff315a;
-}
-
-/* Quick Action Buttons in Nav Actions Bar */
+/* Quick Action Buttons in Nav Actions Bar (Desktop & Tablet) */
 .nav-action-quick-btn {
-  height: 38px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px;
+  gap: 7px;
+  padding: 0 15px;
   border-radius: 11px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
+  flex-shrink: 0;
   font-family: inherit;
 }
 
@@ -596,6 +573,42 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
     z-index: 999;
+  }
+
+  .mobile-drawer-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .mobile-drawer-btn {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    font-family: inherit;
+  }
+
+  .mobile-drawer-btn.random {
+    background: rgba(250, 204, 21, 0.12);
+    border-color: rgba(250, 204, 21, 0.35);
+    color: #facc15;
+  }
+
+  .mobile-drawer-btn.request {
+    background: rgba(255, 49, 90, 0.12);
+    border-color: rgba(255, 49, 90, 0.35);
+    color: #ff315a;
   }
 
   .menu {

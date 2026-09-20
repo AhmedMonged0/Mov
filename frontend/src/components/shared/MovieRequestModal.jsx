@@ -150,16 +150,15 @@ export default function MovieRequestModal({ isOpen, onClose }) {
             <div className="req-form-group">
               <label htmlFor="req-title">
                 <Film size={14} />
-                <span>اسم الفيلم المطلوب *</span>
+                <span>اسم الفيلم أو المسلسل المطلوب *</span>
               </label>
               <input
                 id="req-title"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="مثال: Inception أو سبايدرمان الجديد..."
+                placeholder="مثال: Inception أو سبايدرمان..."
                 required
-                autoFocus
               />
             </div>
 
