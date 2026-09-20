@@ -301,7 +301,7 @@ export default function MovieDetails() {
               title={title}
               allowFullScreen
               allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-              sandbox={vipStatus.isVip ? "allow-forms allow-scripts allow-same-origin allow-presentation allow-fullscreen" : undefined}
+              sandbox="allow-forms allow-scripts allow-same-origin allow-presentation allow-fullscreen"
             />
           </div>
           {/* Optional Sponsored Banner Slot */}

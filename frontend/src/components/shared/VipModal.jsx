@@ -43,7 +43,15 @@ export default function VipModal({ isOpen, onClose }) {
       setCode('');
       setShowExtendCodeForm(false);
       verifyVipWithCloud().then((fresh) => {
-        if (fresh) setVipStatus(fresh);
+        if (fresh) {
+          setVipStatus(fresh);
+          if (fresh.isRevoked) {
+            setFeedback({
+              type: 'error',
+              message: 'تنبيه: تم إلغاء أو حذف كود التفعيل هذا من قِبل إدارة الموقع. يمكنك إدخال كود جديد أدناه.'
+            });
+          }
+        }
       });
     }
   }, [isOpen]);
@@ -61,7 +69,7 @@ export default function VipModal({ isOpen, onClose }) {
   const handleRedeem = async (e) => {
     e.preventDefault();
     if (!code.trim()) {
-      setFeedback({ type: 'error', message: 'يرجى كتابة رمز الكود أولاً' });
+      setFeedback({ type: 'error', message: 'يرجى إدخال رمز الكود أولاً' });
       return;
     }
 
@@ -72,9 +80,13 @@ export default function VipModal({ isOpen, onClose }) {
     setIsSubmitting(false);
 
     if (res.success) {
-      setFeedback({ type: 'success', message: res.message });
+      setFeedback({ type: 'success', message: `${res.message} جاري تحديث الصفحة لتنظيف كافة الإعلانات تماماً... ✨` });
       setCode('');
       setShowExtendCodeForm(false);
+      // Clean reload to flush all ad memory
+      setTimeout(() => {
+        window.location.reload();
+      }, 1200);
     } else {
       setFeedback({ type: 'error', message: res.error });
     }

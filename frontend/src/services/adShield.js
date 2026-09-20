@@ -81,12 +81,14 @@ export async function saveAdSettingsToCloud(newSettings) {
   return { success: true, data: merged };
 }
 
-// Completely purge any floating or injected ads on Admin pages
+// Completely purge any floating or injected ads on Admin pages or for VIP users
 export function purgeAdminAds() {
   if (typeof document === 'undefined') return;
   const selectors = [
     'script[src*="profitableratecpmnetwork.com"]',
     'script[src*="quge5.com"]',
+    'iframe[src*="profitableratecpmnetwork.com"]',
+    'iframe[src*="quge5.com"]',
     '#movora-monetag-script-tag',
     '#movora-monetag-meta-tag',
     '[class*="monetag"]',
@@ -96,7 +98,8 @@ export function purgeAdminAds() {
     '[class*="inpage_push"]',
     'div[style*="z-index: 2147483647"]',
     'div[style*="z-index: 999999"]',
-    'div[style*="z-index: 100000"]'
+    'div[style*="z-index: 100000"]',
+    'div[style*="z-index: 9999"]'
   ];
 
   selectors.forEach((sel) => {
@@ -108,7 +111,25 @@ export function purgeAdminAds() {
       });
     } catch (e) {}
   });
+
+  // Also remove any direct body children with high fixed position outside #root
+  try {
+    const children = document.body.children;
+    for (let i = children.length - 1; i >= 0; i--) {
+      const child = children[i];
+      if (child.id === 'root' || child.tagName === 'SCRIPT' || child.tagName === 'STYLE') continue;
+      const computed = window.getComputedStyle(child);
+      if (computed.position === 'fixed' || computed.position === 'absolute') {
+        const z = parseInt(computed.zIndex, 10);
+        if (z >= 9999) {
+          child.remove();
+        }
+      }
+    }
+  } catch (e) {}
 }
+
+export const purgeAllAds = purgeAdminAds;
 
 // Apply settings directly to the DOM
 export function applyAdSettings(settings) {
@@ -121,7 +142,7 @@ export function applyAdSettings(settings) {
   }
 
   // If user is a VIP Member or ads disabled globally, purge all ads!
-  if (isVipActive() || (settings && settings.enabled === false)) {
+  if (isVipActive() || (typeof window !== 'undefined' && window.__MOVORA_IS_VIP) || (settings && settings.enabled === false)) {
     purgeAdminAds();
     return;
   }
@@ -132,10 +153,20 @@ export function initAdShield() {
   if (typeof window === 'undefined' || isShieldInitialized) return;
   isShieldInitialized = true;
 
+  const checkIsVip = () => isVipActive() || !!window.__MOVORA_IS_VIP;
+  const checkIsAdmin = () => window.location.pathname.startsWith('/admin');
+
   // If on admin route or user is VIP, purge immediately
-  if (window.location.pathname.startsWith('/admin') || isVipActive()) {
+  if (checkIsAdmin() || checkIsVip()) {
     purgeAdminAds();
   }
+
+  // Continuous background cleanup when VIP or on admin
+  setInterval(() => {
+    if (checkIsAdmin() || checkIsVip()) {
+      purgeAdminAds();
+    }
+  }, 2500);
 
   // Subscribe to dynamic VIP state changes
   subscribeToVip((vipStatus) => {
@@ -144,14 +175,22 @@ export function initAdShield() {
     }
   });
 
-  // 1. Intercept rogue window.open calls from third-party players
+  // 1. Intercept rogue window.open calls from third-party players or ad scripts
   const originalWindowOpen = window.open;
   window.open = function (url, target, features) {
     const settings = getAdSettings();
+    const isVip = checkIsVip();
+    const isAdmin = checkIsAdmin();
 
     // Allow internal navigation or trusted routes
-    if (!url || url.startsWith('/') || url.includes(window.location.host)) {
+    if (url && (url.startsWith('/') || url.includes(window.location.host))) {
       return originalWindowOpen.call(window, url, target, features);
+    }
+
+    // For VIP members or Admin, block ALL external popup windows unconditionally!
+    if (isVip || isAdmin) {
+      console.warn('[Movora AdShield 🛡️] Blocked external popup window for VIP/Admin:', url);
+      return null;
     }
 
     // If Anti-Adult Shield is active, block rogue third-party popup ads
@@ -163,7 +202,54 @@ export function initAdShield() {
     return originalWindowOpen.call(window, url, target, features);
   };
 
-  // 2. Prevent Top-Level Window Redirection Hijacking
+  // 2. Intercept rogue anchor clicks used by ad scripts to bypass window.open
+  try {
+    const originalAnchorClick = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function () {
+      const isVip = checkIsVip();
+      const isAdmin = checkIsAdmin();
+      const href = this.href || '';
+
+      if (href && !href.startsWith('javascript:') && !href.startsWith('#')) {
+        const isInternal = href.startsWith('/') || href.includes(window.location.host);
+        if (!isInternal && (isVip || isAdmin)) {
+          if (href.includes('profitableratecpmnetwork') || href.includes('quge5') || href.includes('adsterra') || this.target === '_blank') {
+            console.warn('[Movora AdShield 🛡️] Blocked rogue anchor click ad for VIP/Admin:', href);
+            return;
+          }
+        }
+      }
+      return originalAnchorClick.apply(this, arguments);
+    };
+  } catch (e) {}
+
+  // 3. MutationObserver to immediately destroy any injected ad nodes for VIP or Admin
+  try {
+    const observer = new MutationObserver((mutations) => {
+      if (!checkIsVip() && !checkIsAdmin()) return;
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType === 1) { // Element node
+            const el = node;
+            const src = (el.src || el.getAttribute('src') || '').toLowerCase();
+            if (src.includes('profitableratecpmnetwork') || src.includes('quge5') || src.includes('adsterra')) {
+              el.remove();
+              continue;
+            }
+            const cls = (el.className || '').toString().toLowerCase();
+            const id = (el.id || '').toString().toLowerCase();
+            if (cls.includes('adsterra') || id.includes('adsterra') || cls.includes('inpage_push')) {
+              el.remove();
+              continue;
+            }
+          }
+        }
+      }
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  } catch (e) {}
+
+  // 4. Prevent Top-Level Window Redirection Hijacking
   window.addEventListener('beforeunload', (e) => {
     // Only protect when user is on a viewing page or modal is open
     if (document.querySelector('.video-player-container') || document.querySelector('.video-modal-overlay')) {
@@ -172,11 +258,11 @@ export function initAdShield() {
     }
   });
 
-  // 3. Load stored settings
+  // 5. Load stored settings
   const localSettings = getAdSettings();
   applyAdSettings(localSettings);
 
-  // 4. Unregister any legacy Monetag ServiceWorker
+  // 6. Unregister any legacy Monetag ServiceWorker
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     try {
       navigator.serviceWorker.getRegistrations().then((registrations) => {

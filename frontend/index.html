@@ -85,25 +85,47 @@
     <!-- Movora Smart Ad & VIP Pre-Loader -->
     <script>
       (function() {
-        try {
-          var vip = localStorage.getItem('movora_vip_membership_v1');
-          if (vip) {
-            var data = JSON.parse(vip);
-            if (data && data.expiresAt && Date.now() < data.expiresAt) {
-              window.__MOVORA_IS_VIP = true;
-              return; // Absolutely NO ads for VIP members!
+        function isUserVip() {
+          try {
+            var raw = localStorage.getItem('movora_vip_membership_v1');
+            if (raw) {
+              var d = JSON.parse(raw);
+              if (d && (d.isVip || (d.expiresAt && Date.now() < Number(d.expiresAt)))) {
+                return true;
+              }
             }
-          }
-        } catch(e) {}
-
-        // Never load ads on admin routes
-        if (window.location.pathname.startsWith('/admin')) {
-          return;
+          } catch(e) {}
+          return false;
         }
 
-        // Dynamically load Adsterra only for regular non-VIP visitors
+        var isVip = isUserVip();
+        var isAdmin = window.location.pathname.startsWith('/admin');
+
+        if (isVip || isAdmin) {
+          window.__MOVORA_IS_VIP = true;
+          // Freeze Adsterra script injection permanently in this session
+          var origCreate = document.createElement;
+          document.createElement = function(tag) {
+            var el = origCreate.apply(document, arguments);
+            if (tag && tag.toLowerCase && tag.toLowerCase() === 'script') {
+              var origSetAttr = el.setAttribute;
+              el.setAttribute = function(k, v) {
+                if (k === 'src' && typeof v === 'string' && (v.indexOf('profitableratecpmnetwork') !== -1 || v.indexOf('quge5') !== -1)) {
+                  return;
+                }
+                return origSetAttr.apply(el, arguments);
+              };
+            }
+            return el;
+          };
+          return; // Absolutely zero ads for VIP or Admin
+        }
+
+        // Dynamically load Adsterra ONLY for free non-VIP visitors
         window.__loadMovoraAds = function() {
-          if (window.__MOVORA_IS_VIP || window.location.pathname.startsWith('/admin')) return;
+          if (window.__MOVORA_IS_VIP || isUserVip() || window.location.pathname.startsWith('/admin')) {
+            return;
+          }
 
           var s1 = document.createElement('script');
           s1.src = 'https://pl31428179.profitableratecpmnetwork.com/7b/e7/07/7be707785eeb9d7afdf4c116107210a2.js';

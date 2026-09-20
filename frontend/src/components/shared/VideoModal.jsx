@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Film, Play, Star, ShieldCheck, Languages } from 'lucide-react';
+import { X, Server, Film, Play, Star, ShieldCheck, Languages, Crown } from 'lucide-react';
 import { fetchMovieVideos } from '../../services/tmdb';
 import { trackMovieStream } from '../../services/analyticsTracker';
+import { isVipActive, subscribeToVip } from '../../services/vipService';
 import AdBannerSlot from './AdBannerSlot';
 import '../../styles/VideoModal.css';
 
@@ -9,6 +10,13 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
   const [activeServer, setActiveServer] = useState(initialServer); // 'primary' | 'multiembed' | 'backup' | 'trailer'
   const [trailerKey, setTrailerKey] = useState(null);
   const [loadingTrailer, setLoadingTrailer] = useState(true);
+  const [isVip, setIsVip] = useState(() => isVipActive());
+
+  useEffect(() => {
+    return subscribeToVip((status) => {
+      setIsVip(!!status.isVip);
+    });
+  }, []);
 
   // Track movie stream in analytics
   useEffect(() => {
@@ -141,11 +149,12 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
           <div className="modal-header-actions">
             {/* Movora Secure Stream Badge */}
             <div 
-              className="ad-shield-badge active"
-              title="درع موفورا الذكي: حظر الإعلانات الإباحية والنوافذ المنبثقة الخبيثة وتوفير الصوت الإنجليزي الأصلي"
+              className={`ad-shield-badge active ${isVip ? 'vip-stream-badge' : ''}`}
+              style={isVip ? { borderColor: '#eab308', background: 'rgba(234, 179, 8, 0.15)', color: '#facc15' } : {}}
+              title={isVip ? "عضوية Movora VIP نشطة: حظر شامل لكافة الإعلانات والنوافذ المنبثقة 👑" : "درع موفورا الذكي: حظر الإعلانات الإباحية والنوافذ المنبثقة"}
             >
-              <ShieldCheck size={14} />
-              <span>درع الحماية نشط 🛡️</span>
+              {isVip ? <Crown size={14} style={{ color: '#facc15' }} /> : <ShieldCheck size={14} />}
+              <span>{isVip ? 'عضوية VIP: بدون إعلانات 👑' : 'درع الحماية نشط 🛡️'}</span>
             </div>
 
             {/* Prominent Header Close Button */}
@@ -165,45 +174,44 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
         <div className="video-modal-servers">
           <div className="server-label">
             <Server size={15} />
-            <span>سيرفرات المشاهدة:</span>
+            <span>سيرفر العرض:</span>
           </div>
 
-          <div className="server-buttons">
+          <div className="server-buttons-grid">
             <button
               className={`server-btn ${activeServer === 'primary' ? 'active' : ''}`}
               onClick={() => setActiveServer('primary')}
-              title="سيرفر نقي عالي الجودة بدون إعلانات مزعجة"
             >
-              <span className="server-dot"></span>
-              سيرفر سينما نقي (VidLink HD) ⭐
+              <Play size={14} />
+              سيرفر VidLink (سريع ودقة عالية)
             </button>
 
             <button
-              className={`server-btn ${activeServer === 'autoembed' ? 'active' : ''}`}
-              onClick={() => setActiveServer('autoembed')}
+              className={`server-btn ${activeServer === 'secondary' ? 'active' : ''}`}
+              onClick={() => setActiveServer('secondary')}
             >
-              <span className="server-dot multi"></span>
-              سيرفر سريع (AutoEmbed)
+              <Server size={14} />
+              سيرفر AutoEmbed
             </button>
 
             <button
-              className={`server-btn ${activeServer === 'multiembed' ? 'active' : ''}`}
-              onClick={() => setActiveServer('multiembed')}
+              className={`server-btn ${activeServer === 'server3' ? 'active' : ''}`}
+              onClick={() => setActiveServer('server3')}
             >
-              <span className="server-dot backup"></span>
-              سيرفر الترجمة (MultiEmbed)
+              <Server size={14} />
+              سيرفر MultiEmbed (متعدد)
             </button>
 
             <button
-              className={`server-btn ${activeServer === 'backup' ? 'active' : ''}`}
-              onClick={() => setActiveServer('backup')}
+              className={`server-btn ${activeServer === 'server4' ? 'active' : ''}`}
+              onClick={() => setActiveServer('server4')}
             >
-              <span className="server-dot"></span>
-              سيرفر احتياطي (VidSrc)
+              <Server size={14} />
+              سيرفر VidSrc (احتياطي)
             </button>
 
             <button
-              className={`server-btn ${activeServer === 'trailer' ? 'active' : ''}`}
+              className={`server-btn trailer-btn ${activeServer === 'trailer' ? 'active' : ''}`}
               onClick={() => setActiveServer('trailer')}
               disabled={loadingTrailer && !trailerKey}
             >
@@ -222,6 +230,7 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
             className="video-player-iframe"
             allowFullScreen
             allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+            sandbox="allow-forms allow-scripts allow-same-origin allow-presentation allow-fullscreen"
           />
         </div>
 
