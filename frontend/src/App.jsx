@@ -13,7 +13,7 @@ import { AdminAuthProvider, AdminProtectedRoute } from './context/AdminAuthConte
 import { trackPageView } from './services/analyticsTracker';
 import { initAdShield } from './services/adShield';
 
-// Initialize AdShield (blocks offensive popups & activates Monetag ads)
+// Initialize AdShield (blocks offensive third-party popups & secures admin area)
 if (typeof window !== 'undefined') {
   initAdShield();
 }

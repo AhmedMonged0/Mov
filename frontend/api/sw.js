@@ -4,12 +4,11 @@ export default function handler(req, res) {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  const content = `self.options = {
-    "domain": "5gvci.com",
-    "zoneId": 11839605
-}
-self.lary = ""
-importScripts('https://5gvci.com/act/files/service-worker.min.js?r=sw')`;
+  const content = `// Unregister legacy ad service workers
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.registration.unregister());
+});`;
 
   return res.status(200).send(content);
 }

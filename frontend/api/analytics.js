@@ -25,8 +25,7 @@ function createEmptyAnalytics() {
     liveActiveCount: 1,
     adSettings: {
       enabled: true,
-      monetagVerification: '',
-      monetagScript: '<script src="https://quge5.com/88/tag.min.js" data-zone="283157" async data-cfasync="false"></script>',
+      adNetwork: 'adsterra',
       bannerPlayerCode: '',
       antiAdultShield: true,
       lastUpdated: Date.now()
@@ -92,9 +91,8 @@ function autoHealAnalytics(data) {
   // Ensure adSettings exists
   if (!data.adSettings) {
     data.adSettings = {
-      enabled: false,
-      monetagVerification: '',
-      monetagScript: '',
+      enabled: true,
+      adNetwork: 'adsterra',
       bannerPlayerCode: '',
       antiAdultShield: true,
       lastUpdated: Date.now()
@@ -192,7 +190,7 @@ export default async function handler(req, res) {
         return res.status(200).json(empty);
       }
 
-      // Handle Monetag & Ad Settings Update
+      // Handle Ad Settings Update
       if (action === 'update_ads') {
         current.adSettings = {
           ...(current.adSettings || {}),

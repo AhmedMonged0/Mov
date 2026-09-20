@@ -245,7 +245,7 @@ export default function MovieDetails() {
               allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
             />
           </div>
-          {/* Optional Monetag Sponsored Banner Slot */}
+          {/* Optional Sponsored Banner Slot */}
           <AdBannerSlot slot="player" />
           <div style={{
             background: '#0e1017',

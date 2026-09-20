@@ -66,7 +66,7 @@ export default function AdminDashboard() {
   const [cloudStatus, setCloudStatus] = useState(true);
   const [cloudFeedback, setCloudFeedback] = useState(null);
 
-  // Monetag & Ads Modal State
+  // Ads Modal State
   const [showAdsModal, setShowAdsModal] = useState(false);
   const [adSettings, setAdSettings] = useState(() => getAdSettings());
   const [isSavingAds, setIsSavingAds] = useState(false);
@@ -169,7 +169,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Handle Monetag Ads Settings Save
+  // Handle Ads Settings Save
   const handleSaveAds = async (e) => {
     e.preventDefault();
     setIsSavingAds(true);
@@ -257,7 +257,7 @@ export default function AdminDashboard() {
           <button 
             className="admin-action-btn ads-btn"
             onClick={() => setShowAdsModal(true)}
-            title="إدارة إعلانات Monetag وأرباح الموقع ودرع الحماية"
+            title="إدارة إعلانات الموقع وأرباح Adsterra ودرع الحماية"
             style={{
               borderColor: 'rgba(234, 179, 8, 0.4)',
               background: 'rgba(234, 179, 8, 0.1)',
@@ -265,7 +265,7 @@ export default function AdminDashboard() {
             }}
           >
             <DollarSign size={15} style={{ color: '#facc15' }} />
-            <span>إعلانات Monetag والأرباح 💰</span>
+            <span>إعلانات الموقع والأرباح 💰</span>
           </button>
 
           <button 
@@ -367,7 +367,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Monetag Ads & Revenue Bar */}
+        {/* Ads & Revenue Bar */}
         <div style={{
           background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0%, rgba(15, 23, 42, 0.7) 100%)',
           border: '1px solid rgba(234, 179, 8, 0.25)',
@@ -395,7 +395,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <strong style={{ fontSize: '15px', color: '#fff' }}>أرباح الموقع وإعلانات Monetag</strong>
+                <strong style={{ fontSize: '15px', color: '#fff' }}>أرباح الموقع وإعلانات Adsterra</strong>
                 <span style={{
                   fontSize: '11px',
                   padding: '2px 8px',
@@ -422,7 +422,7 @@ export default function AdminDashboard() {
                 </span>
               </div>
               <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#94a3b8' }}>
-                تحكم بإعلانات موني تاج الخاصة بك، ضع كود التحقق والأرباح، وتأمين الزوار من إعلانات البث الخارجية.
+                إعلانات شبكة Adsterra (Popunder و Social Bar) مدمجة لجميع الزوار مع حماية كاملة للوحة الإدارة.
               </p>
             </div>
           </div>
@@ -445,7 +445,7 @@ export default function AdminDashboard() {
             }}
           >
             <Sparkles size={15} />
-            <span>إعداد وتفعيل Monetag</span>
+            <span>إدارة الإعلانات والأرباح</span>
           </button>
         </div>
         
@@ -916,14 +916,14 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Monetag & Ads Management Modal */}
+      {/* Ads Management Modal */}
       {showAdsModal && (
         <div className="admin-modal-backdrop" onClick={() => setShowAdsModal(false)}>
           <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} dir="rtl" style={{ maxWidth: '640px' }}>
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <DollarSign size={22} style={{ color: '#facc15' }} />
-                <h3>إدارة إعلانات Monetag وأرباح الموقع 💰</h3>
+                <h3>إدارة إعلانات Adsterra وأرباح الموقع 💰</h3>
               </div>
               <button className="modal-close-btn" onClick={() => setShowAdsModal(false)}>
                 <X size={18} />
@@ -941,8 +941,8 @@ export default function AdminDashboard() {
               lineHeight: '1.6',
               marginBottom: '16px'
             }}>
-              🛡️ <strong>درع حماية موفورا من الإعلانات الإباحية مفعّل تلقائياً:</strong><br />
-              تم توجيه مشغل الأفلام لسيرفر <strong>VidLink HD</strong> النقي الخالي من النوافذ المنبثقة الإباحية، مع تفعيل حظر تلقائي لكافة النوافذ المنبثقة العشوائية ومحاولات التحويل الإجباري من سيرفرات البث الخارجية.
+              🛡️ <strong>درع حماية موفورا مفعّل تلقائياً:</strong><br />
+              مشغل الأفلام مضبوط على سيرفر <strong>VidLink HD</strong> النقي الخالي من النوافذ المنبثقة الإباحية، مع حماية لوحة الإدارة من أي إعلانات مزعجة.
             </div>
 
             {adsFeedback && (
@@ -966,10 +966,10 @@ export default function AdminDashboard() {
               }}>
                 <div>
                   <strong style={{ fontSize: '14px', color: '#fff', display: 'block' }}>
-                    تفعيل إعلانات Monetag في الموقع
+                    تفعيل إعلانات Adsterra في الموقع
                   </strong>
                   <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-                    عند التفعيل، ستظهر إعلاناتك أنت فقط لجميع زوار موقع movora.me لتحقيق الأرباح.
+                    إعلانات Popunder و Social Bar نشطة وتعمل لجميع الزوار لتحقيق الأرباح.
                   </span>
                 </div>
                 <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
@@ -980,42 +980,6 @@ export default function AdminDashboard() {
                     style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#eab308' }}
                   />
                 </label>
-              </div>
-
-              {/* Verification Code Input */}
-              <div className="form-group" style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>كود التحقق من ملكية الموقع (Monetag Verification Tag):</span>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>مطلوب لتأكيد موقعك في Monetag</span>
-                </label>
-                <input
-                  type="text"
-                  value={adSettings.monetagVerification || ''}
-                  onChange={(e) => setAdSettings({ ...adSettings, monetagVerification: e.target.value })}
-                  placeholder='مثال: <meta name="monetag" content="c03264b123..." /> أو الكود فقط'
-                  style={{ direction: 'ltr', textAlign: 'left', fontFamily: 'monospace', fontSize: '12px' }}
-                />
-                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
-                  يمكنك لصق كود الميتا كاملاً أو المعرّف فقط، وسيتم دمجه فوراً في ترويسة الموقع تلقائياً.
-                </span>
-              </div>
-
-              {/* Main Monetag Script (MultiTag / Popunder / In-Page Push) */}
-              <div className="form-group" style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>كود إعلان Monetag MultiTag أو الكود العام:</span>
-                  <span style={{ fontSize: '11px', color: '#38bdf8' }}>MultiTag / In-Page Push / Popunder</span>
-                </label>
-                <textarea
-                  rows="4"
-                  value={adSettings.monetagScript || ''}
-                  onChange={(e) => setAdSettings({ ...adSettings, monetagScript: e.target.value })}
-                  placeholder='الصق كود الـ <script> الذي نسخته من موقع Monetag هنا...'
-                  style={{ direction: 'ltr', textAlign: 'left', fontFamily: 'monospace', fontSize: '12px', resize: 'vertical' }}
-                />
-                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
-                  كود الجافاسكريبت المخصص من Monetag. يتم تنفيذه لجميع الزوار بشكل آمن ومحمي.
-                </span>
               </div>
 
               {/* Optional Player Banner Slot */}
@@ -1030,7 +994,7 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Quick Start Guide */}
+              {/* Adsterra Info Guide */}
               <div style={{
                 background: 'rgba(234, 179, 8, 0.05)',
                 border: '1px solid rgba(234, 179, 8, 0.2)',
@@ -1041,13 +1005,12 @@ export default function AdminDashboard() {
                 lineHeight: '1.7',
                 marginBottom: '18px'
               }}>
-                <strong style={{ color: '#facc15' }}>💡 خطوات الربح من Monetag لموقعك movora.me:</strong>
-                <ol style={{ paddingRight: '18px', margin: '6px 0 0 0' }}>
-                  <li>ادخل إلى <a href="https://monetag.com" target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8' }}>Monetag.com</a> وأنشئ حساب ناشر، ثم أضف موقعك <code>movora.me</code>.</li>
-                  <li>انسخ كود التحقق (Verification Meta Tag) وضعه في الحقل الأول واضغط "حفظ".</li>
-                  <li>بعد تأكيد الموقع، أنشئ إعلان من نوع <strong>MultiTag</strong> أو <strong>In-Page Push</strong> (وهي إعلانات نظيفة وموثوقة).</li>
-                  <li>انسخ كود الإعلان وضعه في الحقل الثاني وفعل خيار "تفعيل إعلانات Monetag" ثم اضغط حفظ.</li>
-                </ol>
+                <strong style={{ color: '#facc15' }}>✨ إعلانات Adsterra المثبتة في الموقع:</strong>
+                <ul style={{ paddingRight: '18px', margin: '6px 0 0 0' }}>
+                  <li><strong>Popunder:</strong> إعلان فتحة نافذة منبثقة ربحية عند أول نقرة للزائر.</li>
+                  <li><strong>Social Bar:</strong> شريط إعلاني تفاعلي ذكي وسلس في أسفل الشاشة.</li>
+                  <li><strong>لوحة الإدارة:</strong> محمية دائماً وبشكل تلقائي من ظهور أي إعلانات لك.</li>
+                </ul>
               </div>
 
               <div className="modal-actions">

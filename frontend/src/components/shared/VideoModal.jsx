@@ -225,7 +225,7 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
           />
         </div>
 
-        {/* Optional Monetag Sponsored Banner Slot */}
+        {/* Optional Sponsored Banner Slot */}
         <AdBannerSlot slot="player" />
 
         {/* Player Bottom Info Bar with Subtitle Guidance */}

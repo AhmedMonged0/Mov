@@ -1,6 +1,5 @@
-self.options = {
-    "domain": "5gvci.com",
-    "zoneId": 11839605
-}
-self.lary = ""
-importScripts('https://5gvci.com/act/files/service-worker.min.js?r=sw')
+// Unregister legacy ad service workers
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.registration.unregister());
+});

@@ -1,20 +1,18 @@
 // ==========================================================================
-// MOVORA AD-SHIELD & MONETAG INTEGRATION ENGINE
+// MOVORA AD-SHIELD & MONETIZATION ENGINE
 // 1. Blocks offensive 18+/adult popups and rogue redirects from third-party embed servers
-// 2. Safely integrates Monetag monetization scripts (MultiTag, Push, Banners, Verification)
+// 2. Protects Admin Portal (/admin) so it remains 100% clean and ad-free
 // ==========================================================================
 
 import { API_ENDPOINT } from './analyticsTracker';
 
-const AD_SETTINGS_KEY = 'movora_ad_settings_v1';
-const MONETAG_SCRIPT_ID = 'movora-monetag-script-tag';
-const MONETAG_META_ID = 'movora-monetag-meta-tag';
+const AD_SETTINGS_KEY = 'movora_ad_settings_v2';
 
-// Default configuration with active Monetag Multitag
+// Default configuration
 const DEFAULT_AD_SETTINGS = {
   enabled: true,
-  monetagVerification: '',
-  monetagScript: '<script src="https://quge5.com/88/tag.min.js" data-zone="283157" async data-cfasync="false"></script>',
+  adsterraPopunder: 'https://pl31428179.profitableratecpmnetwork.com/7b/e7/07/7be707785eeb9d7afdf4c116107210a2.js',
+  adsterraSocialBar: 'https://pl31428180.profitableratecpmnetwork.com/21/44/13/2144131ce5f19fd744b8bbd57b85d8b4.js',
   bannerPlayerCode: '',
   antiAdultShield: true,
   lastUpdated: Date.now()
@@ -86,10 +84,15 @@ export async function saveAdSettingsToCloud(newSettings) {
 export function purgeAdminAds() {
   if (typeof document === 'undefined') return;
   const selectors = [
+    'script[src*="profitableratecpmnetwork.com"]',
+    'script[src*="quge5.com"]',
     '#movora-monetag-script-tag',
-    '[class*="inpage_push"]',
+    '#movora-monetag-meta-tag',
     '[class*="monetag"]',
     '[id*="monetag"]',
+    '[class*="adsterra"]',
+    '[id*="adsterra"]',
+    '[class*="inpage_push"]',
     'div[style*="z-index: 2147483647"]',
     'div[style*="z-index: 999999"]',
     'div[style*="z-index: 100000"]'
@@ -115,72 +118,6 @@ export function applyAdSettings(settings) {
     purgeAdminAds();
     return;
   }
-
-  const { enabled, monetagVerification, monetagScript } = settings;
-
-  // 1. Inject or update Monetag Domain Verification Meta Tag
-  const cleanMetaCode = extractVerificationCode(monetagVerification);
-  let metaTag = document.getElementById(MONETAG_META_ID);
-
-  if (cleanMetaCode) {
-    if (!metaTag) {
-      metaTag = document.createElement('meta');
-      metaTag.id = MONETAG_META_ID;
-      metaTag.name = 'monetag';
-      document.head.appendChild(metaTag);
-    }
-    metaTag.content = cleanMetaCode;
-  } else if (metaTag) {
-    metaTag.remove();
-  }
-
-  // 2. Inject or remove Monetag Ad Script
-  const existingContainer = document.getElementById(MONETAG_SCRIPT_ID);
-  if (existingContainer) {
-    existingContainer.remove();
-  }
-
-  if (enabled && monetagScript && monetagScript.trim()) {
-    try {
-      const container = document.createElement('div');
-      container.id = MONETAG_SCRIPT_ID;
-      container.style.display = 'none';
-
-      // Parse script tags or inline JS
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = monetagScript;
-      const scripts = tempDiv.getElementsByTagName('script');
-
-      if (scripts.length > 0) {
-        Array.from(scripts).forEach((oldScript) => {
-          const newScript = document.createElement('script');
-          Array.from(oldScript.attributes).forEach((attr) => {
-            newScript.setAttribute(attr.name, attr.value);
-          });
-          if (oldScript.src) {
-            newScript.src = oldScript.src;
-          } else {
-            newScript.textContent = oldScript.textContent;
-          }
-          container.appendChild(newScript);
-        });
-      } else {
-        // Raw script content or URL
-        const scriptEl = document.createElement('script');
-        if (monetagScript.trim().startsWith('http')) {
-          scriptEl.src = monetagScript.trim();
-          scriptEl.async = true;
-        } else {
-          scriptEl.textContent = monetagScript;
-        }
-        container.appendChild(scriptEl);
-      }
-
-      document.body.appendChild(container);
-    } catch (e) {
-      console.error('[AdShield] Error injecting Monetag script:', e);
-    }
-  }
 }
 
 // Active Anti-Adult Popup and Redirect Shield
@@ -188,15 +125,15 @@ export function initAdShield() {
   if (typeof window === 'undefined' || isShieldInitialized) return;
   isShieldInitialized = true;
 
+  // If on admin route, purge immediately
+  if (window.location.pathname.startsWith('/admin')) {
+    purgeAdminAds();
+  }
+
   // 1. Intercept rogue window.open calls from third-party players
   const originalWindowOpen = window.open;
   window.open = function (url, target, features) {
     const settings = getAdSettings();
-
-    // If user's Monetag ad wants to open an approved ad window, allow it
-    if (window.__allow_monetag_popup) {
-      return originalWindowOpen.call(window, url, target, features);
-    }
 
     // Allow internal navigation or trusted routes
     if (!url || url.startsWith('/') || url.includes(window.location.host)) {
@@ -216,39 +153,23 @@ export function initAdShield() {
   window.addEventListener('beforeunload', (e) => {
     // Only protect when user is on a viewing page or modal is open
     if (document.querySelector('.video-player-container') || document.querySelector('.video-modal-overlay')) {
-      // Browsers will ask user confirmation before redirecting to adult spam sites
       e.preventDefault();
       e.returnValue = '';
     }
   });
 
-  // 3. Load stored settings and fetch from cloud asynchronously
+  // 3. Load stored settings
   const localSettings = getAdSettings();
   applyAdSettings(localSettings);
 
-  fetch(`${API_ENDPOINT}?t=${Date.now()}`)
-    .then((r) => r.json())
-    .then((data) => {
-      if (data && data.adSettings) {
-        currentAdSettings = { ...DEFAULT_AD_SETTINGS, ...data.adSettings };
-        try {
-          localStorage.setItem(AD_SETTINGS_KEY, JSON.stringify(currentAdSettings));
-        } catch (e) {}
-        applyAdSettings(currentAdSettings);
-      }
-    })
-    .catch(() => {});
-
-  // 4. Register Monetag Service Worker for push monetization and verification
+  // 4. Unregister any legacy Monetag ServiceWorker
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' })
-        .then((reg) => {
-          console.log('[AdShield] Monetag ServiceWorker active with scope:', reg.scope);
-        })
-        .catch((err) => {
-          console.log('[AdShield] SW registration notice:', err.message);
-        });
-    });
+    try {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (let registration of registrations) {
+          registration.unregister().catch(() => {});
+        }
+      }).catch(() => {});
+    } catch (e) {}
   }
 }

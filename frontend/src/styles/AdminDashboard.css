@@ -3,16 +3,22 @@
    ========================================================================== */
 
 /* Block any third-party ads or in-page push popups inside Admin Area */
-body:has(.admin-dashboard-wrapper) > div:not(#root),
-body:has(.admin-login-page) > div:not(#root),
-body:has(.admin-dashboard-wrapper) > iframe,
-body:has(.admin-login-page) > iframe,
-body:has(.admin-dashboard-wrapper) [class*="inpage_push"],
-body:has(.admin-login-page) [class*="inpage_push"],
-body:has(.admin-dashboard-wrapper) [class*="monetag"],
-body:has(.admin-login-page) [class*="monetag"],
-body:has(.admin-dashboard-wrapper) [id*="monetag"],
-body:has(.admin-login-page) [id*="monetag"] {
+body:has(.admin-dashboard-container) > div:not(#root),
+body:has(.admin-login-screen) > div:not(#root),
+body:has(.admin-dashboard-container) > iframe,
+body:has(.admin-login-screen) > iframe,
+body:has(.admin-dashboard-container) [class*="inpage_push"],
+body:has(.admin-login-screen) [class*="inpage_push"],
+body:has(.admin-dashboard-container) [class*="monetag"],
+body:has(.admin-login-screen) [class*="monetag"],
+body:has(.admin-dashboard-container) [id*="monetag"],
+body:has(.admin-login-screen) [id*="monetag"],
+body:has(.admin-dashboard-container) [class*="adsterra"],
+body:has(.admin-login-screen) [class*="adsterra"],
+body:has(.admin-dashboard-container) [id*="adsterra"],
+body:has(.admin-login-screen) [id*="adsterra"],
+body:has(.admin-dashboard-container) [src*="profitableratecpmnetwork.com"],
+body:has(.admin-login-screen) [src*="profitableratecpmnetwork.com"] {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
