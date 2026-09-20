@@ -1,6 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Lock, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import Logo from '../shared/Logo';
 import '../../styles/Footer.css';
 
@@ -35,9 +34,6 @@ export default function Footer() {
 
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Movora (movora.me) - جميع الحقوق محفوظة.</span>
-          <Link to="/admin" className="footer-admin-link" title="بوابة الإدارة والترافيك">
-            <Lock size={12} /> لوحة الإدارة
-          </Link>
         </div>
       </div>
     </footer>

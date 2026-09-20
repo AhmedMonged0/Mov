@@ -124,23 +124,3 @@
   gap: 16px;
   flex-wrap: wrap;
 }
-
-.footer-admin-link {
-  color: #4a4e61;
-  text-decoration: none;
-  font-size: 11.5px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.2s ease;
-}
-
-.footer-admin-link:hover {
-  color: #ff315a;
-  border-color: rgba(255, 49, 90, 0.3);
-  background: rgba(255, 49, 90, 0.06);
-}
