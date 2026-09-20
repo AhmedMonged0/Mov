@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, name: 'Movora API', domain: 'movora.me', provider: 'TMDB Official API' });
+  res.json({ ok: true, name: 'Movora API', domain: 'movora.me', provider: 'Movora Core Engine' });
 });
 
 app.use('/api/movies', movieRoutes);

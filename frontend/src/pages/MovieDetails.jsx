@@ -87,7 +87,7 @@ export default function MovieDetails() {
         }
       } catch (err) {
         console.error("Failed to load movie details:", err);
-        setError('تعذر تحميل تفاصيل الفيلم من TMDB. يرجى المحاولة لاحقاً.');
+        setError('تعذر تحميل تفاصيل الفيلم. يرجى المحاولة لاحقاً.');
       } finally {
         setLoading(false);
       }
@@ -151,7 +151,7 @@ export default function MovieDetails() {
   if (loading) {
     return (
       <div className="details-page" dir="rtl" style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="loading">جاري تحميل تفاصيل الفيلم من TMDB...</div>
+        <div className="loading">جاري تحميل تفاصيل الفيلم...</div>
       </div>
     );
   }
@@ -309,7 +309,7 @@ export default function MovieDetails() {
           
           <div className="details-info">
             <div className="details-badge-row">
-              <span className="badge-tmdb">TMDB Certified</span>
+              <span className="badge-tmdb">جودة سينما 4K</span>
               {movie.vote_average >= 7.5 && <span className="quality" style={{ position: 'static' }}>أعلى تقييم</span>}
             </div>
 
@@ -332,7 +332,7 @@ export default function MovieDetails() {
               <span className="rating"><Star size={14} fill="currentColor" /> {rating} / 10</span>
             </div>
             
-            <p className="details-overview">{movie.overview || 'لا يتوفر وصف بالعربية لهذا الفيلم حالياً في قاعدة بيانات TMDB.'}</p>
+            <p className="details-overview">{movie.overview || 'لا يتوفر وصف بالعربية لهذا الفيلم حالياً.'}</p>
             
             <div className="details-actions">
               <button 

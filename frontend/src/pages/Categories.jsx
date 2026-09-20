@@ -71,7 +71,7 @@ export default function Categories() {
     <div className="content" style={{ paddingTop: '120px' }} dir="rtl">
       <div className="section-head">
         <div>
-          <span className="section-kicker">TMDB CATEGORIES</span>
+          <span className="section-kicker">MOVORA CATEGORIES</span>
           <h2>تصنيفات الأفلام</h2>
         </div>
       </div>

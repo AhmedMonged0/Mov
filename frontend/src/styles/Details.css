@@ -59,6 +59,19 @@
   margin-bottom: 12px;
 }
 
+.badge-tmdb {
+  background: rgba(255, 49, 90, 0.12);
+  border: 1px solid rgba(255, 49, 90, 0.35);
+  color: #ff315a;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+}
+
 .details-info h1 {
   font-size: 38px;
   margin: 0 0 8px;

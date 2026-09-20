@@ -29,7 +29,7 @@ export default function SearchResults() {
         setMovies(data);
       } catch (err) {
         console.error(err);
-        setError('حدث خطأ أثناء جلب نتائج البحث من TMDB');
+        setError('حدث خطأ أثناء جلب نتائج البحث. يرجى المحاولة لاحقاً.');
       } finally {
         setLoading(false);
       }
@@ -41,7 +41,7 @@ export default function SearchResults() {
     <div className="content" style={{ paddingTop: '120px' }} dir="rtl">
       <div className="section-head">
         <div>
-          <span className="section-kicker">TMDB SEARCH</span>
+          <span className="section-kicker">MOVORA SEARCH</span>
           <h2>نتائج البحث عن: <span style={{ color: '#ff315a' }}>"{query}"</span></h2>
         </div>
 

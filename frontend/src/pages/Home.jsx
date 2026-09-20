@@ -88,7 +88,7 @@ export default function Home() {
       }
     } catch (err) {
       console.error(`Feed load error for tab ${tab}:`, err);
-      setError('تعذر تحميل الأفلام من TMDB. يرجى التحقق من اتصال الإنترنت.');
+      setError('تعذر تحميل الأفلام. يرجى التحقق من اتصال الإنترنت والمحاولة مجدداً.');
     } finally {
       setLoading(false);
     }
