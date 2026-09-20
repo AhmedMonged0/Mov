@@ -230,7 +230,6 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
             className="video-player-iframe"
             allowFullScreen
             allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-            sandbox="allow-forms allow-scripts allow-same-origin allow-presentation allow-fullscreen"
           />
         </div>
 
