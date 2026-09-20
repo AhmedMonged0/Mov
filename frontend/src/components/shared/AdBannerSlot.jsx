@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { getAdSettings } from '../../services/adShield';
+import { isVipActive } from '../../services/vipService';
 
 export default function AdBannerSlot({ slot = 'player', style = {} }) {
   const containerRef = useRef(null);
   const settings = getAdSettings();
 
-  const isEnabled = settings && settings.enabled;
+  const isVip = isVipActive();
+  const isEnabled = !isVip && settings && settings.enabled;
   const bannerCode = slot === 'player' ? settings.bannerPlayerCode : null;
 
   useEffect(() => {

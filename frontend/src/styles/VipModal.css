@@ -1,0 +1,665 @@
+/* ==========================================================================
+   MOVORA VIP & PROMO CODE MODAL STYLING
+   Luxury Golden Cinema Glassmorphism Theme
+   ========================================================================== */
+
+.vip-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 13, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  animation: vipFadeIn 0.25s ease-out;
+}
+
+@keyframes vipFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.vip-modal-dialog {
+  background: linear-gradient(145deg, #101522 0%, #0a0d14 100%);
+  border: 1px solid rgba(250, 204, 21, 0.25);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(250, 204, 21, 0.12);
+  color: #f1f5f9;
+  position: relative;
+  animation: vipSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  direction: rtl;
+  text-align: right;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(250, 204, 21, 0.3) transparent;
+}
+
+@keyframes vipSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.vip-modal-header {
+  padding: 24px 28px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  background: linear-gradient(to bottom, rgba(250, 204, 21, 0.08) 0%, transparent 100%);
+}
+
+.vip-header-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.vip-crown-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.25) 0%, rgba(234, 179, 8, 0.08) 100%);
+  border: 1px solid rgba(250, 204, 21, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #facc15;
+  box-shadow: 0 4px 18px rgba(250, 204, 21, 0.25);
+  flex-shrink: 0;
+}
+
+.vip-modal-header h2 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.3px;
+}
+
+.vip-modal-header p {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.vip-close-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vip-close-btn:hover {
+  background: rgba(255, 49, 90, 0.15);
+  border-color: rgba(255, 49, 90, 0.4);
+  color: #ff315a;
+  transform: rotate(90deg);
+}
+
+/* Tabs */
+.vip-modal-tabs {
+  display: flex;
+  padding: 6px 28px;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.vip-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  color: #94a3b8;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.vip-tab-btn.active {
+  background: rgba(250, 204, 21, 0.14);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  box-shadow: 0 2px 12px rgba(250, 204, 21, 0.15);
+}
+
+.vip-modal-body {
+  padding: 24px 28px 30px;
+}
+
+/* Active Membership Banner */
+.vip-active-banner {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 20, 30, 0.95) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  border-radius: 16px;
+  padding: 18px 22px;
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vip-active-content h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vip-active-content p {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.vip-days-badge {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  color: #4ade80;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* Features Grid */
+.vip-perks-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.vip-perk-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.vip-perk-card:hover {
+  border-color: rgba(250, 204, 21, 0.3);
+  background: rgba(250, 204, 21, 0.04);
+  transform: translateY(-2px);
+}
+
+.vip-perk-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(250, 204, 21, 0.12);
+  color: #facc15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vip-perk-info h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.vip-perk-info p {
+  margin: 3px 0 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+/* Plans Pricing Cards */
+.vip-plans-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vip-plans-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.vip-plan-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 16px 12px;
+  text-align: center;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.vip-plan-card.featured {
+  background: linear-gradient(145deg, rgba(250, 204, 21, 0.12) 0%, rgba(234, 179, 8, 0.03) 100%);
+  border-color: rgba(250, 204, 21, 0.5);
+  box-shadow: 0 4px 20px rgba(250, 204, 21, 0.15);
+}
+
+.vip-popular-tag {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+  color: #0f172a;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 2px 10px;
+  border-radius: 12px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.vip-plan-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin-bottom: 6px;
+}
+
+.vip-plan-price {
+  font-size: 22px;
+  font-weight: 900;
+  color: #facc15;
+  margin-bottom: 4px;
+}
+
+.vip-plan-price span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.vip-plan-desc {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Payment Instructions Box */
+.vip-payment-box {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.vip-payment-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 14px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vip-pay-methods-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.vip-pay-method-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.vip-pay-method-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vip-pay-method-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.vip-pay-method-icon.vodafone {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.vip-pay-method-icon.instapay {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.vip-pay-label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.vip-pay-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  font-family: monospace;
+  direction: ltr;
+}
+
+.vip-copy-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.vip-copy-btn:hover {
+  background: rgba(250, 204, 21, 0.2);
+  border-color: rgba(250, 204, 21, 0.5);
+  color: #facc15;
+}
+
+.vip-copy-btn.copied {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: #22c55e;
+  color: #4ade80;
+}
+
+/* Telegram CTA */
+.vip-telegram-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #0088cc 0%, #006699 100%);
+  color: #ffffff;
+  text-decoration: none;
+  padding: 14px 22px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 800;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 18px rgba(0, 136, 204, 0.35);
+}
+
+.vip-telegram-cta:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: 0 6px 24px rgba(0, 136, 204, 0.5);
+}
+
+/* -------------------------------------------------------------
+   Redeem Code Section
+   ------------------------------------------------------------- */
+.vip-redeem-container {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.vip-redeem-lead {
+  font-size: 13.5px;
+  color: #94a3b8;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.vip-input-wrap {
+  display: flex;
+  gap: 10px;
+}
+
+.vip-code-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  border-radius: 14px;
+  padding: 14px 18px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-family: monospace;
+  direction: ltr;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.vip-code-input:focus {
+  outline: none;
+  border-color: #facc15;
+  box-shadow: 0 0 20px rgba(250, 204, 21, 0.25);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.vip-code-input::placeholder {
+  letter-spacing: normal;
+  font-family: inherit;
+  font-size: 13px;
+  color: #64748b;
+  text-transform: none;
+}
+
+.vip-redeem-btn {
+  background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+  color: #0f172a;
+  border: 0;
+  padding: 14px 26px;
+  border-radius: 14px;
+  font-size: 14.5px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(250, 204, 21, 0.35);
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.vip-redeem-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+  box-shadow: 0 6px 26px rgba(250, 204, 21, 0.5);
+}
+
+.vip-redeem-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.vip-feedback-alert {
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: vipSlideUp 0.2s ease;
+}
+
+.vip-feedback-alert.success {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+
+.vip-feedback-alert.error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+/* Navbar VIP Badge & Trigger */
+.nav-vip-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  border: 1px solid rgba(250, 204, 21, 0.4);
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.18) 0%, rgba(234, 179, 8, 0.05) 100%);
+  color: #facc15;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(250, 204, 21, 0.18);
+  font-family: inherit;
+}
+
+.nav-vip-badge-btn:hover {
+  transform: translateY(-1.5px);
+  border-color: #facc15;
+  box-shadow: 0 4px 16px rgba(250, 204, 21, 0.35);
+  color: #ffffff;
+}
+
+.nav-vip-badge-btn.active-member {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.08) 100%);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #4ade80;
+  box-shadow: 0 2px 10px rgba(34, 197, 94, 0.2);
+}
+
+.nav-vip-badge-btn.active-member:hover {
+  border-color: #4ade80;
+  box-shadow: 0 4px 18px rgba(34, 197, 94, 0.4);
+}
+
+/* Movie Details Player VIP Banner */
+.details-vip-promo-banner {
+  margin-top: 14px;
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.08) 0%, rgba(16, 20, 30, 0.9) 100%);
+  border: 1px solid rgba(250, 204, 21, 0.25);
+  border-radius: 14px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.details-vip-promo-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13.5px;
+  color: #cbd5e1;
+}
+
+.details-vip-promo-btn {
+  background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+  color: #0f172a;
+  border: 0;
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(250, 204, 21, 0.25);
+  font-family: inherit;
+}
+
+.details-vip-promo-btn:hover {
+  transform: translateY(-1.5px);
+  filter: brightness(1.1);
+  box-shadow: 0 4px 16px rgba(250, 204, 21, 0.4);
+}
+
+@media (max-width: 640px) {
+  .vip-perks-grid {
+    grid-template-columns: 1fr;
+  }
+  .vip-plans-row {
+    grid-template-columns: 1fr;
+  }
+  .vip-input-wrap {
+    flex-direction: column;
+  }
+  .vip-modal-dialog {
+    padding: 0;
+  }
+  .vip-modal-header,
+  .vip-modal-tabs,
+  .vip-modal-body {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .details-vip-promo-banner {
+    flex-direction: column;
+    text-align: center;
+  }
+}

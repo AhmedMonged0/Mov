@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Menu, X, Star, Film, Loader2, Play, Sparkles, Flame, Send, Dices, Clapperboard } from 'lucide-react';
+import { Search, Menu, X, Star, Film, Loader2, Play, Sparkles, Flame, Send, Dices, Clapperboard, Crown } from 'lucide-react';
 import Logo from '../shared/Logo';
 import { searchMovies, getPosterUrl, fetchRandomMovie } from '../../services/tmdb';
 import MovieRequestModal from '../shared/MovieRequestModal';
+import VipModal from '../shared/VipModal';
+import { getVipStatus, subscribeToVip } from '../../services/vipService';
 import '../../styles/Navbar.css';
 
 export default function Navbar() {
@@ -16,6 +18,15 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isRollingDice, setIsRollingDice] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
+  const [showVipModal, setShowVipModal] = useState(false);
+  const [vipStatus, setVipStatus] = useState(() => getVipStatus());
+
+  useEffect(() => {
+    const unsub = subscribeToVip((status) => {
+      setVipStatus(status);
+    });
+    return unsub;
+  }, []);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -225,6 +236,19 @@ export default function Navbar() {
             <Clapperboard size={16} />
             <span>طلب فيلم أو مسلسل 🎬</span>
           </button>
+
+          <button 
+            type="button" 
+            className="mobile-drawer-btn vip"
+            onClick={() => {
+              setMobileMenu(false);
+              setShowVipModal(true);
+            }}
+            style={{ color: '#facc15' }}
+          >
+            <Crown size={16} />
+            <span>{vipStatus.isVip ? 'عضوية VIP نشطة 👑' : 'ترقية إلى VIP 👑'}</span>
+          </button>
         </div>
       </nav>
 
@@ -254,6 +278,19 @@ export default function Navbar() {
           >
             <Clapperboard size={15} />
             <span className="quick-btn-label">طلب فيلم</span>
+          </button>
+        )}
+
+        {/* Movora VIP Membership Trigger */}
+        {!mobileSearchOpen && (
+          <button
+            type="button"
+            className={`nav-vip-badge-btn ${vipStatus.isVip ? 'active-member' : ''}`}
+            onClick={() => setShowVipModal(true)}
+            title={vipStatus.isVip ? `أنت مشترك VIP (متبقي ${vipStatus.remainingDays} يوم)` : 'اشترك في Movora VIP بدون إعلانات'}
+          >
+            <Crown size={14} />
+            <span>{vipStatus.isVip ? 'مشترك VIP' : 'Movora VIP'}</span>
           </button>
         )}
 
@@ -443,6 +480,12 @@ export default function Navbar() {
     <MovieRequestModal 
       isOpen={showRequestModal} 
       onClose={() => setShowRequestModal(false)} 
+    />
+
+    {/* VIP Membership & Promo Code Modal */}
+    <VipModal
+      isOpen={showVipModal}
+      onClose={() => setShowVipModal(false)}
     />
   </>
   );

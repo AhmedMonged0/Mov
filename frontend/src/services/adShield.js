@@ -5,6 +5,7 @@
 // ==========================================================================
 
 import { API_ENDPOINT } from './analyticsTracker';
+import { isVipActive, subscribeToVip } from './vipService';
 
 const AD_SETTINGS_KEY = 'movora_ad_settings_v2';
 
@@ -118,6 +119,12 @@ export function applyAdSettings(settings) {
     purgeAdminAds();
     return;
   }
+
+  // If user is a VIP Member or ads disabled globally, purge all ads!
+  if (isVipActive() || (settings && settings.enabled === false)) {
+    purgeAdminAds();
+    return;
+  }
 }
 
 // Active Anti-Adult Popup and Redirect Shield
@@ -125,10 +132,17 @@ export function initAdShield() {
   if (typeof window === 'undefined' || isShieldInitialized) return;
   isShieldInitialized = true;
 
-  // If on admin route, purge immediately
-  if (window.location.pathname.startsWith('/admin')) {
+  // If on admin route or user is VIP, purge immediately
+  if (window.location.pathname.startsWith('/admin') || isVipActive()) {
     purgeAdminAds();
   }
+
+  // Subscribe to dynamic VIP state changes
+  subscribeToVip((vipStatus) => {
+    if (vipStatus.isVip) {
+      purgeAdminAds();
+    }
+  });
 
   // 1. Intercept rogue window.open calls from third-party players
   const originalWindowOpen = window.open;

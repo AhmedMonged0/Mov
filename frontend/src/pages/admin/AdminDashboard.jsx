@@ -35,11 +35,16 @@ import {
   Calendar,
   MessageSquare,
   AtSign,
-  Search
+  Search,
+  Crown,
+  Plus,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { getAdSettings, saveAdSettingsToCloud, extractVerificationCode, purgeAdminAds } from '../../services/adShield';
 import TelegramPublisherModal from '../../components/admin/TelegramPublisherModal';
+import { fetchVipCodes, createVipCode, deleteVipCode, generateRandomCodePrefix } from '../../services/vipService';
 import { 
   loadAnalytics, 
   fetchGlobalAnalytics,
@@ -85,6 +90,77 @@ export default function AdminDashboard() {
   // Telegram Smart Publisher Modal State
   const [showTelegramModal, setShowTelegramModal] = useState(false);
   const [telegramPreloadQuery, setTelegramPreloadQuery] = useState('');
+
+  // VIP Promo Codes Modal State
+  const [showVipAdminModal, setShowVipAdminModal] = useState(false);
+  const [vipCodesList, setVipCodesList] = useState([]);
+  const [isLoadingVip, setIsLoadingVip] = useState(false);
+  const [newCodeDuration, setNewCodeDuration] = useState(30);
+  const [newCodeCustom, setNewCodeCustom] = useState(() => generateRandomCodePrefix(30));
+  const [newCodeNote, setNewCodeNote] = useState('');
+  const [vipActionFeedback, setVipActionFeedback] = useState(null);
+  const [copiedCodeId, setCopiedCodeId] = useState(null);
+
+  const loadVipCodes = useCallback(async () => {
+    setIsLoadingVip(true);
+    const res = await fetchVipCodes();
+    if (res.success) {
+      setVipCodesList(res.vipCodes || []);
+    }
+    setIsLoadingVip(false);
+  }, []);
+
+  useEffect(() => {
+    if (showVipAdminModal) {
+      loadVipCodes();
+      setVipActionFeedback(null);
+    }
+  }, [showVipAdminModal, loadVipCodes]);
+
+  const handleCreateVipCode = async (e) => {
+    e.preventDefault();
+    if (!newCodeCustom.trim()) return;
+
+    setVipActionFeedback(null);
+    let planName = `${newCodeDuration} يوم`;
+    if (newCodeDuration === 30) planName = 'شهر (30 يوم)';
+    else if (newCodeDuration === 90) planName = '3 شهور (90 يوم)';
+    else if (newCodeDuration === 180) planName = '6 شهور (180 يوم)';
+    else if (newCodeDuration === 365) planName = 'سنة كاملة (365 يوم)';
+    else if (newCodeDuration >= 9000) planName = 'مدى الحياة 👑';
+
+    const res = await createVipCode({
+      code: newCodeCustom.trim(),
+      durationDays: newCodeDuration,
+      planName,
+      note: newCodeNote.trim()
+    });
+
+    if (res.success) {
+      setVipCodesList(res.vipCodes || []);
+      setVipActionFeedback({ type: 'success', message: `تم إنشاء الكود بنجاح: ${res.code.code}` });
+      setNewCodeCustom(generateRandomCodePrefix(newCodeDuration));
+      setNewCodeNote('');
+    } else {
+      setVipActionFeedback({ type: 'error', message: res.error || 'تعذر إنشاء الكود' });
+    }
+  };
+
+  const handleDeleteVipCode = async (codeId, codeStr) => {
+    if (!window.confirm(`هل أنت متأكد من حذف وإلغاء الكود ${codeStr}؟`)) return;
+    const res = await deleteVipCode(codeId, codeStr);
+    if (res.success) {
+      setVipCodesList(res.vipCodes || []);
+    }
+  };
+
+  const handleCopyVipCode = (codeStr, codeId) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(codeStr);
+      setCopiedCodeId(codeId);
+      setTimeout(() => setCopiedCodeId(null), 2000);
+    }
+  };
 
   // Movie Request Actions
   const handleToggleRequestStatus = async (requestId) => {
@@ -313,6 +389,20 @@ export default function AdminDashboard() {
           >
             <DollarSign size={15} style={{ color: '#facc15' }} />
             <span>إعلانات الموقع والأرباح 💰</span>
+          </button>
+
+          <button 
+            className="admin-action-btn vip-btn"
+            onClick={() => setShowVipAdminModal(true)}
+            title="إدارة اشتراكات وأكواد VIP وتوليد أكواد المشاهدة بدون إعلانات"
+            style={{
+              borderColor: 'rgba(250, 204, 21, 0.45)',
+              background: 'rgba(250, 204, 21, 0.12)',
+              color: '#facc15'
+            }}
+          >
+            <Crown size={15} style={{ color: '#facc15' }} />
+            <span>أكواد واشتراكات VIP 👑</span>
           </button>
 
           <button 
@@ -1319,6 +1409,361 @@ export default function AdminDashboard() {
           }} 
           initialQuery={telegramPreloadQuery}
         />
+      )}
+
+      {/* VIP Promo Codes & Subscriptions Modal */}
+      {showVipAdminModal && (
+        <div className="admin-modal-backdrop" onClick={() => setShowVipAdminModal(false)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} dir="rtl" style={{ maxWidth: '820px' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: 'rgba(250, 204, 21, 0.15)',
+                  border: '1px solid rgba(250, 204, 21, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#facc15'
+                }}>
+                  <Crown size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>إدارة اشتراكات وأكواد Movora VIP 👑</h3>
+                  <span style={{ fontSize: '12px', color: '#94a3b8' }}>توليد أكواد المشاهدة بدون إعلانات ومتابعة المشتركين</span>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowVipAdminModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Quick KPI stats */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '12px',
+              padding: '16px 20px',
+              background: 'rgba(0, 0, 0, 0.25)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
+            }}>
+              <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <span style={{ fontSize: '12px', color: '#94a3b8' }}>إجمالي الأكواد المُصدرة</span>
+                <strong style={{ display: 'block', fontSize: '20px', color: '#fff', marginTop: '2px' }}>
+                  {vipCodesList.length}
+                </strong>
+              </div>
+              <div style={{ background: 'rgba(34, 197, 94, 0.08)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(34, 197, 94, 0.25)' }}>
+                <span style={{ fontSize: '12px', color: '#86efac' }}>الأكواد النشطة (جاهزة للبيع)</span>
+                <strong style={{ display: 'block', fontSize: '20px', color: '#4ade80', marginTop: '2px' }}>
+                  {vipCodesList.filter(c => c.status === 'active').length}
+                </strong>
+              </div>
+              <div style={{ background: 'rgba(250, 204, 21, 0.08)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(250, 204, 21, 0.25)' }}>
+                <span style={{ fontSize: '12px', color: '#fde047' }}>المشتركين المفعلين (تم التفعيل)</span>
+                <strong style={{ display: 'block', fontSize: '20px', color: '#facc15', marginTop: '2px' }}>
+                  {vipCodesList.filter(c => c.status === 'redeemed').length}
+                </strong>
+              </div>
+            </div>
+
+            {/* Form: Generate New VIP Code */}
+            <form onSubmit={handleCreateVipCode} style={{ padding: '20px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <strong style={{ display: 'block', fontSize: '14.5px', color: '#facc15', marginBottom: '12px' }}>
+                ✨ توليد كود تفعيل VIP جديد:
+              </strong>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr auto', gap: '10px', alignItems: 'flex-end' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>مدة الباقة:</label>
+                  <select 
+                    value={newCodeDuration}
+                    onChange={(e) => {
+                      const dur = Number(e.target.value);
+                      setNewCodeDuration(dur);
+                      setNewCodeCustom(generateRandomCodePrefix(dur));
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '13px',
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    <option value={30}>شهر (30 يوم)</option>
+                    <option value={90}>3 شهور (90 يوم)</option>
+                    <option value={180}>6 شهور (180 يوم)</option>
+                    <option value={365}>سنة (365 يوم)</option>
+                    <option value={9999}>مدى الحياة 👑</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>رمز الكود:</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input 
+                      type="text"
+                      value={newCodeCustom}
+                      onChange={(e) => setNewCodeCustom(e.target.value.toUpperCase())}
+                      placeholder="VIP-MOV-XXXX"
+                      style={{
+                        flex: 1,
+                        padding: '10px 12px',
+                        background: 'rgba(0, 0, 0, 0.4)',
+                        border: '1px solid rgba(250, 204, 21, 0.4)',
+                        borderRadius: '8px',
+                        color: '#facc15',
+                        fontWeight: '800',
+                        fontFamily: 'monospace',
+                        direction: 'ltr',
+                        textAlign: 'center',
+                        fontSize: '13.5px'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setNewCodeCustom(generateRandomCodePrefix(newCodeDuration))}
+                      title="توليد كود عشوائي جديد"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        color: '#cbd5e1',
+                        borderRadius: '8px',
+                        padding: '0 10px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <RefreshCw size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>ملاحظة العميل (اختياري):</label>
+                  <input 
+                    type="text"
+                    value={newCodeNote}
+                    onChange={(e) => setNewCodeNote(e.target.value)}
+                    placeholder="مثال: أحمد - فودافون كاش"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '13px',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  style={{
+                    background: 'linear-gradient(135deg, #facc15 0%, #eab308 100%)',
+                    color: '#0f172a',
+                    fontWeight: '800',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '10px 18px',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    height: '40px',
+                    fontFamily: 'inherit'
+                  }}
+                >
+                  <Plus size={16} />
+                  <span>إنشاء الكود</span>
+                </button>
+              </div>
+
+              {vipActionFeedback && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  background: vipActionFeedback.type === 'success' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                  border: `1px solid ${vipActionFeedback.type === 'success' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                  color: vipActionFeedback.type === 'success' ? '#4ade80' : '#f87171'
+                }}>
+                  {vipActionFeedback.message}
+                </div>
+              )}
+            </form>
+
+            {/* List of existing VIP Codes */}
+            <div style={{ padding: '20px', maxHeight: '380px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <strong style={{ fontSize: '14px', color: '#fff' }}>📋 سجل الأكواد المنشأة:</strong>
+                <button 
+                  type="button" 
+                  onClick={loadVipCodes}
+                  disabled={isLoadingVip}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#38bdf8',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontFamily: 'inherit'
+                  }}
+                >
+                  <RefreshCw size={13} className={isLoadingVip ? 'spin' : ''} />
+                  <span>تحديث السجل</span>
+                </button>
+              </div>
+
+              {vipCodesList.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '30px 0', color: '#64748b', fontSize: '13px' }}>
+                  لا توجد أكواد منشأة حالياً. قم بإنشاء أول كود للأعضاء بالأعلى! ☝️
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {vipCodesList.map((item) => (
+                    <div 
+                      key={item.id || item.code}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 16px',
+                        borderRadius: '10px',
+                        background: item.status === 'redeemed' ? 'rgba(250, 204, 21, 0.04)' : 'rgba(255, 255, 255, 0.03)',
+                        border: `1px solid ${item.status === 'redeemed' ? 'rgba(250, 204, 21, 0.2)' : 'rgba(255, 255, 255, 0.08)'}`,
+                        gap: '12px'
+                      }}
+                    >
+                      {/* Code and Copy */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '180px' }}>
+                        <span style={{
+                          fontFamily: 'monospace',
+                          fontSize: '14px',
+                          fontWeight: '800',
+                          color: item.status === 'redeemed' ? '#94a3b8' : '#facc15',
+                          textDecoration: item.status === 'redeemed' ? 'line-through' : 'none'
+                        }}>
+                          {item.code}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyVipCode(item.code, item.id)}
+                          title="نسخ الكود لإرساله للعميل"
+                          style={{
+                            background: copiedCodeId === item.id ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                            border: `1px solid ${copiedCodeId === item.id ? '#22c55e' : 'rgba(255, 255, 255, 0.15)'}`,
+                            color: copiedCodeId === item.id ? '#4ade80' : '#cbd5e1',
+                            borderRadius: '6px',
+                            padding: '4px 8px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '11px',
+                            fontFamily: 'inherit'
+                          }}
+                        >
+                          {copiedCodeId === item.id ? <Check size={12} /> : <Copy size={12} />}
+                          <span>{copiedCodeId === item.id ? 'تم!' : 'نسخ'}</span>
+                        </button>
+                      </div>
+
+                      {/* Plan / Duration */}
+                      <div style={{ fontSize: '12.5px', color: '#cbd5e1' }}>
+                        {item.planName || `${item.durationDays} يوم`}
+                      </div>
+
+                      {/* Note */}
+                      <div style={{ fontSize: '12px', color: '#94a3b8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.note || '—'}
+                      </div>
+
+                      {/* Status */}
+                      <div>
+                        {item.status === 'active' && (
+                          <span style={{
+                            background: 'rgba(34, 197, 94, 0.15)',
+                            color: '#4ade80',
+                            border: '1px solid rgba(34, 197, 94, 0.35)',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: '700'
+                          }}>
+                            جاهز 🟢
+                          </span>
+                        )}
+                        {item.status === 'redeemed' && (
+                          <span style={{
+                            background: 'rgba(250, 204, 21, 0.15)',
+                            color: '#facc15',
+                            border: '1px solid rgba(250, 204, 21, 0.35)',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: '700'
+                          }}>
+                            تم التفعيل 👑
+                          </span>
+                        )}
+                        {item.status === 'cancelled' && (
+                          <span style={{
+                            background: 'rgba(148, 163, 184, 0.15)',
+                            color: '#94a3b8',
+                            border: '1px solid rgba(148, 163, 184, 0.3)',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '11px'
+                          }}>
+                            ملغي ⚪
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Delete */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteVipCode(item.id, item.code)}
+                        title="حذف وإلغاء الكود"
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          border: '1px solid rgba(239, 68, 68, 0.25)',
+                          color: '#f87171',
+                          borderRadius: '6px',
+                          padding: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-actions" style={{ padding: '16px 20px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <button type="button" className="btn-cancel" onClick={() => setShowVipAdminModal(false)}>
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

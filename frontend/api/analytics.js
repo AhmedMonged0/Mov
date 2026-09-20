@@ -31,6 +31,7 @@ function createEmptyAnalytics() {
       lastUpdated: Date.now()
     },
     movieRequests: [],
+    vipCodes: [],
     lastUpdated: Date.now()
   };
 }
@@ -103,6 +104,11 @@ function autoHealAnalytics(data) {
   // Ensure movieRequests exists
   if (!Array.isArray(data.movieRequests)) {
     data.movieRequests = [];
+  }
+
+  // Ensure vipCodes exists
+  if (!Array.isArray(data.vipCodes)) {
+    data.vipCodes = [];
   }
 
   return data;
@@ -304,6 +310,137 @@ export default async function handler(req, res) {
           }
         }
         return res.status(404).json({ error: 'Request not found' });
+      }
+
+      // =============================================================
+      // VIP PROMO CODES & AD-FREE MEMBERSHIP ACTIONS
+      // =============================================================
+
+      // 1. Get All VIP Codes (Admin)
+      if (action === 'get_vip_codes') {
+        return res.status(200).json({ success: true, vipCodes: current.vipCodes || [] });
+      }
+
+      // 2. Create New VIP Code (Admin)
+      if (action === 'create_vip_code') {
+        const rawCode = (body.code || '').trim().toUpperCase();
+        if (!rawCode) {
+          return res.status(400).json({ error: 'رمز الكود مطلوب' });
+        }
+
+        if (!Array.isArray(current.vipCodes)) current.vipCodes = [];
+
+        // Check if code already exists
+        const exists = current.vipCodes.some(c => c.code === rawCode);
+        if (exists) {
+          return res.status(400).json({ error: 'هذا الكود مسجل بالفعل، يرجى اختيار رمز آخر' });
+        }
+
+        const durationDays = Number(body.durationDays) || 30;
+        const newVipCode = {
+          id: 'vip_' + now.toString(36) + Math.random().toString(36).substring(2, 6),
+          code: rawCode,
+          durationDays,
+          planName: body.planName || (durationDays >= 9000 ? 'مدى الحياة' : `${durationDays} يوم`),
+          note: (body.note || '').trim(),
+          status: 'active', // active, redeemed, cancelled
+          createdAt: now,
+          redeemedAt: null,
+          redeemedBy: null,
+          expiresAt: null
+        };
+
+        current.vipCodes.unshift(newVipCode);
+        if (current.vipCodes.length > 500) {
+          current.vipCodes = current.vipCodes.slice(0, 500);
+        }
+        current.lastUpdated = now;
+
+        await put(BLOB_PATH, JSON.stringify(current), {
+          access: 'public',
+          token: process.env.BLOB_READ_WRITE_TOKEN,
+          addRandomSuffix: false,
+          allowOverwrite: true,
+          cacheControlMaxAge: 0
+        });
+
+        return res.status(200).json({ success: true, code: newVipCode, vipCodes: current.vipCodes });
+      }
+
+      // 3. Redeem VIP Code (Visitor / Member)
+      if (action === 'redeem_vip_code') {
+        const codeInput = (body.code || '').trim().toUpperCase();
+        if (!codeInput) {
+          return res.status(400).json({ error: 'يرجى إدخال رمز كود الـ VIP' });
+        }
+
+        if (!Array.isArray(current.vipCodes)) current.vipCodes = [];
+
+        const targetCode = current.vipCodes.find(c => c.code === codeInput);
+        if (!targetCode) {
+          return res.status(404).json({ error: 'كود غير صحيح، يرجى التأكد من كتابة الكود بشكل سليم' });
+        }
+
+        if (targetCode.status === 'redeemed') {
+          return res.status(400).json({ error: 'هذا الكود تم استخدامه وتفعيله بالفعل من قبل' });
+        }
+
+        if (targetCode.status === 'cancelled') {
+          return res.status(400).json({ error: 'هذا الكود تم إلغاؤه من قبل إدارة الموقع' });
+        }
+
+        // Calculate subscription expiry
+        const durationDays = targetCode.durationDays || 30;
+        const durationMs = durationDays >= 9000 
+          ? (100 * 365 * 24 * 60 * 60 * 1000) // 100 years for lifetime
+          : (durationDays * 24 * 60 * 60 * 1000);
+        const expiresAt = now + durationMs;
+
+        targetCode.status = 'redeemed';
+        targetCode.redeemedAt = now;
+        targetCode.redeemedBy = visitorId || sessionId || 'user_' + now.toString(36);
+        targetCode.expiresAt = expiresAt;
+        targetCode.updatedAt = now;
+        current.lastUpdated = now;
+
+        await put(BLOB_PATH, JSON.stringify(current), {
+          access: 'public',
+          token: process.env.BLOB_READ_WRITE_TOKEN,
+          addRandomSuffix: false,
+          allowOverwrite: true,
+          cacheControlMaxAge: 0
+        });
+
+        return res.status(200).json({
+          success: true,
+          valid: true,
+          code: targetCode.code,
+          durationDays: targetCode.durationDays,
+          planName: targetCode.planName,
+          expiresAt
+        });
+      }
+
+      // 4. Delete VIP Code (Admin)
+      if (action === 'delete_vip_code') {
+        const codeId = body.codeId;
+        const codeStr = body.code;
+        if (codeId || codeStr) {
+          if (Array.isArray(current.vipCodes)) {
+            current.vipCodes = current.vipCodes.filter(c => c.id !== codeId && c.code !== codeStr);
+            current.lastUpdated = now;
+
+            await put(BLOB_PATH, JSON.stringify(current), {
+              access: 'public',
+              token: process.env.BLOB_READ_WRITE_TOKEN,
+              addRandomSuffix: false,
+              allowOverwrite: true,
+              cacheControlMaxAge: 0
+            });
+            return res.status(200).json({ success: true, vipCodes: current.vipCodes });
+          }
+        }
+        return res.status(400).json({ error: 'معرف الكود مطلوب' });
       }
 
       // -------------------------------------------------------------

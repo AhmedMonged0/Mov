@@ -3,12 +3,14 @@ import { useParams, Link } from 'react-router-dom';
 import { 
   Play, Download, Star, ArrowRight, Film, Clock, Calendar, 
   Server, Languages, ShieldCheck, Share2, Check, Copy, 
-  Sparkles, Send 
+  Sparkles, Send, Crown 
 } from 'lucide-react';
 import { fetchMovieDetails, fetchMovieVideos, getPosterUrl, getBackdropUrl } from '../services/tmdb';
 import { trackMovieStream } from '../services/analyticsTracker';
 import { updatePageSEO, resetPageSEO } from '../services/seoHelper';
 import AdBannerSlot from '../components/shared/AdBannerSlot';
+import VipModal from '../components/shared/VipModal';
+import { getVipStatus, subscribeToVip } from '../services/vipService';
 import '../styles/Details.css';
 
 export default function MovieDetails() {
@@ -21,6 +23,15 @@ export default function MovieDetails() {
   const [trailerKey, setTrailerKey] = useState(null);
   const [imgError, setImgError] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [showVipModal, setShowVipModal] = useState(false);
+  const [vipStatus, setVipStatus] = useState(() => getVipStatus());
+
+  useEffect(() => {
+    const unsub = subscribeToVip((status) => {
+      setVipStatus(status);
+    });
+    return unsub;
+  }, []);
 
   // Copy movie link to clipboard with feedback
   const handleCopyLink = () => {
@@ -241,24 +252,46 @@ export default function MovieDetails() {
               >
                 التريلر
               </button>
-              <div 
-                className="ad-shield-badge active"
-                title="درع موفورا الذكي: حظر الإعلانات الإباحية والنوافذ المنبثقة الخبيثة وتوفير الصوت الإنجليزي الأصلي"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  background: 'rgba(34, 197, 94, 0.15)',
-                  border: '1px solid rgba(34, 197, 94, 0.4)',
-                  color: '#4ade80',
-                  borderRadius: '6px',
-                  padding: '5px 9px',
-                  fontSize: '11px'
-                }}
-              >
-                <ShieldCheck size={13} />
-                <span>درع الحماية نشط 🛡️</span>
-              </div>
+              {vipStatus.isVip ? (
+                <div 
+                  className="ad-shield-badge active"
+                  title="عضوية VIP: مشاهدة سينمائية نقية 100% بدون إعلانات وبأعلى دقة"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: 'rgba(250, 204, 21, 0.18)',
+                    border: '1px solid rgba(250, 204, 21, 0.45)',
+                    color: '#facc15',
+                    borderRadius: '6px',
+                    padding: '5px 10px',
+                    fontSize: '11px',
+                    fontWeight: '800'
+                  }}
+                >
+                  <Crown size={13} />
+                  <span>سينما VIP (بدون إعلانات) 👑</span>
+                </div>
+              ) : (
+                <div 
+                  className="ad-shield-badge active"
+                  title="درع موفورا الذكي: حظر الإعلانات الإباحية والنوافذ المنبثقة الخبيثة وتوفير الصوت الإنجليزي الأصلي"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    border: '1px solid rgba(34, 197, 94, 0.4)',
+                    color: '#4ade80',
+                    borderRadius: '6px',
+                    padding: '5px 9px',
+                    fontSize: '11px'
+                  }}
+                >
+                  <ShieldCheck size={13} />
+                  <span>درع الحماية نشط 🛡️</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="iframe-wrapper">
@@ -287,6 +320,24 @@ export default function MovieDetails() {
               <strong style={{ color: '#fff' }}>الصوت الأساسي: إنجليزي أصلي.</strong> لاختيار الترجمة باللغة العربية أو أي لغة، انقر على زر الترجمة <strong style={{ color: '#ff315a' }}>(CC أو Subtitles)</strong> داخل شاشة المشغل ثم اختر <strong style={{ color: '#fff' }}>Arabic</strong>.
             </span>
           </div>
+
+          {/* Upsell VIP Banner for Non-VIP viewers */}
+          {!vipStatus.isVip && (
+            <div className="details-vip-promo-banner">
+              <div className="details-vip-promo-content">
+                <Crown size={20} style={{ color: '#facc15', flexShrink: 0 }} />
+                <span>هل تريد مشاهدة نقية بدون أي إعلانات نهائياً وبجودة 4K فائقة السرعة؟</span>
+              </div>
+              <button 
+                type="button" 
+                className="details-vip-promo-btn"
+                onClick={() => setShowVipModal(true)}
+              >
+                <Sparkles size={14} />
+                <span>اشترك في Movora VIP (35 ج) 🚀</span>
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="details-content">
@@ -418,6 +469,12 @@ export default function MovieDetails() {
           </div>
         </div>
       )}
+
+      {/* VIP Modal */}
+      <VipModal 
+        isOpen={showVipModal}
+        onClose={() => setShowVipModal(false)}
+      />
     </div>
   );
 }
