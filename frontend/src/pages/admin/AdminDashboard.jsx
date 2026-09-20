@@ -27,7 +27,15 @@ import {
   Sparkles,
   Shield,
   AlertCircle,
-  Send
+  Send,
+  Inbox,
+  CheckSquare,
+  Square,
+  Clapperboard,
+  Calendar,
+  MessageSquare,
+  AtSign,
+  Search
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { getAdSettings, saveAdSettingsToCloud, extractVerificationCode, purgeAdminAds } from '../../services/adShield';
@@ -41,6 +49,8 @@ import {
   resetAnalyticsData, 
   exportAnalyticsJson,
   recordHeartbeat,
+  deleteMovieRequest,
+  toggleMovieRequestStatus,
   getFirebaseDbUrl,
   setFirebaseDbUrl
 } from '../../services/analyticsTracker';
@@ -74,6 +84,43 @@ export default function AdminDashboard() {
 
   // Telegram Smart Publisher Modal State
   const [showTelegramModal, setShowTelegramModal] = useState(false);
+  const [telegramPreloadQuery, setTelegramPreloadQuery] = useState('');
+
+  // Movie Request Actions
+  const handleToggleRequestStatus = async (requestId) => {
+    try {
+      await toggleMovieRequestStatus(requestId);
+      setData(prev => {
+        const nextReqs = (prev.movieRequests || []).map(r => 
+          r.id === requestId 
+            ? { ...r, status: r.status === 'fulfilled' ? 'pending' : 'fulfilled' } 
+            : r
+        );
+        return { ...prev, movieRequests: nextReqs };
+      });
+    } catch (e) {
+      console.warn('Failed to toggle request status:', e);
+    }
+  };
+
+  const handleDeleteRequest = async (requestId, title) => {
+    if (window.confirm(`هل أنت متأكد من حذف طلب فيلم "${title}"؟`)) {
+      try {
+        await deleteMovieRequest(requestId);
+        setData(prev => ({
+          ...prev,
+          movieRequests: (prev.movieRequests || []).filter(r => r.id !== requestId)
+        }));
+      } catch (e) {
+        console.warn('Failed to delete request:', e);
+      }
+    }
+  };
+
+  const handlePublishRequestedMovie = (title) => {
+    setTelegramPreloadQuery(title);
+    setShowTelegramModal(true);
+  };
 
   // Load real global analytics data from cloud
   const refreshData = useCallback(async (showSpinner = true) => {
@@ -657,6 +704,238 @@ export default function AdminDashboard() {
           </div>
         </section>
 
+        {/* Row: Visitor Movie Requests (طلبات الأفلام من المشاهدين) */}
+        <section className="admin-requests-section" style={{ marginBottom: '24px' }}>
+          <div className="admin-panel-card" style={{ width: '100%' }}>
+            <div className="panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  background: 'rgba(255, 49, 90, 0.15)',
+                  border: '1px solid rgba(255, 49, 90, 0.35)',
+                  color: '#ff315a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Inbox size={20} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <h3 className="panel-title" style={{ margin: 0 }}>طلبات الأفلام من الزوار 📬</h3>
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: 'rgba(255, 49, 90, 0.15)',
+                      color: '#ff315a',
+                      fontWeight: 'bold',
+                      border: '1px solid rgba(255, 49, 90, 0.3)'
+                    }}>
+                      {(data.movieRequests || []).length} طلب
+                    </span>
+                    {(data.movieRequests || []).filter(r => r.status !== 'fulfilled').length > 0 && (
+                      <span style={{
+                        fontSize: '11px',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        background: 'rgba(234, 179, 8, 0.15)',
+                        color: '#facc15',
+                        fontWeight: 'bold',
+                        border: '1px solid rgba(234, 179, 8, 0.3)'
+                      }}>
+                        {(data.movieRequests || []).filter(r => r.status !== 'fulfilled').length} بانتظار التوفير ⏳
+                      </span>
+                    )}
+                  </div>
+                  <p className="panel-sub" style={{ margin: '4px 0 0 0' }}>
+                    الأفلام والمسلسلات التي يطلبها المشاهدون مع إمكانية توفيرها ونشرها مباشرة لقناة التليجرام @movora_me
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => refreshData(true)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#94a3b8',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <RefreshCw size={12} className={isRefreshing ? 'spin-icon' : ''} />
+                  <span>تحديث الطلبات</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="top-movies-table-wrapper" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>الحالة</th>
+                    <th>اسم الفيلم المطلوب</th>
+                    <th>السنة</th>
+                    <th>ملاحظات وتفاصيل المشاهد</th>
+                    <th>التواصل</th>
+                    <th>وقت الطلب والجهاز</th>
+                    <th>إجراءات سريعة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.movieRequests && data.movieRequests.length > 0 ? (
+                    data.movieRequests.map((req) => {
+                      const isFulfilled = req.status === 'fulfilled';
+                      const timeStr = req.createdAt 
+                        ? new Date(req.createdAt).toLocaleString('ar-EG', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+                        : 'حديث';
+
+                      return (
+                        <tr key={req.id} style={{ opacity: isFulfilled ? 0.7 : 1 }}>
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleRequestStatus(req.id)}
+                              style={{
+                                background: isFulfilled ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                                border: `1px solid ${isFulfilled ? 'rgba(34, 197, 94, 0.4)' : 'rgba(234, 179, 8, 0.4)'}`,
+                                color: isFulfilled ? '#4ade80' : '#facc15',
+                                borderRadius: '8px',
+                                padding: '4px 10px',
+                                fontSize: '11.5px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px'
+                              }}
+                              title="اضغط لتغيير الحالة بين (تم التوفير / قيد الانتظار)"
+                            >
+                              {isFulfilled ? <CheckCircle2 size={13} /> : <Clock size={13} />}
+                              <span>{isFulfilled ? 'تم التوفير ✅' : 'قيد الانتظار ⏳'}</span>
+                            </button>
+                          </td>
+                          <td className="movie-cell">
+                            <strong style={{ color: '#fff', fontSize: '14px' }}>{req.title}</strong>
+                          </td>
+                          <td>
+                            <span style={{ color: '#94a3b8', fontSize: '12px' }}>{req.year || '—'}</span>
+                          </td>
+                          <td>
+                            <span style={{ color: '#cbd5e1', fontSize: '12px', maxWidth: '200px', display: 'inline-block' }}>
+                              {req.notes || '—'}
+                            </span>
+                          </td>
+                          <td>
+                            {req.contact ? (
+                              <span style={{ color: '#38bdf8', fontSize: '12px', direction: 'ltr', display: 'inline-block' }}>
+                                {req.contact}
+                              </span>
+                            ) : (
+                              <span style={{ color: '#64748b', fontSize: '12px' }}>—</span>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
+                              <span>{timeStr}</span>
+                              <span style={{ margin: '0 4px' }}>•</span>
+                              <span>{req.device || 'Desktop'}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {/* Publish to Telegram */}
+                              <button
+                                type="button"
+                                onClick={() => handlePublishRequestedMovie(req.title)}
+                                style={{
+                                  background: 'rgba(0, 136, 204, 0.15)',
+                                  border: '1px solid rgba(0, 136, 204, 0.4)',
+                                  color: '#38bdf8',
+                                  padding: '5px 10px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                title="نشر إشعار توفر هذا الفيلم لقناة التليجرام @movora_me"
+                              >
+                                <Send size={11} />
+                                <span>نشر تليجرام</span>
+                              </button>
+
+                              {/* Search site for this movie */}
+                              <Link
+                                to={`/?q=${encodeURIComponent(req.title)}`}
+                                target="_blank"
+                                style={{
+                                  background: 'rgba(255, 255, 255, 0.05)',
+                                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                                  color: '#cbd5e1',
+                                  padding: '5px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  textDecoration: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                title="فحص وجود الفيلم في الموقع"
+                              >
+                                <Search size={11} />
+                                <span>فحص</span>
+                              </Link>
+
+                              {/* Delete Request */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteRequest(req.id, req.title)}
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.1)',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  color: '#f87171',
+                                  padding: '5px 7px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center'
+                                }}
+                                title="حذف هذا الطلب"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '36px 14px', color: '#717688' }}>
+                        لا توجد طلبات أفلام مسجلة حتى الآن — ستظهر هنا فوراً بمجرد قيام أي زائر بطلب فيلم من الموقع!
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         {/* Row 3: Top Streamed Movies & Recent Live Activity Stream */}
         <section className="admin-bottom-grid">
           
@@ -1033,7 +1312,13 @@ export default function AdminDashboard() {
 
       {/* Telegram Smart Publisher Modal */}
       {showTelegramModal && (
-        <TelegramPublisherModal onClose={() => setShowTelegramModal(false)} />
+        <TelegramPublisherModal 
+          onClose={() => {
+            setShowTelegramModal(false);
+            setTelegramPreloadQuery('');
+          }} 
+          initialQuery={telegramPreloadQuery}
+        />
       )}
     </div>
   );

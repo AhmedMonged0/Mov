@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Menu, X, Star, Film, Loader2, Play, Sparkles, Flame, Send } from 'lucide-react';
+import { Search, Menu, X, Star, Film, Loader2, Play, Sparkles, Flame, Send, Dices, Clapperboard } from 'lucide-react';
 import Logo from '../shared/Logo';
-import { searchMovies, getPosterUrl } from '../../services/tmdb';
+import { searchMovies, getPosterUrl, fetchRandomMovie } from '../../services/tmdb';
+import MovieRequestModal from '../shared/MovieRequestModal';
 import '../../styles/Navbar.css';
 
 export default function Navbar() {
@@ -13,12 +14,30 @@ export default function Navbar() {
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isRollingDice, setIsRollingDice] = useState(false);
+  const [showRequestModal, setShowRequestModal] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
   const searchWrapperRef = useRef(null);
   const searchInputRef = useRef(null);
   const debounceTimerRef = useRef(null);
+
+  // Handle Surprise / Random Movie Roulette
+  const handleRandomMovie = async () => {
+    if (isRollingDice) return;
+    setIsRollingDice(true);
+    try {
+      const movie = await fetchRandomMovie();
+      if (movie && movie.id) {
+        navigate(`/movie/${movie.id}`);
+      }
+    } catch (err) {
+      console.error('Error selecting random movie:', err);
+    } finally {
+      setIsRollingDice(false);
+    }
+  };
 
   // Handle scroll effect for glassmorphic navbar
   useEffect(() => {
@@ -168,6 +187,33 @@ export default function Navbar() {
             </Link>
           );
         })}
+        <button 
+          type="button" 
+          className={`nav-link-btn random-btn ${isRollingDice ? 'dice-rolling' : ''}`}
+          onClick={() => {
+            setMobileMenu(false);
+            handleRandomMovie();
+          }}
+          title="اقترح لي فيلماً بجودة عالية 🎲"
+          disabled={isRollingDice}
+        >
+          <Dices size={15} className={isRollingDice ? 'spin-dice' : ''} />
+          <span>فيلم عشوائي 🎲</span>
+        </button>
+
+        <button 
+          type="button" 
+          className="nav-link-btn req-btn"
+          onClick={() => {
+            setMobileMenu(false);
+            setShowRequestModal(true);
+          }}
+          title="اطلب فيلماً أو مسلسلاً 🎬"
+        >
+          <Clapperboard size={15} />
+          <span>طلب فيلم 🎬</span>
+        </button>
+
         <a 
           href="https://t.me/movora_me" 
           target="_blank" 
@@ -183,6 +229,33 @@ export default function Navbar() {
 
       {/* Global Live Instant Search Bar & Actions */}
       <div className="nav-actions" ref={searchWrapperRef} onClick={(e) => e.stopPropagation()}>
+        {/* Quick Surprise / Random Movie Trigger */}
+        {!mobileSearchOpen && (
+          <button 
+            type="button" 
+            className={`nav-action-quick-btn random ${isRollingDice ? 'loading' : ''}`}
+            onClick={handleRandomMovie}
+            title="فيلم عشوائي - اقترح لي فيلماً لسهرة الليلة 🎲"
+            disabled={isRollingDice}
+          >
+            <Dices size={16} className={isRollingDice ? 'spin-dice' : ''} />
+            <span className="quick-btn-label">فيلم عشوائي</span>
+          </button>
+        )}
+
+        {/* Quick Movie Request Modal Trigger */}
+        {!mobileSearchOpen && (
+          <button 
+            type="button" 
+            className="nav-action-quick-btn request"
+            onClick={() => setShowRequestModal(true)}
+            title="اطلب فيلماً أو مسلسلاً 🎬"
+          >
+            <Clapperboard size={15} />
+            <span className="quick-btn-label">طلب فيلم</span>
+          </button>
+        )}
+
         {/* Mobile Search Trigger Icon (Visible only on mobile when search is NOT open) */}
         {!mobileSearchOpen && (
           <button 
@@ -363,6 +436,12 @@ export default function Navbar() {
           </button>
         )}
       </div>
+
+      {/* Movie Request Modal */}
+      <MovieRequestModal 
+        isOpen={showRequestModal} 
+        onClose={() => setShowRequestModal(false)} 
+      />
     </header>
   );
 }

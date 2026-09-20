@@ -30,14 +30,14 @@ const HOOKS = [
   '⚡️ حصرياً بجودة فائقة 1080p'
 ];
 
-export default function TelegramPublisherModal({ onClose }) {
+export default function TelegramPublisherModal({ onClose, initialQuery = '' }) {
   const [botToken, setBotToken] = useState(() => localStorage.getItem('movora_tg_bot_token') || DEFAULT_BOT_TOKEN);
   const [channelId, setChannelId] = useState(() => localStorage.getItem('movora_tg_channel') || DEFAULT_CHANNEL);
   const [showToken, setShowToken] = useState(false);
 
   // Movie Selection
   const [trendingMovies, setTrendingMovies] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => initialQuery || '');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [loadingTrending, setLoadingTrending] = useState(true);
@@ -79,6 +79,24 @@ export default function TelegramPublisherModal({ onClose }) {
     };
     loadTrending();
   }, []);
+
+  // Auto search and select if initialQuery passed (e.g. from requested movies)
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim()) {
+      setIsSearching(true);
+      searchMovies(initialQuery.trim(), 1)
+        .then(results => {
+          if (Array.isArray(results) && results.length > 0) {
+            setSearchResults(results);
+            setSelectedMovie(results[0]);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          setIsSearching(false);
+        });
+    }
+  }, [initialQuery]);
 
   // Sync synopsis when movie changes
   useEffect(() => {

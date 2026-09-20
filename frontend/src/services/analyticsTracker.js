@@ -121,6 +121,7 @@ export function createEmptyAnalytics() {
     })),
     topMovies: [],
     recentEvents: [],
+    movieRequests: [],
     activeSessions: {},
     liveActiveCount: 1,
     lastUpdated: Date.now(),
@@ -219,6 +220,7 @@ export function normalizeAnalytics(d) {
     dailyTraffic: daily,
     topMovies: Array.isArray(d.topMovies) ? d.topMovies : [],
     recentEvents: Array.isArray(d.recentEvents) ? d.recentEvents : [],
+    movieRequests: Array.isArray(d.movieRequests) ? d.movieRequests : [],
     activeSessions: prunedSessions,
     liveActiveCount: Math.max(1, liveCount),
     lastUpdated: d.lastUpdated || now,
@@ -461,6 +463,137 @@ export function exportAnalyticsJson() {
   URL.revokeObjectURL(url);
 }
 
+// Submit a Movie Request from Visitor
+export async function submitMovieRequest({ title, year = '', notes = '', contact = '' }) {
+  if (!title || !title.trim()) {
+    return { success: false, error: 'اسم الفيلم مطلوب' };
+  }
+
+  const visitorId = getVisitorId();
+  const sessionId = getSessionId();
+  const { device, browser, os } = detectDevice();
+
+  try {
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'request_movie',
+        title: title.trim(),
+        year: (year || '').trim(),
+        notes: (notes || '').trim(),
+        contact: (contact || '').trim(),
+        visitorId,
+        sessionId,
+        device,
+        browser,
+        os
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.allRequests) {
+        const local = loadAnalytics();
+        local.movieRequests = data.allRequests;
+        saveAnalytics(local);
+      }
+      return { success: true, request: data.request };
+    }
+  } catch (err) {
+    console.warn('Movie request API error:', err);
+  }
+
+  // Fallback to local storage if offline/network error
+  const now = Date.now();
+  const fallbackReq = {
+    id: 'req_' + now.toString(36),
+    title: title.trim(),
+    year: (year || '').trim(),
+    notes: (notes || '').trim(),
+    contact: (contact || '').trim(),
+    status: 'pending',
+    createdAt: now,
+    device,
+    browser
+  };
+  const local = loadAnalytics();
+  if (!Array.isArray(local.movieRequests)) local.movieRequests = [];
+  local.movieRequests.unshift(fallbackReq);
+  saveAnalytics(local);
+
+  return { success: true, request: fallbackReq, fallback: true };
+}
+
+// Delete Movie Request (Admin action)
+export async function deleteMovieRequest(requestId) {
+  if (!requestId) return false;
+  try {
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'delete_movie_request',
+        requestId
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.movieRequests) {
+        const local = loadAnalytics();
+        local.movieRequests = data.movieRequests;
+        saveAnalytics(local);
+      }
+      return true;
+    }
+  } catch (err) {
+    console.warn('Delete movie request error:', err);
+  }
+
+  const local = loadAnalytics();
+  if (Array.isArray(local.movieRequests)) {
+    local.movieRequests = local.movieRequests.filter(r => r.id !== requestId);
+    saveAnalytics(local);
+  }
+  return true;
+}
+
+// Toggle Movie Request Status between 'pending' and 'fulfilled' (Admin action)
+export async function toggleMovieRequestStatus(requestId) {
+  if (!requestId) return false;
+  try {
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'toggle_movie_request_status',
+        requestId
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.movieRequests) {
+        const local = loadAnalytics();
+        local.movieRequests = data.movieRequests;
+        saveAnalytics(local);
+      }
+      return true;
+    }
+  } catch (err) {
+    console.warn('Toggle movie request error:', err);
+  }
+
+  const local = loadAnalytics();
+  if (Array.isArray(local.movieRequests)) {
+    const target = local.movieRequests.find(r => r.id === requestId);
+    if (target) {
+      target.status = target.status === 'fulfilled' ? 'pending' : 'fulfilled';
+      saveAnalytics(local);
+    }
+  }
+  return true;
+}
+
 export default {
   loadAnalytics,
   fetchGlobalAnalytics,
@@ -473,6 +606,9 @@ export default {
   getBrowserPercentages,
   resetAnalyticsData,
   exportAnalyticsJson,
+  submitMovieRequest,
+  deleteMovieRequest,
+  toggleMovieRequestStatus,
   getFirebaseDbUrl,
   setFirebaseDbUrl,
 };

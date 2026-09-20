@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Play, Download, Star, ArrowRight, Film, Clock, Calendar, Server, Languages, ShieldCheck } from 'lucide-react';
+import { Play, Download, Star, ArrowRight, Film, Clock, Calendar, Server, Languages, ShieldCheck, Share2, Check, Copy } from 'lucide-react';
 import { fetchMovieDetails, fetchMovieVideos, getPosterUrl, getBackdropUrl } from '../services/tmdb';
 import { trackMovieStream } from '../services/analyticsTracker';
 import { updatePageSEO, resetPageSEO } from '../services/seoHelper';
@@ -16,6 +16,33 @@ export default function MovieDetails() {
   const [currentServer, setCurrentServer] = useState('primary'); // 'primary' | 'multiembed' | 'backup' | 'trailer'
   const [trailerKey, setTrailerKey] = useState(null);
   const [imgError, setImgError] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Copy movie link to clipboard with feedback
+  const handleCopyLink = () => {
+    const url = `https://movora.me/movie/${movie?.id || id}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(() => {
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2500);
+      }).catch(() => fallbackCopy(url));
+    } else {
+      fallbackCopy(url);
+    }
+  };
+
+  const fallbackCopy = (text) => {
+    try {
+      const el = document.createElement('input');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    } catch (e) {}
+  };
 
   // Track movie stream in analytics when user clicks play
   useEffect(() => {
@@ -316,6 +343,40 @@ export default function MovieDetails() {
                 onClick={() => setIsPlaying(true)}
               >
                 <Play size={20} fill="currentColor" /> بدء المشاهدة الفورية
+              </button>
+
+              {/* WhatsApp Share Button */}
+              <a
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                  `🍿 سهرة الليلة: شاهد فيلم ${title} (${releaseYear}) بجودة عالية 1080p مجاناً وبدون إعلانات مزعجة على موفورا:\nhttps://movora.me/movie/${movie.id}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-whatsapp-share"
+                title="شارك الفيلم مع أصدقائك عبر واتساب"
+              >
+                <Share2 size={17} />
+                <span>واتساب 🟢</span>
+              </a>
+
+              {/* Fast Copy Link Button */}
+              <button
+                type="button"
+                className={`btn-copy-link ${copiedLink ? 'copied' : ''}`}
+                onClick={handleCopyLink}
+                title="نسخ رابط الفيلم المباشر"
+              >
+                {copiedLink ? (
+                  <>
+                    <Check size={17} style={{ color: '#4ade80' }} />
+                    <span style={{ color: '#4ade80' }}>تم النسخ! ✓</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={16} />
+                    <span>نسخ الرابط 📋</span>
+                  </>
+                )}
               </button>
 
               <a

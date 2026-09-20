@@ -173,6 +173,65 @@ export const fetchMoviesByGenre = async (genreId, page = 1) => {
   }
 };
 
+/**
+ * Pick a random high-rated movie from TMDB (Surprise Me / Random Movie feature)
+ */
+export const fetchRandomMovie = async () => {
+  // Curated list of legendary popular movies as reliable fallback
+  const fallbackMovieIds = [
+    157336, // Interstellar
+    27205,  // Inception
+    155,    // The Dark Knight
+    680,    // Pulp Fiction
+    550,    // Fight Club
+    299536, // Avengers: Infinity War
+    299534, // Avengers: Endgame
+    671,    // Harry Potter
+    19995,  // Avatar
+    278,    // The Shawshank Redemption
+    238,    // The Godfather
+    497,    // The Green Mile
+    324857, // Spider-Man: Into the Spider-Verse
+    569094, // Spider-Man: Across the Spider-Verse
+    429,    // The Good, the Bad and the Ugly
+    122,    // The Lord of the Rings: The Return of the King
+    98,     // Gladiator
+    389,    // 12 Angry Men
+    637,    // Life Is Beautiful
+    496243, // Parasite
+    693134, // Dune: Part Two
+    438631, // Dune
+    872585, // Oppenheimer
+    939243, // Sonic the Hedgehog 3
+  ];
+
+  try {
+    // Pick random page between 1 and 8 to get fresh diverse high-rated movies
+    const randomPage = Math.floor(Math.random() * 8) + 1;
+    const isTopRated = Math.random() > 0.4;
+    const endpoint = isTopRated ? 'top_rated' : 'popular';
+    
+    const url = `${BASE_URL}/movie/${endpoint}?api_key=${TMDB_API_KEY}&language=ar&page=${randomPage}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      const results = (data.results || []).filter(
+        m => m.poster_path && m.vote_average >= 6.8 && (m.title || m.original_title)
+      );
+      if (results.length > 0) {
+        const picked = results[Math.floor(Math.random() * results.length)];
+        return picked;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to fetch dynamic random movie, using fallback:', err);
+  }
+
+  // Fallback to random ID from curated top list
+  const randomFallbackId = fallbackMovieIds[Math.floor(Math.random() * fallbackMovieIds.length)];
+  return { id: randomFallbackId };
+};
+
 export default {
   TMDB_API_KEY,
   IMAGE_BASE_URL,
@@ -186,4 +245,5 @@ export default {
   fetchMovieDetails,
   fetchMovieVideos,
   fetchMoviesByGenre,
+  fetchRandomMovie,
 };

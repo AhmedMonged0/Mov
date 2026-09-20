@@ -30,6 +30,7 @@ function createEmptyAnalytics() {
       antiAdultShield: true,
       lastUpdated: Date.now()
     },
+    movieRequests: [],
     lastUpdated: Date.now()
   };
 }
@@ -97,6 +98,11 @@ function autoHealAnalytics(data) {
       antiAdultShield: true,
       lastUpdated: Date.now()
     };
+  }
+
+  // Ensure movieRequests exists
+  if (!Array.isArray(data.movieRequests)) {
+    data.movieRequests = [];
   }
 
   return data;
@@ -177,6 +183,23 @@ export default async function handler(req, res) {
         os = 'Windows'
       } = body;
 
+      // Robust device detection (Client-provided or User-Agent fallback)
+      const ua = (req.headers['user-agent'] || '').toLowerCase();
+      let clientDevice = device;
+      if (!clientDevice || clientDevice === 'Desktop') {
+        if (/mobile|iphone|ipod|android|blackberry/i.test(ua)) clientDevice = 'Mobile';
+        else if (/tablet|ipad/i.test(ua)) clientDevice = 'Tablet';
+        else clientDevice = clientDevice || 'Desktop';
+      }
+
+      let clientBrowser = browser;
+      if (!clientBrowser || clientBrowser === 'Chrome') {
+        if (/safari/i.test(ua) && !/chrome/i.test(ua)) clientBrowser = 'Safari';
+        else if (/firefox/i.test(ua)) clientBrowser = 'Firefox';
+        else if (/edg/i.test(ua)) clientBrowser = 'Edge';
+        else clientBrowser = clientBrowser || 'Chrome';
+      }
+
       // Handle Admin Reset
       if (action === 'reset') {
         const empty = createEmptyAnalytics();
@@ -207,21 +230,80 @@ export default async function handler(req, res) {
         return res.status(200).json(current);
       }
 
-      // Robust device detection (Client-provided or User-Agent fallback)
-      const ua = (req.headers['user-agent'] || '').toLowerCase();
-      let clientDevice = device;
-      if (!clientDevice || clientDevice === 'Desktop') {
-        if (/mobile|iphone|ipod|android|blackberry/i.test(ua)) clientDevice = 'Mobile';
-        else if (/tablet|ipad/i.test(ua)) clientDevice = 'Tablet';
-        else clientDevice = clientDevice || 'Desktop';
+      // Handle Visitor Movie Request Submission
+      if (action === 'request_movie') {
+        const title = (body.title || '').trim();
+        if (title) {
+          if (!Array.isArray(current.movieRequests)) current.movieRequests = [];
+          const newRequest = {
+            id: 'req_' + now.toString(36) + Math.random().toString(36).substring(2, 6),
+            title,
+            year: (body.year || '').trim(),
+            notes: (body.notes || '').trim(),
+            contact: (body.contact || '').trim(),
+            status: 'pending', // 'pending' | 'fulfilled'
+            createdAt: now,
+            device: clientDevice,
+            browser: clientBrowser
+          };
+          current.movieRequests.unshift(newRequest);
+          if (current.movieRequests.length > 250) {
+            current.movieRequests = current.movieRequests.slice(0, 250);
+          }
+          current.lastUpdated = now;
+
+          await put(BLOB_PATH, JSON.stringify(current), {
+            access: 'public',
+            token: process.env.BLOB_READ_WRITE_TOKEN,
+            addRandomSuffix: false,
+            allowOverwrite: true,
+            cacheControlMaxAge: 0
+          });
+          return res.status(200).json({ success: true, request: newRequest, allRequests: current.movieRequests });
+        }
+        return res.status(400).json({ error: 'Movie title is required' });
       }
 
-      let clientBrowser = browser;
-      if (!clientBrowser || clientBrowser === 'Chrome') {
-        if (/safari/i.test(ua) && !/chrome/i.test(ua)) clientBrowser = 'Safari';
-        else if (/firefox/i.test(ua)) clientBrowser = 'Firefox';
-        else if (/edg/i.test(ua)) clientBrowser = 'Edge';
-        else clientBrowser = clientBrowser || 'Chrome';
+      // Handle Delete Movie Request
+      if (action === 'delete_movie_request') {
+        const reqId = body.requestId;
+        if (reqId && Array.isArray(current.movieRequests)) {
+          current.movieRequests = current.movieRequests.filter(r => r.id !== reqId);
+          current.lastUpdated = now;
+
+          await put(BLOB_PATH, JSON.stringify(current), {
+            access: 'public',
+            token: process.env.BLOB_READ_WRITE_TOKEN,
+            addRandomSuffix: false,
+            allowOverwrite: true,
+            cacheControlMaxAge: 0
+          });
+          return res.status(200).json({ success: true, movieRequests: current.movieRequests });
+        }
+        return res.status(400).json({ error: 'Request ID is required' });
+      }
+
+      // Handle Toggle Movie Request Status (Pending <-> Fulfilled)
+      if (action === 'toggle_movie_request_status') {
+        const reqId = body.requestId;
+        if (reqId && Array.isArray(current.movieRequests)) {
+          const target = current.movieRequests.find(r => r.id === reqId);
+          if (target) {
+            target.status = target.status === 'fulfilled' ? 'pending' : 'fulfilled';
+            target.updatedAt = now;
+            current.lastUpdated = now;
+
+            await put(BLOB_PATH, JSON.stringify(current), {
+              access: 'public',
+              token: process.env.BLOB_READ_WRITE_TOKEN,
+              addRandomSuffix: false,
+              allowOverwrite: true,
+              cacheControlMaxAge: 0
+            });
+            return res.status(200).json({ success: true, request: target, movieRequests: current.movieRequests });
+          }
+        }
+        return res.status(404).json({ error: 'Request not found' });
       }
 
       // -------------------------------------------------------------

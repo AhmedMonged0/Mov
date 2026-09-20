@@ -97,10 +97,99 @@
   display: none !important;
 }
 
+/* Navigation Link Buttons (Mobile menu & desktop) */
+.nav-link-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  text-align: right;
+}
+
+.nav-link-btn:hover {
+  color: #ffffff;
+}
+
+.nav-link-btn.random-btn:hover {
+  color: #facc15;
+}
+
+.nav-link-btn.req-btn:hover {
+  color: #ff315a;
+}
+
+/* Quick Action Buttons in Nav Actions Bar */
+.nav-action-quick-btn {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 11px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.nav-action-quick-btn.random {
+  background: rgba(250, 204, 21, 0.12);
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  color: #facc15;
+}
+
+.nav-action-quick-btn.random:hover:not(:disabled) {
+  background: rgba(250, 204, 21, 0.25);
+  border-color: #facc15;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(250, 204, 21, 0.3);
+}
+
+.nav-action-quick-btn.request {
+  background: rgba(255, 49, 90, 0.12);
+  border: 1px solid rgba(255, 49, 90, 0.35);
+  color: #ff315a;
+}
+
+.nav-action-quick-btn.request:hover {
+  background: rgba(255, 49, 90, 0.25);
+  border-color: #ff315a;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(255, 49, 90, 0.35);
+}
+
+.nav-action-quick-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+/* Spin animation for dice */
+.spin-dice {
+  animation: diceRollAnim 0.7s infinite linear;
+}
+
+@keyframes diceRollAnim {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.15); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   position: relative;
 }
 
@@ -479,6 +568,15 @@
 /* --------------------------------------------------------------------------
    Tablet & Mobile Responsive Breakpoints
    -------------------------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .nav-action-quick-btn .quick-btn-label {
+    display: none;
+  }
+  .nav-action-quick-btn {
+    padding: 0 10px;
+  }
+}
+
 @media (max-width: 960px) {
   .nav-links {
     display: none;
@@ -513,6 +611,11 @@
 
   .navbar.scrolled {
     height: 62px;
+  }
+
+  /* Quick action buttons move to mobile menu on tablets/mobile */
+  .nav-action-quick-btn {
+    display: none !important;
   }
 
   /* Switch search to mobile trigger button */
