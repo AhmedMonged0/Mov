@@ -378,13 +378,13 @@ export default function VipModal({ isOpen, onClose }) {
 
                     {/* Telegram CTA */}
                     <a 
-                      href="https://t.me/movora_official" 
+                      href="https://t.me/movora_mebot" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="vip-telegram-cta"
                     >
                       <Send size={18} />
-                      <span>تواصل معنا على تليجرام للاشتراك واستلام الكود فوراً 🚀</span>
+                      <span>تواصل مع بوت الدعم والاشتراك على تليجرام (@movora_mebot) 🚀</span>
                     </a>
                   </div>
                 </>
