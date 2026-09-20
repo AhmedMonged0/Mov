@@ -3,10 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { 
   Play, Download, Star, ArrowRight, Film, Clock, Calendar, 
   Server, Languages, ShieldCheck, Share2, Check, Copy, 
-  Magnet, Loader2, Sparkles, Send, Zap, Info 
+  Sparkles, Send 
 } from 'lucide-react';
 import { fetchMovieDetails, fetchMovieVideos, getPosterUrl, getBackdropUrl } from '../services/tmdb';
-import { fetchMovieDownloads } from '../services/ytsService';
 import { trackMovieStream } from '../services/analyticsTracker';
 import { updatePageSEO, resetPageSEO } from '../services/seoHelper';
 import AdBannerSlot from '../components/shared/AdBannerSlot';
@@ -22,10 +21,6 @@ export default function MovieDetails() {
   const [trailerKey, setTrailerKey] = useState(null);
   const [imgError, setImgError] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [downloads, setDownloads] = useState([]);
-  const [downloadsLoading, setDownloadsLoading] = useState(true);
-  const [downloadSource, setDownloadSource] = useState(null);
-  const [copiedMagnetHash, setCopiedMagnetHash] = useState(null);
 
   // Copy movie link to clipboard with feedback
   const handleCopyLink = () => {
@@ -52,49 +47,6 @@ export default function MovieDetails() {
       setTimeout(() => setCopiedLink(false), 2500);
     } catch (e) {}
   };
-
-  const handleCopyMagnet = (hash, magnetUrl) => {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(magnetUrl).then(() => {
-        setCopiedMagnetHash(hash);
-        setTimeout(() => setCopiedMagnetHash(null), 2500);
-      }).catch(() => fallbackCopy(magnetUrl));
-    } else {
-      fallbackCopy(magnetUrl);
-    }
-  };
-
-  // Fetch verified real downloads (YTS BluRay/4K/1080p P2P)
-  useEffect(() => {
-    if (!movie) return;
-    let isMounted = true;
-
-    const loadDownloads = async () => {
-      setDownloadsLoading(true);
-      try {
-        const imdbId = movie.imdb_id || '';
-        const titleForSearch = movie.original_title || movie.title || '';
-        const year = movie.release_date ? movie.release_date.split('-')[0] : '';
-
-        const res = await fetchMovieDownloads(imdbId, titleForSearch, year);
-        if (isMounted) {
-          if (res && res.success && Array.isArray(res.torrents) && res.torrents.length > 0) {
-            setDownloads(res.torrents);
-            setDownloadSource(res.source);
-          } else {
-            setDownloads([]);
-          }
-        }
-      } catch (err) {
-        if (isMounted) setDownloads([]);
-      } finally {
-        if (isMounted) setDownloadsLoading(false);
-      }
-    };
-
-    loadDownloads();
-    return () => { isMounted = false; };
-  }, [movie]);
 
   // Track movie stream in analytics when user clicks play
   useEffect(() => {
@@ -436,156 +388,32 @@ export default function MovieDetails() {
               </a>
             </div>
 
-            {/* Real High-Speed Downloads Section (YTS / Magnet / Telegram) */}
-            <div className="downloads-section" id="downloads">
-              <div className="downloads-header">
-                <div className="downloads-header-title">
-                  <div className="dl-icon-badge">
-                    <Download size={20} />
-                  </div>
-                  <div>
-                    <h3>خيارات التحميل المباشر والتورنت السريع</h3>
-                    <p>تحميل مجاني 100% بنسخ بلوراي أصلية من سيرفرات P2P العالمية</p>
-                  </div>
-                </div>
-                {downloads.length > 0 && (
-                  <span className="dl-source-badge">
-                    <Zap size={13} /> {downloadSource || 'سيرفرات YTS فائقة السرعة'}
-                  </span>
-                )}
+            {/* Downloads Coming Soon Section */}
+            <div className="downloads-coming-soon-card">
+              <div className="dl-coming-icon-wrap">
+                <Download size={22} />
               </div>
-
-              {downloadsLoading ? (
-                <div className="downloads-loading-box">
-                  <Loader2 size={24} className="spin-icon" />
-                  <span>جاري فحص سيرفرات التحميل وروابط التورنت عالية السرعة...</span>
+              <div className="dl-coming-content">
+                <div className="dl-coming-badge">
+                  <Sparkles size={13} />
+                  <span>ميزة جديدة • قريباً</span>
                 </div>
-              ) : downloads.length > 0 ? (
-                <>
-                  <div className="download-grid">
-                    {downloads.map((dl, idx) => {
-                      const isCopied = copiedMagnetHash === dl.hash;
-                      return (
-                        <div key={idx} className="download-card">
-                          <div className="dl-card-top">
-                            <div className="dl-badge-wrap">
-                              <span className={`dl-quality-badge rank-${dl.rank}`}>
-                                {dl.badge}
-                              </span>
-                              <span className="dl-codec-badge">{dl.type} • {dl.videoCodec}</span>
-                            </div>
-                            <span className="dl-size-tag">{dl.size}</span>
-                          </div>
-
-                          <div className="dl-info">
-                            <div className="dl-seeds-row">
-                              <span className="dl-seeds-indicator">
-                                <span className="seed-dot" />
-                                {dl.seeds > 0 ? `${dl.seeds} موزع (Seeds نشط)` : 'متاح للتحميل الفوري'}
-                              </span>
-                              {dl.peers > 0 && <span className="dl-peers">({dl.peers} تحميل نشط)</span>}
-                            </div>
-                          </div>
-
-                          <div className="dl-card-actions">
-                            {/* Magnet Direct Protocol Link */}
-                            <a 
-                              href={dl.magnetUrl} 
-                              className="dl-btn magnet-btn"
-                              title="فتح برابط المغناطيس المباشر في برنامج التورنت"
-                            >
-                              <Magnet size={15} />
-                              <span>تحميل فوري (Magnet)</span>
-                            </a>
-
-                            {/* Direct .torrent File Download */}
-                            {dl.torrentUrl && (
-                              <a 
-                                href={dl.torrentUrl} 
-                                className="dl-btn torrent-btn"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="تحميل ملف التورنت الصغير (.torrent)"
-                              >
-                                <Download size={14} />
-                                <span>ملف تورنت</span>
-                              </a>
-                            )}
-
-                            {/* Copy Magnet Link Button */}
-                            <button
-                              type="button"
-                              className={`dl-btn copy-btn ${isCopied ? 'copied' : ''}`}
-                              onClick={() => handleCopyMagnet(dl.hash, dl.magnetUrl)}
-                              title="نسخ رابط المغناطيس ولصقه في برنامج التحميل"
-                            >
-                              {isCopied ? (
-                                <>
-                                  <Check size={14} />
-                                  <span>تم النسخ!</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy size={14} />
-                                  <span>نسخ</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* How To Download Helper Tip */}
-                  <div className="dl-guide-hint">
-                    <Info size={16} />
-                    <span>
-                      <strong>طريقة التحميل السريعة:</strong> اضغط على <strong>تحميل فوري (Magnet)</strong> أو حمل <strong>ملف التورنت</strong> ليفتح تلقائياً في تطبيقك المفضل (مثل <strong>uTorrent</strong> أو <strong>1DM</strong> على الهاتف والكمبيوتر) ويبدأ التنزيل فوراً بأقصى سرعة إنترنت لديك.
-                    </span>
-                  </div>
-                </>
-              ) : (
-                /* Fallback when no BluRay torrent is available (e.g. Arabic or unreleased movie) */
-                <div className="downloads-empty-box">
-                  <div className="dl-empty-icon">
-                    <Film size={34} />
-                  </div>
-                  <h4>لم تتوفر نسخ تورنت رقمية رسمية بعد لهذا العمل</h4>
-                  <p>
-                    يتم عادة توفير نسخ التحميل عالية الجودة فور صدور أقراص الـ BluRay العالمية.
-                    إذا كنت تبحث عن رابط تحميل مباشر وسريع الآن، يمكنك طلبه فوراً وسنقوم برفعه لك عبر قناتنا على تليجرام!
-                  </p>
-                  <a
-                    href="https://t.me/movora_me"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="dl-request-tg-btn"
-                  >
-                    <Send size={16} />
-                    <span>اطلب رابط تحميل الفيلم على تليجرام 📢</span>
-                  </a>
-                </div>
-              )}
-
-              {/* Telegram Community Download Alternative Banner */}
-              <div className="dl-telegram-alt-banner">
-                <div className="tg-alt-icon">
-                  <Send size={18} />
-                </div>
-                <div className="tg-alt-text">
-                  <strong>تفضل التحميل المباشر بدون برامج تورنت؟</strong>
-                  <span>نقوم بنشر ملفات الأفلام وروابط المشاهدة المباشرة فائقة السرعة يومياً عبر قناتنا الرسمية على تليجرام <strong>@movora_me</strong>.</span>
-                </div>
-                <a
-                  href="https://t.me/movora_me"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="tg-alt-btn"
-                >
-                  انضم للقناة 🚀
-                </a>
+                <h3>سيتم إضافة خيار التحميل قريباً 🚀</h3>
+                <p>
+                  نعمل حالياً على تجهيز روابط تنزيل مباشرة وسريعة لكافة الأعمال السينمائية.
+                  يمكنك الاستمتاع حالياً ببدء المشاهدة الفورية بجودة 4K وبدون إعلانات عبر زر المشاهدة أعلاه!
+                </p>
               </div>
+              <a
+                href="https://t.me/movora_me"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="dl-coming-tg-btn"
+                title="انضم لقناة موفورا على تليجرام"
+              >
+                <Send size={15} />
+                <span>قناتنا على تليجرام 📢</span>
+              </a>
             </div>
           </div>
         </div>
