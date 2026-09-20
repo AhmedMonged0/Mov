@@ -39,7 +39,8 @@ import {
   Crown,
   Plus,
   Copy,
-  Check
+  Check,
+  Layers
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { getAdSettings, saveAdSettingsToCloud, extractVerificationCode, purgeAdminAds } from '../../services/adShield';
@@ -101,6 +102,16 @@ export default function AdminDashboard() {
   const [vipActionFeedback, setVipActionFeedback] = useState(null);
   const [copiedCodeId, setCopiedCodeId] = useState(null);
 
+  // Navigation Tabs State: 'overview' | 'vip' | 'ads' | 'requests' | 'telegram' | 'all'
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // VIP Filter and Search State
+  const [vipFilter, setVipFilter] = useState('all');
+  const [vipSearchQuery, setVipSearchQuery] = useState('');
+
+  // Movie Requests Filter State
+  const [requestFilter, setRequestFilter] = useState('all');
+
   const loadVipCodes = useCallback(async () => {
     setIsLoadingVip(true);
     const res = await fetchVipCodes();
@@ -110,12 +121,10 @@ export default function AdminDashboard() {
     setIsLoadingVip(false);
   }, []);
 
+  // Auto-load VIP codes on mount
   useEffect(() => {
-    if (showVipAdminModal) {
-      loadVipCodes();
-      setVipActionFeedback(null);
-    }
-  }, [showVipAdminModal, loadVipCodes]);
+    loadVipCodes();
+  }, [loadVipCodes]);
 
   const handleCreateVipCode = async (e) => {
     e.preventDefault();
@@ -344,6 +353,26 @@ export default function AdminDashboard() {
     5
   );
 
+  // Filter VIP codes
+  const filteredVipCodes = vipCodesList.filter(item => {
+    if (vipFilter !== 'all' && item.status !== vipFilter) return false;
+    if (vipSearchQuery.trim()) {
+      const q = vipSearchQuery.trim().toLowerCase();
+      const codeMatch = (item.code || '').toLowerCase().includes(q);
+      const noteMatch = (item.note || '').toLowerCase().includes(q);
+      const planMatch = (item.planName || '').toLowerCase().includes(q);
+      return codeMatch || noteMatch || planMatch;
+    }
+    return true;
+  });
+
+  // Filter Movie Requests
+  const filteredMovieRequests = (data.movieRequests || []).filter(req => {
+    if (requestFilter === 'pending') return req.status !== 'fulfilled';
+    if (requestFilter === 'fulfilled') return req.status === 'fulfilled';
+    return true;
+  });
+
   return (
     <div className="admin-dashboard-container" dir="rtl">
       {/* Top Navbar */}
@@ -380,62 +409,12 @@ export default function AdminDashboard() {
 
           <button 
             className="admin-action-btn"
-            onClick={exportAnalyticsJson}
-            title="تنزيل تقرير الترافيك الحقيقي بصيغة JSON"
-          >
-            <Download size={15} />
-            <span>تصدير التقرير</span>
-          </button>
-
-          <button 
-            className="admin-action-btn ads-btn"
-            onClick={() => setShowAdsModal(true)}
-            title="إدارة إعلانات الموقع وأرباح Adsterra ودرع الحماية"
-            style={{
-              borderColor: 'rgba(234, 179, 8, 0.4)',
-              background: 'rgba(234, 179, 8, 0.1)',
-              color: '#facc15'
-            }}
-          >
-            <DollarSign size={15} style={{ color: '#facc15' }} />
-            <span>إعلانات الموقع والأرباح 💰</span>
-          </button>
-
-          <button 
-            className="admin-action-btn vip-btn"
-            onClick={() => setShowVipAdminModal(true)}
-            title="إدارة اشتراكات وأكواد VIP وتوليد أكواد المشاهدة بدون إعلانات"
-            style={{
-              borderColor: 'rgba(250, 204, 21, 0.45)',
-              background: 'rgba(250, 204, 21, 0.12)',
-              color: '#facc15'
-            }}
-          >
-            <Crown size={15} style={{ color: '#facc15' }} />
-            <span>أكواد واشتراكات VIP 👑</span>
-          </button>
-
-          <button 
-            className="admin-action-btn tg-publisher-btn"
-            onClick={() => setShowTelegramModal(true)}
-            title="أداة النشر التلقائي الذكي على تليجرام"
-            style={{
-              borderColor: 'rgba(56, 189, 248, 0.45)',
-              background: 'rgba(56, 189, 248, 0.12)',
-              color: '#38bdf8'
-            }}
-          >
-            <Send size={15} style={{ color: '#38bdf8' }} />
-            <span>نشر على تليجرام 📢</span>
-          </button>
-
-          <button 
-            className="admin-action-btn"
             onClick={() => setShowCloudModal(true)}
             title="سحابة Movora متصلة وتعمل تلقائياً"
             style={{
               borderColor: 'rgba(34, 197, 94, 0.4)',
-              background: 'rgba(34, 197, 94, 0.1)'
+              background: 'rgba(34, 197, 94, 0.1)',
+              color: '#4ade80'
             }}
           >
             <Cloud size={15} style={{ color: '#22c55e' }} />
@@ -444,11 +423,20 @@ export default function AdminDashboard() {
 
           <button 
             className="admin-action-btn"
+            onClick={exportAnalyticsJson}
+            title="تنزيل تقرير الترافيك الحقيقي بصيغة JSON"
+          >
+            <Download size={15} />
+            <span>تصدير JSON</span>
+          </button>
+
+          <button 
+            className="admin-action-btn"
             onClick={() => setShowPwdModal(true)}
             title="تغيير كلمة المرور للوحة الأدمن"
           >
             <KeyRound size={15} />
-            <span>تغيير كلمة المرور</span>
+            <span>كلمة المرور</span>
           </button>
 
           <Link to="/" target="_blank" className="admin-action-btn visit-site" title="فتح الموقع">
@@ -467,134 +455,203 @@ export default function AdminDashboard() {
         </div>
       </header>
 
+      {/* Admin Navigation Tabs */}
+      <nav className="admin-tabs-nav">
+        <button 
+          type="button"
+          className={`admin-tab-item ${activeTab === 'overview' ? 'active' : ''}`}
+          onClick={() => setActiveTab('overview')}
+        >
+          <BarChart3 size={16} />
+          <span>نظرة عامة والترافيك 📊</span>
+        </button>
+
+        <button 
+          type="button"
+          className={`admin-tab-item tab-vip ${activeTab === 'vip' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('vip'); loadVipCodes(); }}
+        >
+          <Crown size={16} />
+          <span>اشتراكات وأكواد VIP 👑</span>
+          <span className="admin-tab-badge vip">
+            {vipCodesList.filter(c => c.status === 'active').length} جاهز
+          </span>
+        </button>
+
+        <button 
+          type="button"
+          className={`admin-tab-item tab-ads ${activeTab === 'ads' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ads')}
+        >
+          <DollarSign size={16} />
+          <span>إعلانات الموقع والأرباح 💰</span>
+          <span className={`admin-tab-dot ${adSettings.enabled ? 'active' : ''}`} />
+        </button>
+
+        <button 
+          type="button"
+          className={`admin-tab-item tab-requests ${activeTab === 'requests' ? 'active' : ''}`}
+          onClick={() => setActiveTab('requests')}
+        >
+          <Inbox size={16} />
+          <span>طلبات المشاهدين 📬</span>
+          {(data.movieRequests || []).filter(r => r.status !== 'fulfilled').length > 0 && (
+            <span className="admin-tab-badge warning">
+              {(data.movieRequests || []).filter(r => r.status !== 'fulfilled').length} انتظار
+            </span>
+          )}
+        </button>
+
+        <button 
+          type="button"
+          className={`admin-tab-item tab-telegram ${activeTab === 'telegram' ? 'active' : ''}`}
+          onClick={() => setActiveTab('telegram')}
+        >
+          <Send size={16} />
+          <span>النشر على تليجرام 📢</span>
+        </button>
+
+        <button 
+          type="button"
+          className={`admin-tab-item ${activeTab === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveTab('all')}
+        >
+          <Layers size={16} />
+          <span>عرض كافة الأقسام 🗂️</span>
+        </button>
+      </nav>
+
       {/* Main Content Body */}
       <main className="admin-main-content">
 
-        {/* Real Data Banner */}
-        <div style={{
-          background: 'rgba(34, 197, 94, 0.08)',
-          border: '1px solid rgba(34, 197, 94, 0.25)',
-          borderRadius: '12px',
-          padding: '12px 18px',
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CheckCircle2 size={18} style={{ color: '#22c55e' }} />
-            <span style={{ fontSize: '13.5px', color: '#e2e8f0' }}>
-              <strong>نظام التتبع المباشر 100% نشط:</strong> رصد دقيق وتلقائي لجميع الزيارات وتشغيل الأفلام.
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <a 
-              href="https://vercel.com/ahmed-mongeds-projects/movr/analytics" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: '#000',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: '#fff',
-                padding: '6px 14px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: '700',
-                textDecoration: 'none'
-              }}
-            >
-              <BarChart3 size={14} style={{ color: '#22c55e' }} />
-              <span>تحليلات Vercel السحابية لمشروع Movora (كافة الموبايلات والأجهزة)</span>
-            </a>
-          </div>
-        </div>
-
-        {/* Ads & Revenue Bar */}
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0%, rgba(15, 23, 42, 0.7) 100%)',
-          border: '1px solid rgba(234, 179, 8, 0.25)',
-          borderRadius: '12px',
-          padding: '14px 20px',
-          marginBottom: '22px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '14px',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* ================= SECTION 1: OVERVIEW & TRAFFIC ================= */}
+        {(activeTab === 'overview' || activeTab === 'all') && (
+          <div className="admin-section-block">
+            {/* Real Data Banner */}
             <div style={{
-              background: 'rgba(234, 179, 8, 0.2)',
-              border: '1px solid rgba(234, 179, 8, 0.4)',
-              borderRadius: '8px',
-              padding: '8px',
+              background: 'rgba(34, 197, 94, 0.08)',
+              border: '1px solid rgba(34, 197, 94, 0.25)',
+              borderRadius: '12px',
+              padding: '12px 18px',
+              marginBottom: '16px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              color: '#facc15'
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap'
             }}>
-              <DollarSign size={20} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <strong style={{ fontSize: '15px', color: '#fff' }}>أرباح الموقع وإعلانات Adsterra</strong>
-                <span style={{
-                  fontSize: '11px',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  background: adSettings.enabled ? 'rgba(34, 197, 94, 0.2)' : 'rgba(148, 163, 184, 0.15)',
-                  color: adSettings.enabled ? '#4ade80' : '#94a3b8',
-                  border: `1px solid ${adSettings.enabled ? 'rgba(34, 197, 94, 0.4)' : 'rgba(148, 163, 184, 0.3)'}`,
-                  fontWeight: 'bold'
-                }}>
-                  {adSettings.enabled ? 'إعلاناتك نشطة 🟢' : 'الإعلانات متوقفة ⚪'}
-                </span>
-                <span style={{
-                  fontSize: '11px',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  background: 'rgba(56, 189, 248, 0.15)',
-                  color: '#38bdf8',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}>
-                  <ShieldCheck size={12} /> درع حظر الإعلانات الإباحية: مفعّل 🛡️
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle2 size={18} style={{ color: '#22c55e' }} />
+                <span style={{ fontSize: '13.5px', color: '#e2e8f0' }}>
+                  <strong>نظام التتبع المباشر 100% نشط:</strong> رصد دقيق وتلقائي لجميع الزيارات وتشغيل الأفلام.
                 </span>
               </div>
-              <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#94a3b8' }}>
-                إعلانات شبكة Adsterra (Popunder و Social Bar) مدمجة لجميع الزوار مع حماية كاملة للوحة الإدارة.
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <a 
+                  href="https://vercel.com/ahmed-mongeds-projects/movr/analytics" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#000',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#fff',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <BarChart3 size={14} style={{ color: '#22c55e' }} />
+                  <span>تحليلات Vercel السحابية لمشروع Movora (كافة الموبايلات والأجهزة)</span>
+                </a>
+              </div>
             </div>
-          </div>
 
-          <button
-            onClick={() => setShowAdsModal(true)}
-            style={{
-              background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
-              color: '#000',
-              fontWeight: 'bold',
-              border: 'none',
-              padding: '8px 18px',
-              borderRadius: '8px',
-              fontSize: '13px',
-              cursor: 'pointer',
+            {/* Ads & Revenue Quick Bar */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0%, rgba(15, 23, 42, 0.7) 100%)',
+              border: '1px solid rgba(234, 179, 8, 0.25)',
+              borderRadius: '12px',
+              padding: '14px 20px',
+              marginBottom: '22px',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 12px rgba(234, 179, 8, 0.25)'
-            }}
-          >
-            <Sparkles size={15} />
-            <span>إدارة الإعلانات والأرباح</span>
-          </button>
-        </div>
+              justifyContent: 'space-between',
+              gap: '14px',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  background: 'rgba(234, 179, 8, 0.2)',
+                  border: '1px solid rgba(234, 179, 8, 0.4)',
+                  borderRadius: '8px',
+                  padding: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#facc15'
+                }}>
+                  <DollarSign size={20} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <strong style={{ fontSize: '15px', color: '#fff' }}>أرباح الموقع وإعلانات Adsterra</strong>
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: adSettings.enabled ? 'rgba(34, 197, 94, 0.2)' : 'rgba(148, 163, 184, 0.15)',
+                      color: adSettings.enabled ? '#4ade80' : '#94a3b8',
+                      border: `1px solid ${adSettings.enabled ? 'rgba(34, 197, 94, 0.4)' : 'rgba(148, 163, 184, 0.3)'}`,
+                      fontWeight: 'bold'
+                    }}>
+                      {adSettings.enabled ? 'إعلاناتك نشطة 🟢' : 'الإعلانات متوقفة ⚪'}
+                    </span>
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      color: '#38bdf8',
+                      border: '1px solid rgba(56, 189, 248, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <ShieldCheck size={12} /> درع حظر الإعلانات الإباحية: مفعّل 🛡️
+                    </span>
+                  </div>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#94a3b8' }}>
+                    إعلانات شبكة Adsterra (Popunder و Social Bar) مدمجة لجميع الزوار مع حماية كاملة للمشرفين وأعضاء VIP.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setActiveTab('ads')}
+                style={{
+                  background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+                  color: '#000',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 12px rgba(234, 179, 8, 0.25)'
+                }}
+              >
+                <Sparkles size={15} />
+                <span>إدارة الإعلانات والأرباح</span>
+              </button>
+            </div>
         
         {/* Row 1: 4 Vital KPI Cards (100% REAL) */}
         <section className="admin-kpi-grid">
@@ -804,238 +861,6 @@ export default function AdminDashboard() {
           </div>
         </section>
 
-        {/* Row: Visitor Movie Requests (طلبات الأفلام من المشاهدين) */}
-        <section className="admin-requests-section" style={{ marginBottom: '24px' }}>
-          <div className="admin-panel-card" style={{ width: '100%' }}>
-            <div className="panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '10px',
-                  background: 'rgba(255, 49, 90, 0.15)',
-                  border: '1px solid rgba(255, 49, 90, 0.35)',
-                  color: '#ff315a',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <Inbox size={20} />
-                </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <h3 className="panel-title" style={{ margin: 0 }}>طلبات الأفلام من الزوار 📬</h3>
-                    <span style={{
-                      fontSize: '11px',
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      background: 'rgba(255, 49, 90, 0.15)',
-                      color: '#ff315a',
-                      fontWeight: 'bold',
-                      border: '1px solid rgba(255, 49, 90, 0.3)'
-                    }}>
-                      {(data.movieRequests || []).length} طلب
-                    </span>
-                    {(data.movieRequests || []).filter(r => r.status !== 'fulfilled').length > 0 && (
-                      <span style={{
-                        fontSize: '11px',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        background: 'rgba(234, 179, 8, 0.15)',
-                        color: '#facc15',
-                        fontWeight: 'bold',
-                        border: '1px solid rgba(234, 179, 8, 0.3)'
-                      }}>
-                        {(data.movieRequests || []).filter(r => r.status !== 'fulfilled').length} بانتظار التوفير ⏳
-                      </span>
-                    )}
-                  </div>
-                  <p className="panel-sub" style={{ margin: '4px 0 0 0' }}>
-                    الأفلام والمسلسلات التي يطلبها المشاهدون مع إمكانية توفيرها ونشرها مباشرة لقناة التليجرام @movora_me
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => refreshData(true)}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    color: '#94a3b8',
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <RefreshCw size={12} className={isRefreshing ? 'spin-icon' : ''} />
-                  <span>تحديث الطلبات</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="top-movies-table-wrapper" style={{ maxHeight: '420px', overflowY: 'auto' }}>
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>الحالة</th>
-                    <th>اسم الفيلم المطلوب</th>
-                    <th>السنة</th>
-                    <th>ملاحظات وتفاصيل المشاهد</th>
-                    <th>التواصل</th>
-                    <th>وقت الطلب والجهاز</th>
-                    <th>إجراءات سريعة</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.movieRequests && data.movieRequests.length > 0 ? (
-                    data.movieRequests.map((req) => {
-                      const isFulfilled = req.status === 'fulfilled';
-                      const timeStr = req.createdAt 
-                        ? new Date(req.createdAt).toLocaleString('ar-EG', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
-                        : 'حديث';
-
-                      return (
-                        <tr key={req.id} style={{ opacity: isFulfilled ? 0.7 : 1 }}>
-                          <td>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleRequestStatus(req.id)}
-                              style={{
-                                background: isFulfilled ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
-                                border: `1px solid ${isFulfilled ? 'rgba(34, 197, 94, 0.4)' : 'rgba(234, 179, 8, 0.4)'}`,
-                                color: isFulfilled ? '#4ade80' : '#facc15',
-                                borderRadius: '8px',
-                                padding: '4px 10px',
-                                fontSize: '11.5px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '5px'
-                              }}
-                              title="اضغط لتغيير الحالة بين (تم التوفير / قيد الانتظار)"
-                            >
-                              {isFulfilled ? <CheckCircle2 size={13} /> : <Clock size={13} />}
-                              <span>{isFulfilled ? 'تم التوفير ✅' : 'قيد الانتظار ⏳'}</span>
-                            </button>
-                          </td>
-                          <td className="movie-cell">
-                            <strong style={{ color: '#fff', fontSize: '14px' }}>{req.title}</strong>
-                          </td>
-                          <td>
-                            <span style={{ color: '#94a3b8', fontSize: '12px' }}>{req.year || '—'}</span>
-                          </td>
-                          <td>
-                            <span style={{ color: '#cbd5e1', fontSize: '12px', maxWidth: '200px', display: 'inline-block' }}>
-                              {req.notes || '—'}
-                            </span>
-                          </td>
-                          <td>
-                            {req.contact ? (
-                              <span style={{ color: '#38bdf8', fontSize: '12px', direction: 'ltr', display: 'inline-block' }}>
-                                {req.contact}
-                              </span>
-                            ) : (
-                              <span style={{ color: '#64748b', fontSize: '12px' }}>—</span>
-                            )}
-                          </td>
-                          <td>
-                            <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
-                              <span>{timeStr}</span>
-                              <span style={{ margin: '0 4px' }}>•</span>
-                              <span>{req.device || 'Desktop'}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              {/* Publish to Telegram */}
-                              <button
-                                type="button"
-                                onClick={() => handlePublishRequestedMovie(req.title)}
-                                style={{
-                                  background: 'rgba(0, 136, 204, 0.15)',
-                                  border: '1px solid rgba(0, 136, 204, 0.4)',
-                                  color: '#38bdf8',
-                                  padding: '5px 10px',
-                                  borderRadius: '6px',
-                                  fontSize: '11px',
-                                  fontWeight: 'bold',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}
-                                title="نشر إشعار توفر هذا الفيلم لقناة التليجرام @movora_me"
-                              >
-                                <Send size={11} />
-                                <span>نشر تليجرام</span>
-                              </button>
-
-                              {/* Search site for this movie */}
-                              <Link
-                                to={`/?q=${encodeURIComponent(req.title)}`}
-                                target="_blank"
-                                style={{
-                                  background: 'rgba(255, 255, 255, 0.05)',
-                                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                                  color: '#cbd5e1',
-                                  padding: '5px 8px',
-                                  borderRadius: '6px',
-                                  fontSize: '11px',
-                                  textDecoration: 'none',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}
-                                title="فحص وجود الفيلم في الموقع"
-                              >
-                                <Search size={11} />
-                                <span>فحص</span>
-                              </Link>
-
-                              {/* Delete Request */}
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteRequest(req.id, req.title)}
-                                style={{
-                                  background: 'rgba(239, 68, 68, 0.1)',
-                                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                                  color: '#f87171',
-                                  padding: '5px 7px',
-                                  borderRadius: '6px',
-                                  fontSize: '11px',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center'
-                                }}
-                                title="حذف هذا الطلب"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '36px 14px', color: '#717688' }}>
-                        لا توجد طلبات أفلام مسجلة حتى الآن — ستظهر هنا فوراً بمجرد قيام أي زائر بطلب فيلم من الموقع!
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
         {/* Row 3: Top Streamed Movies & Recent Live Activity Stream */}
         <section className="admin-bottom-grid">
           
@@ -1153,7 +978,945 @@ export default function AdminDashboard() {
             </div>
           </div>
         </section>
-      </main>
+      </div>
+    )}
+
+    {/* ================= SECTION 2: VIP PROMO CODES & SUBSCRIPTIONS ================= */}
+    {(activeTab === 'vip' || activeTab === 'all') && (
+      <div className="admin-section-block">
+        <div className="admin-vip-embedded-panel">
+          {/* Header */}
+          <div className="admin-vip-panel-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: 'rgba(250, 204, 21, 0.15)',
+                border: '1px solid rgba(250, 204, 21, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#facc15'
+              }}>
+                <Crown size={22} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#fff' }}>
+                  إدارة اشتراكات وأكواد Movora VIP 👑
+                </h3>
+                <span style={{ fontSize: '12.5px', color: '#94a3b8' }}>
+                  توليد أكواد المشاهدة بدون إعلانات للعملاء، متابعة الأكواد المفعلة، وإلغاء أو سحب الاشتراكات
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button 
+                type="button" 
+                onClick={loadVipCodes}
+                disabled={isLoadingVip}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  color: '#cbd5e1',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: 'inherit'
+                }}
+              >
+                <RefreshCw size={13} className={isLoadingVip ? 'spin-icon' : ''} />
+                <span>تحديث الأكواد</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick KPI stats */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+            gap: '12px',
+            padding: '16px 20px',
+            background: 'rgba(0, 0, 0, 0.25)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
+          }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <span style={{ fontSize: '12px', color: '#94a3b8' }}>إجمالي الأكواد المُصدرة</span>
+              <strong style={{ display: 'block', fontSize: '22px', color: '#fff', marginTop: '2px' }}>
+                {vipCodesList.length}
+              </strong>
+            </div>
+            <div style={{ background: 'rgba(34, 197, 94, 0.08)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(34, 197, 94, 0.25)' }}>
+              <span style={{ fontSize: '12px', color: '#86efac' }}>الأكواد النشطة (جاهزة للبيع)</span>
+              <strong style={{ display: 'block', fontSize: '22px', color: '#4ade80', marginTop: '2px' }}>
+                {vipCodesList.filter(c => c.status === 'active').length}
+              </strong>
+            </div>
+            <div style={{ background: 'rgba(250, 204, 21, 0.08)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(250, 204, 21, 0.25)' }}>
+              <span style={{ fontSize: '12px', color: '#fde047' }}>المشتركين المفعلين (تم التفعيل)</span>
+              <strong style={{ display: 'block', fontSize: '22px', color: '#facc15', marginTop: '2px' }}>
+                {vipCodesList.filter(c => c.status === 'redeemed').length}
+              </strong>
+            </div>
+            <div style={{ background: 'rgba(148, 163, 184, 0.06)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(148, 163, 184, 0.15)' }}>
+              <span style={{ fontSize: '12px', color: '#94a3b8' }}>الأكواد الملغاة</span>
+              <strong style={{ display: 'block', fontSize: '22px', color: '#cbd5e1', marginTop: '2px' }}>
+                {vipCodesList.filter(c => c.status === 'cancelled').length}
+              </strong>
+            </div>
+          </div>
+
+          {/* Form: Generate New VIP Code */}
+          <form onSubmit={handleCreateVipCode} style={{ padding: '20px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <strong style={{ display: 'block', fontSize: '14.5px', color: '#facc15', marginBottom: '12px' }}>
+              ✨ توليد كود تفعيل VIP جديد:
+            </strong>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', alignItems: 'flex-end' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>مدة الباقة:</label>
+                <select 
+                  value={newCodeDuration}
+                  onChange={(e) => {
+                    const dur = Number(e.target.value);
+                    setNewCodeDuration(dur);
+                    setNewCodeCustom(generateRandomCodePrefix(dur));
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '13px',
+                    fontFamily: 'inherit'
+                  }}
+                >
+                  <option value={30}>شهر (30 يوم)</option>
+                  <option value={90}>3 شهور (90 يوم)</option>
+                  <option value={180}>6 شهور (180 يوم)</option>
+                  <option value={365}>سنة كاملة (365 يوم)</option>
+                  <option value={9999}>مدى الحياة 👑</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>رمز الكود:</label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input 
+                    type="text"
+                    value={newCodeCustom}
+                    onChange={(e) => setNewCodeCustom(e.target.value.toUpperCase())}
+                    placeholder="VIP-MOV-XXXX"
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(250, 204, 21, 0.4)',
+                      borderRadius: '8px',
+                      color: '#facc15',
+                      fontWeight: '800',
+                      fontFamily: 'monospace',
+                      direction: 'ltr',
+                      textAlign: 'center',
+                      fontSize: '13.5px'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setNewCodeCustom(generateRandomCodePrefix(newCodeDuration))}
+                    title="توليد كود عشوائي جديد"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: '#cbd5e1',
+                      borderRadius: '8px',
+                      padding: '0 10px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <RefreshCw size={14} />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>ملاحظة العميل (اختياري):</label>
+                <input 
+                  type="text"
+                  value={newCodeNote}
+                  onChange={(e) => setNewCodeNote(e.target.value)}
+                  placeholder="مثال: أحمد - فودافون كاش"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '13px',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                style={{
+                  background: 'linear-gradient(135deg, #facc15 0%, #eab308 100%)',
+                  color: '#0f172a',
+                  fontWeight: '800',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '10px 18px',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  height: '40px',
+                  fontFamily: 'inherit',
+                  boxShadow: '0 4px 14px rgba(250, 204, 21, 0.25)'
+                }}
+              >
+                <Plus size={16} />
+                <span>إنشاء الكود فوراً</span>
+              </button>
+            </div>
+
+            {vipActionFeedback && (
+              <div style={{
+                marginTop: '14px',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '700',
+                background: vipActionFeedback.type === 'success' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                border: `1px solid ${vipActionFeedback.type === 'success' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                color: vipActionFeedback.type === 'success' ? '#4ade80' : '#f87171'
+              }}>
+                {vipActionFeedback.message}
+              </div>
+            )}
+          </form>
+
+          {/* Toolbar: Filter pills and Search */}
+          <div className="admin-toolbar-row">
+            <div className="admin-filter-group">
+              <span style={{ fontSize: '12px', color: '#94a3b8', marginLeft: '4px' }}>تصفية الأكواد:</span>
+              <button
+                type="button"
+                className={`admin-filter-btn ${vipFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setVipFilter('all')}
+              >
+                الكل ({vipCodesList.length})
+              </button>
+              <button
+                type="button"
+                className={`admin-filter-btn ${vipFilter === 'active' ? 'active' : ''}`}
+                onClick={() => setVipFilter('active')}
+              >
+                جاهز نشط ({vipCodesList.filter(c => c.status === 'active').length})
+              </button>
+              <button
+                type="button"
+                className={`admin-filter-btn ${vipFilter === 'redeemed' ? 'active' : ''}`}
+                onClick={() => setVipFilter('redeemed')}
+              >
+                تم التفعيل ({vipCodesList.filter(c => c.status === 'redeemed').length})
+              </button>
+              <button
+                type="button"
+                className={`admin-filter-btn ${vipFilter === 'cancelled' ? 'active' : ''}`}
+                onClick={() => setVipFilter('cancelled')}
+              >
+                ملغي ({vipCodesList.filter(c => c.status === 'cancelled').length})
+              </button>
+            </div>
+
+            <div className="admin-search-box">
+              <Search size={14} style={{ color: '#94a3b8' }} />
+              <input 
+                type="text"
+                value={vipSearchQuery}
+                onChange={(e) => setVipSearchQuery(e.target.value)}
+                placeholder="بحث برمز الكود أو اسم العميل..."
+              />
+              {vipSearchQuery && (
+                <button 
+                  type="button"
+                  onClick={() => setVipSearchQuery('')}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* List of existing VIP Codes */}
+          <div style={{ padding: '20px', maxHeight: '480px', overflowY: 'auto' }}>
+            {filteredVipCodes.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '36px 0', color: '#64748b', fontSize: '13.5px' }}>
+                {vipCodesList.length === 0 
+                  ? 'لا توجد أكواد منشأة حالياً. قم بإنشاء أول كود للأعضاء بالأعلى! ☝️'
+                  : 'لا توجد أكواد مطابقة لفلتر البحث المحدد.'}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {filteredVipCodes.map((item) => (
+                  <div 
+                    key={item.id || item.code}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      borderRadius: '10px',
+                      background: item.status === 'redeemed' ? 'rgba(250, 204, 21, 0.04)' : 'rgba(255, 255, 255, 0.03)',
+                      border: `1px solid ${item.status === 'redeemed' ? 'rgba(250, 204, 21, 0.2)' : 'rgba(255, 255, 255, 0.08)'}`,
+                      gap: '12px',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    {/* Code and Copy */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '180px' }}>
+                      <span style={{
+                        fontFamily: 'monospace',
+                        fontSize: '14px',
+                        fontWeight: '800',
+                        color: item.status === 'redeemed' ? '#94a3b8' : '#facc15',
+                        textDecoration: item.status === 'redeemed' ? 'line-through' : 'none'
+                      }}>
+                        {item.code}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyVipCode(item.code, item.id)}
+                        title="نسخ الكود لإرساله للعميل"
+                        style={{
+                          background: copiedCodeId === item.id ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                          border: `1px solid ${copiedCodeId === item.id ? '#22c55e' : 'rgba(255, 255, 255, 0.15)'}`,
+                          color: copiedCodeId === item.id ? '#4ade80' : '#cbd5e1',
+                          borderRadius: '6px',
+                          padding: '4px 8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '11px',
+                          fontFamily: 'inherit'
+                        }}
+                      >
+                        {copiedCodeId === item.id ? <Check size={12} /> : <Copy size={12} />}
+                        <span>{copiedCodeId === item.id ? 'تم!' : 'نسخ'}</span>
+                      </button>
+                    </div>
+
+                    {/* Plan / Duration */}
+                    <div style={{ fontSize: '12.5px', color: '#cbd5e1' }}>
+                      {item.planName || `${item.durationDays} يوم`}
+                    </div>
+
+                    {/* Note */}
+                    <div style={{ fontSize: '12px', color: '#94a3b8', flex: 1, minWidth: '140px' }}>
+                      {item.note || '—'}
+                    </div>
+
+                    {/* Status */}
+                    <div>
+                      {item.status === 'active' && (
+                        <span style={{
+                          background: 'rgba(34, 197, 94, 0.15)',
+                          color: '#4ade80',
+                          border: '1px solid rgba(34, 197, 94, 0.35)',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: '700'
+                        }}>
+                          جاهز 🟢
+                        </span>
+                      )}
+                      {item.status === 'redeemed' && (
+                        <span style={{
+                          background: 'rgba(250, 204, 21, 0.15)',
+                          color: '#facc15',
+                          border: '1px solid rgba(250, 204, 21, 0.35)',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: '700'
+                        }}>
+                          تم التفعيل 👑
+                        </span>
+                      )}
+                      {item.status === 'cancelled' && (
+                        <span style={{
+                          background: 'rgba(148, 163, 184, 0.15)',
+                          color: '#94a3b8',
+                          border: '1px solid rgba(148, 163, 184, 0.3)',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '11px'
+                        }}>
+                          ملغي ⚪
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {item.status !== 'cancelled' && (
+                        <button
+                          type="button"
+                          onClick={() => handleCancelVipCode(item.id, item.code)}
+                          title="إلغاء وسحب تفعيل الكود فوراً من المشترك"
+                          style={{
+                            background: 'rgba(234, 179, 8, 0.1)',
+                            border: '1px solid rgba(234, 179, 8, 0.3)',
+                            color: '#facc15',
+                            borderRadius: '6px',
+                            padding: '5px 8px',
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontFamily: 'inherit'
+                          }}
+                        >
+                          <span>إلغاء التفعيل 🚫</span>
+                        </button>
+                      )}
+
+                      {/* Delete */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteVipCode(item.id, item.code)}
+                        title="حذف الكود نهائياً"
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          border: '1px solid rgba(239, 68, 68, 0.25)',
+                          color: '#f87171',
+                          borderRadius: '6px',
+                          padding: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ================= SECTION 3: ADS & REVENUE MANAGEMENT ================= */}
+    {(activeTab === 'ads' || activeTab === 'all') && (
+      <div className="admin-section-block">
+        <div className="admin-ads-embedded-panel">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: 'rgba(234, 179, 8, 0.15)',
+                border: '1px solid rgba(234, 179, 8, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#facc15'
+              }}>
+                <DollarSign size={22} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#fff' }}>
+                  إدارة إعلانات Adsterra وأرباح الموقع 💰
+                </h3>
+                <span style={{ fontSize: '12.5px', color: '#94a3b8' }}>
+                  التحكم في إعلانات Popunder و Social Bar والبانرات المخصصة ومراقبة الأرباح
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                fontSize: '12px',
+                padding: '4px 10px',
+                borderRadius: '12px',
+                background: adSettings.enabled ? 'rgba(34, 197, 94, 0.15)' : 'rgba(148, 163, 184, 0.15)',
+                color: adSettings.enabled ? '#4ade80' : '#94a3b8',
+                border: `1px solid ${adSettings.enabled ? 'rgba(34, 197, 94, 0.4)' : 'rgba(148, 163, 184, 0.3)'}`,
+                fontWeight: 'bold'
+              }}>
+                {adSettings.enabled ? 'إعلاناتك نشطة 🟢' : 'الإعلانات متوقفة ⚪'}
+              </span>
+            </div>
+          </div>
+
+          {/* Anti-Adult Protection Shield Alert */}
+          <div style={{
+            background: 'rgba(56, 189, 248, 0.08)',
+            border: '1px solid rgba(56, 189, 248, 0.25)',
+            borderRadius: '10px',
+            padding: '14px 16px',
+            fontSize: '13px',
+            color: '#cbd5e1',
+            lineHeight: '1.6',
+            marginBottom: '18px'
+          }}>
+            🛡️ <strong>درع حماية موفورا مفعّل تلقائياً:</strong><br />
+            مشغل الأفلام مضبوط على سيرفرات HD نقية خالية من النوافذ المنبثقة الإباحية، مع حظر كامل لأي إعلانات داخل لوحة الإدارة لراحتك.
+          </div>
+
+          {adsFeedback && (
+            <div className={`modal-feedback ${adsFeedback.success ? 'success' : 'error'}`} style={{ marginBottom: '16px' }}>
+              {adsFeedback.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+              <span>{adsFeedback.message}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSaveAds}>
+            {/* Toggle Enable Ads */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              padding: '16px 20px',
+              borderRadius: '10px',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '18px'
+            }}>
+              <div>
+                <strong style={{ fontSize: '15px', color: '#fff', display: 'block' }}>
+                  تفعيل إعلانات Adsterra في الموقع
+                </strong>
+                <span style={{ fontSize: '12.5px', color: '#94a3b8' }}>
+                  إعلانات Popunder و Social Bar نشطة وتعمل لجميع الزوار لتحقيق الأرباح، مع استثناء مشتركي VIP تلقائياً.
+                </span>
+              </div>
+              <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={adSettings.enabled || false}
+                  onChange={(e) => setAdSettings({ ...adSettings, enabled: e.target.checked })}
+                  style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: '#eab308' }}
+                />
+              </label>
+            </div>
+
+            {/* Optional Player Banner Slot */}
+            <div className="form-group" style={{ marginBottom: '18px' }}>
+              <label style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                كود بانر مخصص أسفل مشغل الأفلام (Player Banner - اختياري):
+              </label>
+              <textarea
+                rows="3"
+                value={adSettings.bannerPlayerCode || ''}
+                onChange={(e) => setAdSettings({ ...adSettings, bannerPlayerCode: e.target.value })}
+                placeholder='الصق كود إعلان البانر لو أردت ظهوره تحت الفيديو مباشرة...'
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'rgba(0, 0, 0, 0.4)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  direction: 'ltr',
+                  textAlign: 'left',
+                  fontFamily: 'monospace',
+                  fontSize: '12px',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+
+            {/* Adsterra Info Guide */}
+            <div style={{
+              background: 'rgba(234, 179, 8, 0.05)',
+              border: '1px solid rgba(234, 179, 8, 0.2)',
+              borderRadius: '10px',
+              padding: '14px 16px',
+              fontSize: '12.5px',
+              color: '#cbd5e1',
+              lineHeight: '1.7',
+              marginBottom: '20px'
+            }}>
+              <strong style={{ color: '#facc15' }}>✨ مميزات شبكة Adsterra المدمجة:</strong>
+              <ul style={{ paddingRight: '18px', margin: '6px 0 0 0' }}>
+                <li><strong>Popunder:</strong> نافذة إعلانية منبثقة ربحية عند أول نقرة للزائر العادي.</li>
+                <li><strong>Social Bar:</strong> شريط إعلاني ذكي ومتجاوب في أسفل الشاشة يحقق أعلى معدل نقرات (CTR).</li>
+                <li><strong>استثناء VIP التلقائي:</strong> أي مستخدم يفعل كود VIP لا يرى أي إعلان نهائياً.</li>
+              </ul>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={isSavingAds}
+              style={{
+                background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+                color: '#000',
+                fontWeight: 'bold',
+                border: 'none',
+                padding: '10px 22px',
+                borderRadius: '8px',
+                fontSize: '13.5px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px rgba(234, 179, 8, 0.25)',
+                fontFamily: 'inherit'
+              }}
+            >
+              <Sparkles size={16} />
+              <span>{isSavingAds ? 'جاري الحفظ في السحابة...' : 'حفظ وتفعيل سحابي فوراً 🚀'}</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    )}
+
+    {/* ================= SECTION 4: VISITOR MOVIE REQUESTS ================= */}
+    {(activeTab === 'requests' || activeTab === 'all') && (
+      <div className="admin-section-block admin-requests-section">
+        <div className="admin-panel-card" style={{ width: '100%' }}>
+          <div className="panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                background: 'rgba(255, 49, 90, 0.15)',
+                border: '1px solid rgba(255, 49, 90, 0.35)',
+                color: '#ff315a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Inbox size={20} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h3 className="panel-title" style={{ margin: 0 }}>طلبات الأفلام والمسلسلات من الزوار 📬</h3>
+                  <span style={{
+                    fontSize: '11px',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    background: 'rgba(255, 49, 90, 0.15)',
+                    color: '#ff315a',
+                    fontWeight: 'bold',
+                    border: '1px solid rgba(255, 49, 90, 0.3)'
+                  }}>
+                    {(data.movieRequests || []).length} طلب
+                  </span>
+                  {(data.movieRequests || []).filter(r => r.status !== 'fulfilled').length > 0 && (
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: 'rgba(234, 179, 8, 0.15)',
+                      color: '#facc15',
+                      fontWeight: 'bold',
+                      border: '1px solid rgba(234, 179, 8, 0.3)'
+                    }}>
+                      {(data.movieRequests || []).filter(r => r.status !== 'fulfilled').length} بانتظار التوفير ⏳
+                    </span>
+                  )}
+                </div>
+                <p className="panel-sub" style={{ margin: '4px 0 0 0' }}>
+                  الأفلام والمسلسلات التي يطلبها المشاهدون مع إمكانية توفيرها ونشرها مباشرة لقناة التليجرام @movora_me
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => refreshData(true)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#94a3b8',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <RefreshCw size={12} className={isRefreshing ? 'spin-icon' : ''} />
+                <span>تحديث الطلبات</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Filter Pills for Requests */}
+          <div className="admin-toolbar-row">
+            <div className="admin-filter-group">
+              <span style={{ fontSize: '12px', color: '#94a3b8', marginLeft: '4px' }}>تصفية الطلبات:</span>
+              <button
+                type="button"
+                className={`admin-filter-btn filter-blue ${requestFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setRequestFilter('all')}
+              >
+                الكل ({(data.movieRequests || []).length})
+              </button>
+              <button
+                type="button"
+                className={`admin-filter-btn filter-blue ${requestFilter === 'pending' ? 'active' : ''}`}
+                onClick={() => setRequestFilter('pending')}
+              >
+                بانتظار التوفير ⏳ ({(data.movieRequests || []).filter(r => r.status !== 'fulfilled').length})
+              </button>
+              <button
+                type="button"
+                className={`admin-filter-btn filter-blue ${requestFilter === 'fulfilled' ? 'active' : ''}`}
+                onClick={() => setRequestFilter('fulfilled')}
+              >
+                تم التوفير ✅ ({(data.movieRequests || []).filter(r => r.status === 'fulfilled').length})
+              </button>
+            </div>
+          </div>
+
+          <div className="top-movies-table-wrapper" style={{ maxHeight: '460px', overflowY: 'auto' }}>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>الحالة</th>
+                  <th>اسم العمل المطلوب</th>
+                  <th>السنة</th>
+                  <th>ملاحظات وتفاصيل المشاهد</th>
+                  <th>التواصل</th>
+                  <th>وقت الطلب والجهاز</th>
+                  <th>إجراءات سريعة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMovieRequests && filteredMovieRequests.length > 0 ? (
+                  filteredMovieRequests.map((req) => {
+                    const isFulfilled = req.status === 'fulfilled';
+                    const timeStr = req.createdAt 
+                      ? new Date(req.createdAt).toLocaleString('ar-EG', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+                      : 'حديث';
+
+                    return (
+                      <tr key={req.id} style={{ opacity: isFulfilled ? 0.7 : 1 }}>
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleRequestStatus(req.id)}
+                            style={{
+                              background: isFulfilled ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                              border: `1px solid ${isFulfilled ? 'rgba(34, 197, 94, 0.4)' : 'rgba(234, 179, 8, 0.4)'}`,
+                              color: isFulfilled ? '#4ade80' : '#facc15',
+                              borderRadius: '8px',
+                              padding: '4px 10px',
+                              fontSize: '11.5px',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}
+                            title="اضغط لتغيير الحالة بين (تم التوفير / قيد الانتظار)"
+                          >
+                            {isFulfilled ? <CheckCircle2 size={13} /> : <Clock size={13} />}
+                            <span>{isFulfilled ? 'تم التوفير ✅' : 'قيد الانتظار ⏳'}</span>
+                          </button>
+                        </td>
+                        <td className="movie-cell">
+                          <strong style={{ color: '#fff', fontSize: '14px' }}>{req.title}</strong>
+                        </td>
+                        <td>
+                          <span style={{ color: '#94a3b8', fontSize: '12px' }}>{req.year || '—'}</span>
+                        </td>
+                        <td>
+                          <span style={{ color: '#cbd5e1', fontSize: '12px', maxWidth: '200px', display: 'inline-block' }}>
+                            {req.notes || '—'}
+                          </span>
+                        </td>
+                        <td>
+                          {req.contact ? (
+                            <span style={{ color: '#38bdf8', fontSize: '12px', direction: 'ltr', display: 'inline-block' }}>
+                              {req.contact}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#64748b', fontSize: '12px' }}>—</span>
+                          )}
+                        </td>
+                        <td>
+                          <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
+                            <span>{timeStr}</span>
+                            <span style={{ margin: '0 4px' }}>•</span>
+                            <span>{req.device || 'Desktop'}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {/* Publish to Telegram */}
+                            <button
+                              type="button"
+                              onClick={() => handlePublishRequestedMovie(req.title)}
+                              style={{
+                                background: 'rgba(0, 136, 204, 0.15)',
+                                border: '1px solid rgba(0, 136, 204, 0.4)',
+                                color: '#38bdf8',
+                                padding: '5px 10px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                              title="نشر إشعار توفر هذا الفيلم لقناة التليجرام @movora_me"
+                            >
+                              <Send size={11} />
+                              <span>نشر تليجرام</span>
+                            </button>
+
+                            {/* Search site for this movie */}
+                            <Link
+                              to={`/?q=${encodeURIComponent(req.title)}`}
+                              target="_blank"
+                              style={{
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                color: '#cbd5e1',
+                                padding: '5px 8px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                              title="فحص وجود الفيلم في الموقع"
+                            >
+                              <Search size={11} />
+                              <span>فحص</span>
+                            </Link>
+
+                            {/* Delete Request */}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRequest(req.id, req.title)}
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                color: '#f87171',
+                                padding: '5px 7px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center'
+                              }}
+                              title="حذف هذا الطلب"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '36px 14px', color: '#717688' }}>
+                      {requestFilter !== 'all' 
+                        ? 'لا توجد طلبات تطابق الفلتر المحدد حالياً.'
+                        : 'لا توجد طلبات أفلام مسجلة حتى الآن — ستظهر هنا فوراً بمجرد قيام أي زائر بطلب فيلم من الموقع!'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ================= SECTION 5: TELEGRAM SMART PUBLISHER ================= */}
+    {(activeTab === 'telegram' || activeTab === 'all') && (
+      <div className="admin-section-block">
+        <div className="admin-panel-card" style={{ padding: '28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: 'rgba(56, 189, 248, 0.15)',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#38bdf8'
+              }}>
+                <Send size={24} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#fff' }}>
+                  أداة النشر الذكي على قناة تليجرام 📢
+                </h3>
+                <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+                  نشر وتنسيق بوستات الأفلام والمسلسلات مباشرة لقناة <strong>@movora_me</strong> بضغطة زر واحدة
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowTelegramModal(true)}
+              style={{
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                color: '#fff',
+                fontWeight: 'bold',
+                border: 'none',
+                padding: '11px 22px',
+                borderRadius: '10px',
+                fontSize: '13.5px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 16px rgba(2, 132, 199, 0.3)',
+                fontFamily: 'inherit'
+              }}
+            >
+              <Send size={15} />
+              <span>فتح أداة النشر الذكي الآن 🚀</span>
+            </button>
+          </div>
+
+          <p style={{ color: '#cbd5e1', fontSize: '13.5px', lineHeight: '1.7', margin: 0 }}>
+            تتيح لك أداة النشر الذكي البحث عن أي فيلم أو مسلسل، وتوليد بوست ترويجي احترافي باللغة العربية مع البوستر الرسمي وروابط المشاهدة المباشرة وأكواد الـ VIP، وإرسالها مباشرة إلى متابعيك على التليجرام لزيادة الزيارات والمشاهدات.
+          </p>
+        </div>
+      </div>
+    )}
+  </main>
+
 
       {/* Change Password Modal */}
       {showPwdModal && (
