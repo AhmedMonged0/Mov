@@ -128,31 +128,35 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // Helper to fetch current analytics from Blob
+  // Helper to fetch current analytics from Blob (Always fresh, bypassing CDN cache)
   async function getCurrentData() {
     try {
-      const blobRes = await get(BLOB_PATH, {
-        token: process.env.BLOB_READ_WRITE_TOKEN,
-        access: 'public',
-        headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
+      const response = await fetch(`${BLOB_URL}?t=${Date.now()}&_r=${Math.random()}`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+          'Pragma': 'no-cache'
+        },
+        cache: 'no-store'
       });
-      if (blobRes && blobRes.statusCode === 200 && blobRes.stream) {
-        const text = await new Response(blobRes.stream).text();
-        if (text) {
-          const json = JSON.parse(text);
-          if (json && typeof json === 'object') return autoHealAnalytics(json);
-        }
+      if (response.ok) {
+        const json = await response.json();
+        if (json && typeof json === 'object') return autoHealAnalytics(json);
       }
-    } catch (e) {
+    } catch (err) {
+      console.warn('Failed to fetch from primary blob url, fallback to get:', err.message);
       try {
-        const response = await fetch(`${BLOB_URL}?t=${Date.now()}`, {
-          headers: { 'Cache-Control': 'no-cache, no-store' }
+        const blobRes = await get(BLOB_PATH, {
+          token: process.env.BLOB_READ_WRITE_TOKEN,
+          access: 'public'
         });
-        if (response.ok) {
-          const json = await response.json();
-          if (json && typeof json === 'object') return autoHealAnalytics(json);
+        if (blobRes && blobRes.statusCode === 200 && blobRes.stream) {
+          const text = await new Response(blobRes.stream).text();
+          if (text) {
+            const json = JSON.parse(text);
+            if (json && typeof json === 'object') return autoHealAnalytics(json);
+          }
         }
-      } catch (err) {}
+      } catch (e) {}
     }
     return createEmptyAnalytics();
   }
@@ -424,10 +428,65 @@ export default async function handler(req, res) {
       // 4. Delete VIP Code (Admin)
       if (action === 'delete_vip_code') {
         const codeId = body.codeId;
-        const codeStr = body.code;
+        const codeStr = (body.code || '').trim().toUpperCase();
         if (codeId || codeStr) {
-          if (Array.isArray(current.vipCodes)) {
-            current.vipCodes = current.vipCodes.filter(c => c.id !== codeId && c.code !== codeStr);
+          if (!Array.isArray(current.vipCodes)) current.vipCodes = [];
+          current.vipCodes = current.vipCodes.filter(c => {
+            if (codeId && c.id === codeId) return false;
+            if (codeStr && c.code && c.code.toUpperCase() === codeStr) return false;
+            return true;
+          });
+          current.lastUpdated = now;
+
+          await put(BLOB_PATH, JSON.stringify(current), {
+            access: 'public',
+            token: process.env.BLOB_READ_WRITE_TOKEN,
+            addRandomSuffix: false,
+            allowOverwrite: true,
+            cacheControlMaxAge: 0
+          });
+          return res.status(200).json({ success: true, vipCodes: current.vipCodes });
+        }
+        return res.status(400).json({ error: 'معرف الكود مطلوب' });
+      }
+
+      // 5. Verify VIP Membership Status (Client Heartbeat & Cancellation Sync)
+      if (action === 'verify_vip_status') {
+        const codeStr = (body.code || '').trim().toUpperCase();
+        if (!codeStr) {
+          return res.status(200).json({ valid: false, reason: 'no_code' });
+        }
+        if (!Array.isArray(current.vipCodes)) current.vipCodes = [];
+
+        const target = current.vipCodes.find(c => c.code && c.code.toUpperCase() === codeStr);
+        if (!target) {
+          // The code was DELETED by admin -> revoke client VIP immediately!
+          return res.status(200).json({ valid: false, reason: 'code_deleted' });
+        }
+        if (target.status === 'cancelled') {
+          // The code was REVOKED by admin -> revoke client VIP immediately!
+          return res.status(200).json({ valid: false, reason: 'code_cancelled' });
+        }
+
+        return res.status(200).json({
+          valid: true,
+          status: target.status,
+          durationDays: target.durationDays,
+          planName: target.planName,
+          expiresAt: target.expiresAt
+        });
+      }
+
+      // 6. Cancel / Revoke VIP Code (Admin)
+      if (action === 'cancel_vip_code') {
+        const codeId = body.codeId;
+        const codeStr = (body.code || '').trim().toUpperCase();
+        if (codeId || codeStr) {
+          if (!Array.isArray(current.vipCodes)) current.vipCodes = [];
+          const target = current.vipCodes.find(c => (codeId && c.id === codeId) || (codeStr && c.code && c.code.toUpperCase() === codeStr));
+          if (target) {
+            target.status = 'cancelled';
+            target.updatedAt = now;
             current.lastUpdated = now;
 
             await put(BLOB_PATH, JSON.stringify(current), {
@@ -440,7 +499,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true, vipCodes: current.vipCodes });
           }
         }
-        return res.status(400).json({ error: 'معرف الكود مطلوب' });
+        return res.status(404).json({ error: 'الكود غير موجود' });
       }
 
       // -------------------------------------------------------------

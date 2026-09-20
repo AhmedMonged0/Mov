@@ -81,6 +81,44 @@ function notifyVipChange() {
   }
 }
 
+// Synchronize and verify VIP status with Cloud (checks if admin deleted/cancelled the code)
+export async function verifyVipWithCloud() {
+  if (typeof window === 'undefined') return { isVip: false };
+
+  const current = getVipStatus();
+  if (!current.isVip || !current.code) return current;
+
+  try {
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'verify_vip_status',
+        code: current.code
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (!data.valid) {
+        console.warn('[Movora VIP] Subscription revoked or deleted by admin:', data.reason);
+        cancelVipLocally();
+        return { isVip: false, isRevoked: true };
+      }
+    }
+  } catch (err) {
+    // Offline or network error: keep local session
+  }
+  return current;
+}
+
+// Check on boot if window is available
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    verifyVipWithCloud();
+  }, 1000);
+}
+
 // Redeem VIP code (Visitor / Member)
 export async function redeemVipCode(code) {
   if (!code || !code.trim()) {
@@ -118,6 +156,9 @@ export async function redeemVipCode(code) {
     };
 
     localStorage.setItem(VIP_STORAGE_KEY, JSON.stringify(membership));
+    if (typeof window !== 'undefined') {
+      window.__MOVORA_IS_VIP = true;
+    }
     notifyVipChange();
 
     return {
@@ -135,7 +176,32 @@ export async function redeemVipCode(code) {
 export function cancelVipLocally() {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(VIP_STORAGE_KEY);
+    window.__MOVORA_IS_VIP = false;
     notifyVipChange();
+  }
+}
+
+// Revoke / Cancel code from Cloud (Admin)
+export async function cancelVipCode(codeId, codeStr) {
+  try {
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'cancel_vip_code',
+        codeId,
+        code: codeStr
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, vipCodes: data.vipCodes };
+    }
+    return { success: false, error: data.error || 'تعذر إلغاء الكود' };
+  } catch (err) {
+    console.error('Failed to cancel VIP code:', err);
+    return { success: false, error: 'حدث خطأ في الاتصال بالخادم' };
   }
 }
 

@@ -44,7 +44,7 @@ import {
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { getAdSettings, saveAdSettingsToCloud, extractVerificationCode, purgeAdminAds } from '../../services/adShield';
 import TelegramPublisherModal from '../../components/admin/TelegramPublisherModal';
-import { fetchVipCodes, createVipCode, deleteVipCode, generateRandomCodePrefix } from '../../services/vipService';
+import { fetchVipCodes, createVipCode, deleteVipCode, cancelVipCode, generateRandomCodePrefix } from '../../services/vipService';
 import { 
   loadAnalytics, 
   fetchGlobalAnalytics,
@@ -147,10 +147,20 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteVipCode = async (codeId, codeStr) => {
-    if (!window.confirm(`هل أنت متأكد من حذف وإلغاء الكود ${codeStr}؟`)) return;
+    if (!window.confirm(`هل أنت متأكد من حذف وإلغاء الكود ${codeStr} نهائياً؟`)) return;
+    setVipCodesList(prev => prev.filter(c => c.id !== codeId && c.code !== codeStr));
     const res = await deleteVipCode(codeId, codeStr);
-    if (res.success) {
-      setVipCodesList(res.vipCodes || []);
+    if (res.success && res.vipCodes) {
+      setVipCodesList(res.vipCodes);
+    }
+  };
+
+  const handleCancelVipCode = async (codeId, codeStr) => {
+    if (!window.confirm(`هل أنت متأكد من إلغاء وسحب تفعيل الكود ${codeStr} فوراً من المشترك؟`)) return;
+    setVipCodesList(prev => prev.map(c => (c.id === codeId || c.code === codeStr) ? { ...c, status: 'cancelled' } : c));
+    const res = await cancelVipCode(codeId, codeStr);
+    if (res.success && res.vipCodes) {
+      setVipCodesList(res.vipCodes);
     }
   };
 
@@ -1735,22 +1745,48 @@ export default function AdminDashboard() {
                         )}
                       </div>
 
-                      {/* Delete */}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteVipCode(item.id, item.code)}
-                        title="حذف وإلغاء الكود"
-                        style={{
-                          background: 'rgba(239, 68, 68, 0.1)',
-                          border: '1px solid rgba(239, 68, 68, 0.25)',
-                          color: '#f87171',
-                          borderRadius: '6px',
-                          padding: '6px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      {/* Action buttons */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {item.status !== 'cancelled' && (
+                          <button
+                            type="button"
+                            onClick={() => handleCancelVipCode(item.id, item.code)}
+                            title="إلغاء وسحب تفعيل الكود فوراً من المشترك"
+                            style={{
+                              background: 'rgba(234, 179, 8, 0.1)',
+                              border: '1px solid rgba(234, 179, 8, 0.3)',
+                              color: '#facc15',
+                              borderRadius: '6px',
+                              padding: '5px 8px',
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontFamily: 'inherit'
+                            }}
+                          >
+                            <span>إلغاء التفعيل 🚫</span>
+                          </button>
+                        )}
+
+                        {/* Delete */}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteVipCode(item.id, item.code)}
+                          title="حذف الكود نهائياً"
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.25)',
+                            color: '#f87171',
+                            borderRadius: '6px',
+                            padding: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

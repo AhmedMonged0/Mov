@@ -82,13 +82,50 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-    <!-- Adsterra Popunder -->
-    <script src="https://pl31428179.profitableratecpmnetwork.com/7b/e7/07/7be707785eeb9d7afdf4c116107210a2.js"></script>
+    <!-- Movora Smart Ad & VIP Pre-Loader -->
+    <script>
+      (function() {
+        try {
+          var vip = localStorage.getItem('movora_vip_membership_v1');
+          if (vip) {
+            var data = JSON.parse(vip);
+            if (data && data.expiresAt && Date.now() < data.expiresAt) {
+              window.__MOVORA_IS_VIP = true;
+              return; // Absolutely NO ads for VIP members!
+            }
+          }
+        } catch(e) {}
+
+        // Never load ads on admin routes
+        if (window.location.pathname.startsWith('/admin')) {
+          return;
+        }
+
+        // Dynamically load Adsterra only for regular non-VIP visitors
+        window.__loadMovoraAds = function() {
+          if (window.__MOVORA_IS_VIP || window.location.pathname.startsWith('/admin')) return;
+
+          var s1 = document.createElement('script');
+          s1.src = 'https://pl31428179.profitableratecpmnetwork.com/7b/e7/07/7be707785eeb9d7afdf4c116107210a2.js';
+          s1.async = true;
+          document.head.appendChild(s1);
+
+          var s2 = document.createElement('script');
+          s2.src = 'https://pl31428180.profitableratecpmnetwork.com/21/44/13/2144131ce5f19fd744b8bbd57b85d8b4.js';
+          s2.async = true;
+          document.body.appendChild(s2);
+        };
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', window.__loadMovoraAds);
+        } else {
+          window.__loadMovoraAds();
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <!-- Adsterra Social Bar -->
-    <script src="https://pl31428180.profitableratecpmnetwork.com/21/44/13/2144131ce5f19fd744b8bbd57b85d8b4.js"></script>
   </body>
 </html>
