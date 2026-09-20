@@ -2,17 +2,30 @@
 
 .movie-request-backdrop {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   z-index: 100000;
-  background: rgba(0, 0, 0, 0.86);
+  background: rgba(0, 0, 0, 0.88);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
-  overflow-y: auto; /* Crucial: allows scroll if viewport is very short */
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
   animation: modalFadeIn 0.2s ease-out;
+}
+
+@supports (align-items: safe center) {
+  .movie-request-backdrop {
+    align-items: safe center;
+  }
 }
 
 @keyframes modalFadeIn {
@@ -27,7 +40,7 @@
 .movie-request-modal {
   width: 100%;
   max-width: 480px;
-  margin: auto; /* Flexbox safe centering: never clips the top of modal */
+  margin: auto; /* Flexbox safe centering */
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
@@ -37,6 +50,7 @@
   border-radius: 18px;
   overflow: hidden;
   position: relative;
+  flex-shrink: 0;
   animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

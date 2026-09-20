@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Film, Send, CheckCircle2, Loader2, Sparkles, Clapperboard, Calendar, MessageSquare, AtSign } from 'lucide-react';
 import { submitMovieRequest } from '../../services/analyticsTracker';
 import '../../styles/MovieRequestModal.css';
@@ -21,6 +22,16 @@ export default function MovieRequestModal({ isOpen, onClose }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev || 'auto';
+    };
+  }, [isOpen]);
 
   // Reset state when opening
   useEffect(() => {
@@ -71,7 +82,7 @@ export default function MovieRequestModal({ isOpen, onClose }) {
     setError(null);
   };
 
-  return (
+  return createPortal(
     <div className="movie-request-backdrop" onClick={onClose} dir="rtl">
       <div 
         className="movie-request-modal" 
@@ -241,6 +252,7 @@ export default function MovieRequestModal({ isOpen, onClose }) {
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

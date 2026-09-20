@@ -164,7 +164,8 @@ export default function Navbar() {
   ];
 
   return (
-    <header className={`navbar ${isScrolled ? 'scrolled' : ''} ${mobileSearchOpen ? 'mobile-search-active' : ''}`} dir="rtl">
+    <>
+      <header className={`navbar ${isScrolled ? 'scrolled' : ''} ${mobileSearchOpen ? 'mobile-search-active' : ''}`} dir="rtl">
       {/* Brand Logo with Custom Cinema Icon */}
       <div className="nav-brand-group">
         <Logo size="medium" showDomain={true} showBadge={true} badgeText="CINEMA" />
@@ -436,12 +437,13 @@ export default function Navbar() {
           </button>
         )}
       </div>
-
-      {/* Movie Request Modal */}
-      <MovieRequestModal 
-        isOpen={showRequestModal} 
-        onClose={() => setShowRequestModal(false)} 
-      />
     </header>
+
+    {/* Movie Request Modal (Outside header to avoid backdrop-filter stacking context) */}
+    <MovieRequestModal 
+      isOpen={showRequestModal} 
+      onClose={() => setShowRequestModal(false)} 
+    />
+  </>
   );
 }
