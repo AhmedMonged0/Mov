@@ -11,6 +11,8 @@ import { updatePageSEO, resetPageSEO } from '../services/seoHelper';
 import AdBannerSlot from '../components/shared/AdBannerSlot';
 import VipModal from '../components/shared/VipModal';
 import { getVipStatus, subscribeToVip } from '../services/vipService';
+import DownloadHub from '../components/common/DownloadHub';
+import { getMovieDownloadLinks } from '../services/downloadService';
 import '../styles/Details.css';
 
 export default function MovieDetails() {
@@ -204,6 +206,9 @@ export default function MovieDetails() {
       : 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1';
   }
 
+  // Direct download links for this movie
+  const downloadLinks = movie ? getMovieDownloadLinks(movie.id, title) : [];
+
   return (
     <div className="details-page" dir="rtl">
       {backdropUrl && (
@@ -338,6 +343,15 @@ export default function MovieDetails() {
               </button>
             </div>
           )}
+
+          {/* Direct Download Hub Under Player */}
+          <div style={{ marginTop: '28px' }}>
+            <DownloadHub 
+              title={title} 
+              links={downloadLinks} 
+              mediaType="movie" 
+            />
+          </div>
         </div>
       ) : (
         <div className="details-content">
@@ -394,6 +408,20 @@ export default function MovieDetails() {
                 <Play size={20} fill="currentColor" /> بدء المشاهدة الفورية
               </button>
 
+              {/* Direct Download Action Button */}
+              <button
+                type="button"
+                className="btn-quick-download"
+                onClick={() => {
+                  const el = document.getElementById('movie-download-hub');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                title="تحميل الفيلم مباشرة بجميع الجودات"
+              >
+                <Download size={17} />
+                <span>تحميل الفيلم 📥</span>
+              </button>
+
               {/* WhatsApp Share Button */}
               <a
                 href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
@@ -439,32 +467,13 @@ export default function MovieDetails() {
               </a>
             </div>
 
-            {/* Downloads Coming Soon Section */}
-            <div className="downloads-coming-soon-card">
-              <div className="dl-coming-icon-wrap">
-                <Download size={22} />
-              </div>
-              <div className="dl-coming-content">
-                <div className="dl-coming-badge">
-                  <Sparkles size={13} />
-                  <span>ميزة جديدة • قريباً</span>
-                </div>
-                <h3>سيتم إضافة خيار التحميل قريباً 🚀</h3>
-                <p>
-                  نعمل حالياً على تجهيز روابط تنزيل مباشرة وسريعة لكافة الأعمال السينمائية.
-                  يمكنك الاستمتاع حالياً ببدء المشاهدة الفورية بجودة 4K وبدون إعلانات عبر زر المشاهدة أعلاه!
-                </p>
-              </div>
-              <a
-                href="https://t.me/movora_me"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="dl-coming-tg-btn"
-                title="انضم لقناة موفورا على تليجرام"
-              >
-                <Send size={15} />
-                <span>قناتنا على تليجرام 📢</span>
-              </a>
+            {/* Direct Download Hub Section */}
+            <div id="movie-download-hub" style={{ width: '100%', marginTop: '30px' }}>
+              <DownloadHub 
+                title={title} 
+                links={downloadLinks} 
+                mediaType="movie" 
+              />
             </div>
           </div>
         </div>

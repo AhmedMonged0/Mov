@@ -17,7 +17,8 @@ import {
   Share2, 
   Check, 
   Loader2,
-  Crown
+  Crown,
+  Download
 } from 'lucide-react';
 import { 
   fetchSeriesDetails, 
@@ -28,6 +29,8 @@ import {
 import { updatePageSEO, resetPageSEO } from '../services/seoHelper';
 import { isVipActive, subscribeToVip } from '../services/vipService';
 import AdBannerSlot from '../components/shared/AdBannerSlot';
+import DownloadHub from '../components/common/DownloadHub';
+import { getEpisodeDownloadLinks } from '../services/downloadService';
 import '../styles/Series.css';
 
 const SERVERS = [
@@ -221,6 +224,16 @@ export default function SeriesDetails() {
   const currentEpisodesList = seasonData?.episodes || [];
   const currentEpisodeObj = currentEpisodesList.find(e => e.episode_number === currentEpisode);
 
+  // Direct download links for currently selected episode
+  const currentEpDownloadLinks = series 
+    ? getEpisodeDownloadLinks(
+        series.id, 
+        currentSeason, 
+        currentEpisode, 
+        `${title} - S${currentSeason}E${currentEpisode}`
+      )
+    : [];
+
   // Active player source
   const serverConfig = SERVERS.find(s => s.id === currentServer) || SERVERS[0];
   const playerSrc = serverConfig.url(series.id, currentSeason, currentEpisode);
@@ -307,6 +320,19 @@ export default function SeriesDetails() {
               >
                 {isCopied ? <Check size={14} color="#22c55e" /> : <Share2 size={14} />}
                 <span>{isCopied ? 'تم نسخ الرابط!' : 'مشاركة المسلسل'}</span>
+              </button>
+
+              <button 
+                className="ep-nav-btn"
+                onClick={() => {
+                  const el = document.getElementById('series-download-hub');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                title="تحميل الحلقة الحالية بجميع الجودات"
+                style={{ background: 'rgba(14, 165, 233, 0.15)', borderColor: 'rgba(14, 165, 233, 0.4)', color: '#38bdf8' }}
+              >
+                <Download size={14} />
+                <span>تحميل الحلقة {currentEpisode} 📥</span>
               </button>
 
               <Link to="/series" className="ep-nav-btn" style={{ background: 'transparent' }}>
@@ -411,6 +437,17 @@ export default function SeriesDetails() {
           </div>
         </div>
 
+        {/* Direct Download Hub for Active Episode */}
+        <div id="series-download-hub" style={{ margin: '30px 0 40px 0' }}>
+          <DownloadHub 
+            title={title}
+            season={currentSeason}
+            episode={currentEpisode}
+            links={currentEpDownloadLinks} 
+            mediaType="tv" 
+          />
+        </div>
+
         {/* ================= Season & Episodes Section ================= */}
         <div className="season-episodes-section">
           <div className="season-section-header">
@@ -470,6 +507,18 @@ export default function SeriesDetails() {
                       <div className="episode-number-badge">
                         حلقة {ep.episode_number}
                       </div>
+
+                      <a
+                        href={`https://multiembed.mov/directstream.php?video_id=${series.id}&tmdb=1&s=${currentSeason}&e=${ep.episode_number}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="episode-dl-badge"
+                        title={`تحميل الحلقة ${ep.episode_number} مباشرة`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Download size={11} />
+                        <span>تحميل</span>
+                      </a>
 
                       <div className="episode-play-overlay">
                         <Play size={18} fill="currentColor" />
