@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Crown, 
   X, 
@@ -7,59 +7,23 @@ import {
   ShieldCheck, 
   Zap, 
   Film, 
-  Copy, 
-  Check, 
   Send, 
   KeyRound, 
   AlertCircle,
   Loader2,
   Clock,
-  Share2,
-  Gift,
-  Flame,
-  Bookmark,
-  ExternalLink,
   ChevronLeft
 } from 'lucide-react';
-import { 
-  getVipStatus, 
-  redeemVipCode, 
-  subscribeToVip, 
-  verifyVipWithCloud,
-  activateFreeTrial,
-  addVipHours,
-  getReferralCode,
-  getReferralLink,
-  getWheelStatus,
-  recordWheelSpin,
-  getCompletedQuests,
-  claimQuestReward
-} from '../../services/vipService';
+import { getVipStatus, redeemVipCode, subscribeToVip, verifyVipWithCloud } from '../../services/vipService';
 import '../../styles/VipModal.css';
 
-const WHEEL_PRIZES = [
-  { label: '+24 ساعة VIP 🎁', shortLabel: '24 ساعة', hours: 24, color: '#ff315a', textColor: '#ffffff' },
-  { label: '+12 ساعة VIP ⚡', shortLabel: '12 ساعة', hours: 12, color: '#0ea5e9', textColor: '#ffffff' },
-  { label: '+48 ساعة VIP 🌟', shortLabel: '48 ساعة', hours: 48, color: '#eab308', textColor: '#0f172a' },
-  { label: '+6 ساعات VIP 🍿', shortLabel: '6 ساعات', hours: 6, color: '#10b981', textColor: '#ffffff' },
-  { label: '+7 أيام ذهبية 👑', shortLabel: '7 أيام', hours: 168, color: '#ec4899', textColor: '#ffffff' },
-  { label: '+24 ساعة ثانية ✨', shortLabel: '24 ساعة', hours: 24, color: '#8b5cf6', textColor: '#ffffff' }
-];
-
 export default function VipModal({ isOpen, onClose }) {
-  const [activeTab, setActiveTab] = useState('trial'); // 'trial' | 'wheel' | 'redeem'
+  const [activeTab, setActiveTab] = useState('plans'); // 'plans' | 'redeem'
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
-  const [copiedField, setCopiedField] = useState(null);
   const [vipStatus, setVipStatus] = useState(() => getVipStatus());
-  
-  // Lucky wheel states
-  const [wheelAngle, setWheelAngle] = useState(0);
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [wheelResult, setWheelResult] = useState(null);
-  const [wheelStatus, setWheelStatus] = useState(() => getWheelStatus());
-  const [completedQuests, setCompletedQuests] = useState(() => getCompletedQuests());
+  const [showExtendCodeForm, setShowExtendCodeForm] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeToVip((status) => {
@@ -68,23 +32,20 @@ export default function VipModal({ isOpen, onClose }) {
     return unsub;
   }, []);
 
-  // Sync state and check cloud status on open
+  // Reset state and verify cloud status when opened
   useEffect(() => {
     if (isOpen) {
       setVipStatus(getVipStatus());
-      setWheelStatus(getWheelStatus());
-      setCompletedQuests(getCompletedQuests());
       setFeedback(null);
       setCode('');
-      setWheelResult(null);
-
+      setShowExtendCodeForm(false);
       verifyVipWithCloud().then((fresh) => {
         if (fresh) {
           setVipStatus(fresh);
           if (fresh.isRevoked) {
             setFeedback({
               type: 'error',
-              message: 'تنبيه: تم إلغاء كود التفعيل السابق. يمكنك الاستمتاع بالتجربة المجانية أو الأنشطة أدناه.'
+              message: 'تنبيه: تم إلغاء كود التفعيل السابق. يمكنك إدخال كود جديد بالأسفل.'
             });
           }
         }
@@ -94,109 +55,6 @@ export default function VipModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const myRefCode = getReferralCode();
-  const myRefLink = getReferralLink();
-
-  const handleCopy = (text, fieldName) => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      setCopiedField(fieldName);
-      setTimeout(() => setCopiedField(null), 2200);
-    }
-  };
-
-  // 1-Click Activate Free 24h Trial
-  const handleActivateTrial = () => {
-    const res = activateFreeTrial();
-    if (res.success) {
-      setFeedback({
-        type: 'success',
-        message: 'ألف مبروك! تم تفعيل تجربتك المجانية لمدة 24 ساعة بنجاح 🍿 جاري تنظيف كافة الإعلانات...'
-      });
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    }
-  };
-
-  // Lucky Spin Wheel Action
-  const handleSpinWheel = () => {
-    if (isSpinning) return;
-    const status = getWheelStatus();
-    if (!status.canSpin) {
-      const hoursLeft = Math.ceil(status.nextSpinInMs / (1000 * 60 * 60));
-      setFeedback({
-        type: 'error',
-        message: `لقد قمت بلف العجلة اليوم! يمكنك لفها مرة أخرى بعد حوالي ${hoursLeft} ساعة ⏳`
-      });
-      return;
-    }
-
-    setIsSpinning(true);
-    setFeedback(null);
-    setWheelResult(null);
-
-    // Pick weighted target index
-    const rand = Math.random();
-    let targetIndex = 0;
-    if (rand < 0.35) targetIndex = 0;       // +24h
-    else if (rand < 0.65) targetIndex = 1;  // +12h
-    else if (rand < 0.85) targetIndex = 3;  // +6h
-    else if (rand < 0.95) targetIndex = 2;  // +48h
-    else targetIndex = 4;                   // +7 days!
-
-    const sliceAngle = 360 / WHEEL_PRIZES.length; // 60 deg
-    // Calculate final rotation so the top pointer lands squarely on targetIndex
-    const extraRounds = 5 * 360; // 5 full spins
-    const targetSliceCenter = (targetIndex * sliceAngle) + (sliceAngle / 2);
-    // Negative rotation or inverted angle to align with pointer at top (0 deg)
-    const newAngle = wheelAngle + extraRounds + (360 - (targetSliceCenter % 360));
-
-    setWheelAngle(newAngle);
-
-    setTimeout(() => {
-      setIsSpinning(false);
-      const prize = WHEEL_PRIZES[targetIndex];
-      recordWheelSpin(prize.hours);
-      setWheelStatus(getWheelStatus());
-      setWheelResult(prize);
-      setFeedback({
-        type: 'success',
-        message: `🎉 ألف مبروك! ربحت ${prize.label}! تم تمديد فترة مشاهدتك بدون إعلانات فوراً ✨`
-      });
-    }, 4200);
-  };
-
-  // Quests Action (WhatsApp, Telegram, Bookmark)
-  const handleQuest = (questId, hours = 24) => {
-    if (questId === 'whatsapp_share') {
-      const shareMsg = `🍿 جبتلك موقع موفورا Movora الجديد لمشاهدة أحدث الأفلام والمسلسلات بجودة 4K وبدون أي إعلانات نهائياً! ادخل وجرب هديتك المجانية (24 ساعة) من هنا:\n${myRefLink}`;
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMsg)}`, '_blank');
-      claimQuestReward('whatsapp_share', hours);
-      setCompletedQuests(getCompletedQuests());
-      setFeedback({
-        type: 'success',
-        message: `شكراً لمشاركتك موفورا! تم إضافة +${hours} ساعة VIP مجاناً لحسابك 🎁`
-      });
-    } else if (questId === 'telegram_channel') {
-      window.open('https://t.me/movora_me', '_blank');
-      claimQuestReward('telegram_channel', hours);
-      setCompletedQuests(getCompletedQuests());
-      setFeedback({
-        type: 'success',
-        message: `أهلاً بك في قناة موفورا على تليجرام! تم إضافة +${hours} ساعة VIP لحسابك 📢`
-      });
-    } else if (questId === 'bookmark_site') {
-      claimQuestReward('bookmark_site', hours);
-      setCompletedQuests(getCompletedQuests());
-      setFeedback({
-        type: 'success',
-        message: `تم حفظ موفورا! تم إضافة +${hours} ساعة VIP مجاناً لحسابك ⭐`
-      });
-    }
-  };
-
-  // Manual Promo Code Redeem
   const handleRedeem = async (e) => {
     e.preventDefault();
     if (!code.trim()) {
@@ -211,25 +69,15 @@ export default function VipModal({ isOpen, onClose }) {
     setIsSubmitting(false);
 
     if (res.success) {
-      setFeedback({ 
-        type: 'success', 
-        message: `${res.message} جاري تحديث الصفحة للتفعيل الكامل... ✨` 
-      });
+      setFeedback({ type: 'success', message: `${res.message} جاري تحديث الصفحة لتنظيف كافة الإعلانات تماماً... ✨` });
       setCode('');
+      setShowExtendCodeForm(false);
       setTimeout(() => {
         window.location.reload();
       }, 1200);
     } else {
       setFeedback({ type: 'error', message: res.error });
     }
-  };
-
-  // Format wheel countdown
-  const formatWheelCountdown = () => {
-    if (wheelStatus.canSpin) return null;
-    const hours = Math.floor(wheelStatus.nextSpinInMs / (1000 * 60 * 60));
-    const mins = Math.floor((wheelStatus.nextSpinInMs % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours} ساعة و ${mins} دقيقة`;
   };
 
   return (
@@ -243,8 +91,8 @@ export default function VipModal({ isOpen, onClose }) {
               <Crown size={26} />
             </div>
             <div>
-              <h2>نادي موفورا VIP (سينما بدون إعلانات) 👑</h2>
-              <p>تجربة مجانية 24 ساعة + فعاليات يومية لكسب أيام وساعات غير محدودة</p>
+              <h2>عضوية موفورا المميزة (Movora VIP) 👑</h2>
+              <p>مشاهدة سينمائية نقية 100% بدون أي إعلانات وبأعلى جودة</p>
             </div>
           </div>
           <button className="vip-close-btn" onClick={onClose} aria-label="إغلاق">
@@ -252,432 +100,385 @@ export default function VipModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="vip-modal-tabs">
-          <button 
-            type="button" 
-            className={`vip-tab-btn ${activeTab === 'trial' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('trial'); setFeedback(null); }}
-          >
-            <Gift size={16} />
-            <span>التجربة والمكافآت 🎁</span>
-          </button>
-
-          <button 
-            type="button" 
-            className={`vip-tab-btn ${activeTab === 'wheel' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('wheel'); setFeedback(null); }}
-          >
-            <Sparkles size={16} />
-            <span>عجلة الحظ اليومية 🎡</span>
-          </button>
-
-          <button 
-            type="button" 
-            className={`vip-tab-btn ${activeTab === 'redeem' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('redeem'); setFeedback(null); }}
-          >
-            <KeyRound size={16} />
-            <span>معاك كود هدية؟ 🔑</span>
-          </button>
-        </div>
+        {/* Tabs - Only shown when NOT subscribed, or when extending */}
+        {(!vipStatus.isVip || showExtendCodeForm) && (
+          <div className="vip-modal-tabs">
+            <button 
+              type="button" 
+              className={`vip-tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('plans'); setFeedback(null); }}
+            >
+              <Sparkles size={16} />
+              <span>الباقات ومميزات VIP</span>
+            </button>
+            <button 
+              type="button" 
+              className={`vip-tab-btn ${activeTab === 'redeem' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('redeem'); setFeedback(null); }}
+            >
+              <KeyRound size={16} />
+              <span>تفعيل كود الاشتراك 🚀</span>
+            </button>
+          </div>
+        )}
 
         <div className="vip-modal-body">
-          {/* Feedback Messages */}
-          {feedback && (
-            <div className={`vip-feedback ${feedback.type}`}>
-              {feedback.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-              <span>{feedback.message}</span>
-            </div>
-          )}
+          {/* 1. DEDICATED SCREEN FOR ALREADY ACTIVE VIP USERS */}
+          {vipStatus.isVip && !showExtendCodeForm ? (
+            <div className="vip-active-screen" style={{ textAlign: 'center', padding: '10px 0 10px' }}>
+              <div style={{
+                width: '68px',
+                height: '68px',
+                borderRadius: '22px',
+                background: 'linear-gradient(135deg, rgba(250, 204, 21, 0.25) 0%, rgba(234, 179, 8, 0.1) 100%)',
+                border: '1px solid rgba(250, 204, 21, 0.5)',
+                color: '#facc15',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px',
+                boxShadow: '0 8px 24px rgba(250, 204, 21, 0.25)'
+              }}>
+                <Crown size={36} />
+              </div>
 
-          {/* =========================================================
-              TAB 1: FREE TRIAL & VIRAL REWARDS (تنشيط ودعوة الأصدقاء)
-              ========================================================= */}
-          {activeTab === 'trial' && (
-            <div className="vip-trial-container">
-              
-              {/* STATUS CARD */}
-              {vipStatus.isVip ? (
-                /* USER IS ALREADY ACTIVE VIP */
-                <div className="vip-active-card">
-                  <div className="vip-active-card-glow" />
-                  <div className="vip-active-header">
-                    <div className="vip-active-badge-pill">
-                      <Crown size={14} />
-                      <span>اشتراكك نشط الآن 👑</span>
-                    </div>
-                    <span className="vip-active-plan-title">
-                      {vipStatus.planName || 'عضوية سينمائية بدون إعلانات'}
-                    </span>
-                  </div>
+              <h3 style={{ margin: '0 0 6px', fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>
+                أنت مشترك نشط في Movora VIP! 👑
+              </h3>
+              <p style={{ margin: '0 0 20px', fontSize: '13.5px', color: '#94a3b8' }}>
+                حسابك مفعّل ومحمي وتتمتع بمشاهدة سينمائية نقية 100% خالية تماماً من الإعلانات.
+              </p>
 
-                  <div className="vip-countdown-display">
-                    <div className="vip-countdown-item">
-                      <span className="vip-countdown-num">
-                        {vipStatus.remainingDays >= 9000 
-                          ? '∞' 
-                          : String(vipStatus.remainingHours || 0).padStart(2, '0')}
-                      </span>
-                      <span className="vip-countdown-lbl">ساعة متبقية</span>
-                    </div>
-                    <span className="vip-countdown-colon">:</span>
-                    <div className="vip-countdown-item">
-                      <span className="vip-countdown-num">
-                        {vipStatus.remainingDays >= 9000 
-                          ? '∞' 
-                          : String(vipStatus.remainingMinutes || 0).padStart(2, '0')}
-                      </span>
-                      <span className="vip-countdown-lbl">دقيقة</span>
-                    </div>
-                    {vipStatus.remainingDays > 1 && vipStatus.remainingDays < 9000 && (
-                      <>
-                        <span className="vip-countdown-colon">:</span>
-                        <div className="vip-countdown-item">
-                          <span className="vip-countdown-num">{vipStatus.remainingDays}</span>
-                          <span className="vip-countdown-lbl">أيام إضافية</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <p className="vip-active-note">
-                    🛡️ جميع الإعلانات والنوافذ المنبثقة محظورة بالكامل، وتعمل سيرفرات 4K الفائقة تلقائياً بدون تقطيع.
-                  </p>
+              {/* Membership details card */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(250, 204, 21, 0.3)',
+                borderRadius: '16px',
+                padding: '18px 20px',
+                marginBottom: '20px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '14px',
+                textAlign: 'right'
+              }}>
+                <div>
+                  <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block' }}>نوع الباقة:</span>
+                  <strong style={{ fontSize: '15px', color: '#facc15' }}>{vipStatus.planName || 'عضوية مميزة'}</strong>
                 </div>
-              ) : (
-                /* USER NOT VIP: 1-CLICK FREE 24H TRIAL HERO */
-                <div className="vip-free-trial-hero">
-                  <div className="vip-trial-hero-glow" />
-                  <div className="vip-trial-badge">
-                    <Sparkles size={14} />
-                    <span>هدية ترحيبية لكل زائر 🎁</span>
-                  </div>
-
-                  <h3 className="vip-trial-heading">
-                    تجربة مجانية فورية لمدة 24 ساعة! 🚀
-                  </h3>
-                  <p className="vip-trial-desc">
-                    اضغط بالأسفل واستمتع بمشاهدة جميع أفلام ومسلسلات موفورا بدقة 4K فائقة السرعة وبدون أي إعلانات نهائياً بنقرة واحدة!
-                  </p>
-
-                  <button
-                    type="button"
-                    className="vip-activate-trial-btn"
-                    onClick={handleActivateTrial}
-                  >
-                    <Zap size={20} fill="currentColor" />
-                    <span>تفعيل الـ 24 ساعة مجاناً فوراً ⚡</span>
-                  </button>
-
-                  <div className="vip-perks-mini-row">
-                    <div className="vip-perk-mini">
-                      <CheckCircle2 size={15} color="#4ade80" />
-                      <span>بدون إعلانات 100%</span>
-                    </div>
-                    <div className="vip-perk-mini">
-                      <CheckCircle2 size={15} color="#4ade80" />
-                      <span>سيرفرات 4K فائقة السرعة</span>
-                    </div>
-                    <div className="vip-perk-mini">
-                      <CheckCircle2 size={15} color="#4ade80" />
-                      <span>شارة سينما VIP</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* VIRAL REWARDS SECTION: HOW TO GET MORE DAYS */}
-              <div className="vip-viral-section">
-                <div className="vip-viral-header">
-                  <div className="vip-viral-title-group">
-                    <Flame size={20} style={{ color: '#ff315a' }} />
-                    <h4>كيف تكسب أيام وساعات VIP إضافية مجاناً؟ 🔥</h4>
-                  </div>
-                  <span className="vip-viral-sub">
-                    قم بالأنشطة التالية لتمديد اشتراكك بدون أي تكاليف
+                <div>
+                  <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block' }}>رمز الكود المفعل:</span>
+                  <span style={{ fontSize: '14px', fontFamily: 'monospace', color: '#cbd5e1', fontWeight: 700 }}>
+                    {vipStatus.code}
                   </span>
                 </div>
-
-                <div className="vip-quests-grid">
-                  {/* Quest 1: WhatsApp Referral Share */}
-                  <div className="vip-quest-card featured">
-                    <div className="vip-quest-badge-tag">+24 ساعة مجاناً 🎁</div>
-                    <div className="vip-quest-info">
-                      <div className="vip-quest-icon whatsapp">
-                        <Share2 size={18} />
-                      </div>
-                      <div>
-                        <h5>دعوة الأصدقاء عبر واتساب 📲</h5>
-                        <p>شارك رابط موفورا الخاص بك في جروبات وأصدقاء واتساب واكسب يوم كامل (+24 ساعة) فوراً!</p>
-                      </div>
-                    </div>
-
-                    <div className="vip-ref-box">
-                      <span className="vip-ref-label">رابط دعوتك الخاص:</span>
-                      <div className="vip-ref-input-row">
-                        <span className="vip-ref-link-text">{myRefLink}</span>
-                        <button
-                          type="button"
-                          className={`vip-ref-copy-btn ${copiedField === 'ref' ? 'copied' : ''}`}
-                          onClick={() => {
-                            handleCopy(myRefLink, 'ref');
-                            if (!completedQuests.includes('copy_referral')) {
-                              claimQuestReward('copy_referral', 24);
-                              setCompletedQuests(getCompletedQuests());
-                              setFeedback({
-                                type: 'success',
-                                message: 'تم نسخ الرابط وإضافة +24 ساعة VIP مجاناً لحسابك 🎁'
-                              });
-                            }
-                          }}
-                        >
-                          {copiedField === 'ref' ? <Check size={14} /> : <Copy size={14} />}
-                          <span>{copiedField === 'ref' ? 'تم النسخ!' : 'نسخ'}</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="vip-quest-cta-btn whatsapp"
-                      onClick={() => handleQuest('whatsapp_share', 24)}
-                    >
-                      <Share2 size={16} />
-                      <span>مشاركة فورية على واتساب (+24 ساعة) 🟢</span>
-                    </button>
-                  </div>
-
-                  {/* Quest 2: Telegram Channel Join */}
-                  <div className="vip-quest-card">
-                    <div className="vip-quest-badge-tag">+24 ساعة مجاناً 📢</div>
-                    <div className="vip-quest-info">
-                      <div className="vip-quest-icon telegram">
-                        <Send size={18} />
-                      </div>
-                      <div>
-                        <h5>الانضمام لقناة موفورا الرسمية على تليجرام</h5>
-                        <p>انضم لقناتنا لمتابعة سهرات الليلة والأفلام الحصرية وأكواد VIP الدورية.</p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className={`vip-quest-cta-btn telegram ${completedQuests.includes('telegram_channel') ? 'completed' : ''}`}
-                      onClick={() => handleQuest('telegram_channel', 24)}
-                    >
-                      {completedQuests.includes('telegram_channel') ? (
-                        <>
-                          <Check size={16} />
-                          <span>تم الانضمام وكسب +24 ساعة ✓</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send size={16} />
-                          <span>انضم للقناة واكسب +24 ساعة 📢</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Quest 3: Add to Bookmarks / Home Screen */}
-                  <div className="vip-quest-card">
-                    <div className="vip-quest-badge-tag">+12 ساعة مجاناً ⭐</div>
-                    <div className="vip-quest-info">
-                      <div className="vip-quest-icon bookmark">
-                        <Bookmark size={18} />
-                      </div>
-                      <div>
-                        <h5>حفظ موقع موفورا في المفضلة</h5>
-                        <p>احفظ الموقع في مفضلة المتصفح أو أضفه للشاشة الرئيسية للوصول السريع بدون إعلانات.</p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className={`vip-quest-cta-btn secondary ${completedQuests.includes('bookmark_site') ? 'completed' : ''}`}
-                      onClick={() => handleQuest('bookmark_site', 12)}
-                    >
-                      {completedQuests.includes('bookmark_site') ? (
-                        <>
-                          <Check size={16} />
-                          <span>تم حفظ الموقع وكسب +12 ساعة ✓</span>
-                        </>
-                      ) : (
-                        <>
-                          <Bookmark size={16} />
-                          <span>حفظ الموقع في المفضلة (+12 ساعة) ⭐</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                <div>
+                  <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block' }}>تاريخ الانتهاء:</span>
+                  <strong style={{ fontSize: '14px', color: '#ffffff' }}>
+                    {vipStatus.durationDays >= 9000 ? 'مدى الحياة 👑' : new Date(vipStatus.expiresAt).toLocaleDateString('ar-EG')}
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block' }}>المدة المتبقية:</span>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    color: '#4ade80',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    padding: '2px 8px',
+                    borderRadius: '6px'
+                  }}>
+                    <Clock size={12} />
+                    {vipStatus.remainingDays >= 9000 
+                      ? 'دائم مدى الحياة' 
+                      : vipStatus.remainingDays > 1 
+                        ? `${vipStatus.remainingDays} يوم` 
+                        : `${vipStatus.remainingHours || 0} ساعة و ${vipStatus.remainingMinutes || 0} دقيقة`}
+                  </span>
                 </div>
               </div>
+
+              {/* Verified Perks */}
+              <div style={{
+                background: 'rgba(34, 197, 94, 0.06)',
+                border: '1px solid rgba(34, 197, 94, 0.25)',
+                borderRadius: '14px',
+                padding: '14px 18px',
+                marginBottom: '22px',
+                textAlign: 'right',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                fontSize: '13px',
+                color: '#cbd5e1'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CheckCircle2 size={16} style={{ color: '#4ade80', flexShrink: 0 }} />
+                  <span>جميع إعلانات الموقع والنوافذ المنبثقة محظورة ومحذوفة بالكامل.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CheckCircle2 size={16} style={{ color: '#4ade80', flexShrink: 0 }} />
+                  <span>مشغل الأفلام يعمل افتراضياً على سيرفرات 4K فائقة السرعة بدون تقطيع.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CheckCircle2 size={16} style={{ color: '#4ade80', flexShrink: 0 }} />
+                  <span>شارة العضوية الذهبية VIP مفعلة في كافة صفحات الموقع.</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, #facc15 0%, #eab308 100%)',
+                  color: '#0f172a',
+                  border: 'none',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  fontSize: '15px',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  marginBottom: '14px',
+                  boxShadow: '0 4px 20px rgba(250, 204, 21, 0.35)',
+                  fontFamily: 'inherit'
+                }}
+              >
+                استمتع بالمشاهدة الآن 🎬
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExtendCodeForm(true);
+                  setActiveTab('redeem');
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#94a3b8',
+                  fontSize: '12.5px',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  fontFamily: 'inherit'
+                }}
+              >
+                لديك كود تفعيل آخر وترغب في تمديد مدة اشتراكك؟ اضغط هنا ➕
+              </button>
             </div>
-          )}
-
-          {/* =========================================================
-              TAB 2: LUCKY SPIN WHEEL (عجلة الحظ اليومية الدوارة)
-              ========================================================= */}
-          {activeTab === 'wheel' && (
-            <div className="vip-wheel-container">
-              <div className="vip-wheel-header-intro">
-                <h3>عجلة الحظ السينمائية اليومية 🎡</h3>
-                <p>لف العجلة مرة كل 24 ساعة واربح ساعات وأيام VIP فورية مجاناً تضاف لحسابك مباشرة!</p>
-              </div>
-
-              {/* WHEEL COMPONENT */}
-              <div className="vip-wheel-wrapper">
-                {/* Pointer / Needle */}
-                <div className="vip-wheel-pointer">
-                  <div className="vip-pointer-triangle" />
-                </div>
-
-                {/* Rotating Wheel Disc */}
-                <div 
-                  className="vip-wheel-disc"
-                  style={{ 
-                    transform: `rotate(${wheelAngle}deg)`,
-                    transition: isSpinning ? 'transform 4.2s cubic-bezier(0.12, 0.9, 0.2, 1)' : 'none'
+          ) : (
+            /* 2. PLANS OR REDEEM VIEW */
+            <>
+              {/* Return to status button if user is VIP extending */}
+              {vipStatus.isVip && showExtendCodeForm && (
+                <button
+                  type="button"
+                  onClick={() => setShowExtendCodeForm(false)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#facc15',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginBottom: '16px',
+                    fontFamily: 'inherit'
                   }}
                 >
-                  {WHEEL_PRIZES.map((prize, idx) => {
-                    const rotateDeg = idx * 60;
-                    return (
-                      <div
-                        key={idx}
-                        className="vip-wheel-slice"
-                        style={{
-                          transform: `rotate(${rotateDeg}deg)`
-                        }}
-                      >
-                        <div 
-                          className="vip-slice-content"
-                          style={{
-                            background: `linear-gradient(180deg, ${prize.color} 0%, rgba(10, 15, 25, 0.95) 100%)`,
-                            color: prize.textColor
-                          }}
-                        >
-                          <span className="vip-slice-text">{prize.shortLabel}</span>
-                        </div>
+                  <ChevronLeft size={14} />
+                  <span>العودة لبطاقة العضوية المفعلة</span>
+                </button>
+              )}
+
+              {/* TAB 1: Plans & Perks */}
+              {activeTab === 'plans' && (
+                <>
+                  {/* VIP Perks */}
+                  <div className="vip-perks-grid">
+                    <div className="vip-perk-card">
+                      <div className="vip-perk-icon">
+                        <ShieldCheck size={20} />
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="vip-perk-info">
+                        <h4>بدون أي إعلانات نهائياً</h4>
+                        <p>إزالة كاملة للنوافذ المنبثقة، إعلانات البانر، وإعلانات الموقع بنسبة 100%.</p>
+                      </div>
+                    </div>
 
-                {/* Center Hub Logo */}
-                <div className="vip-wheel-center-hub" onClick={handleSpinWheel}>
-                  <Crown size={22} color="#facc15" />
-                  <span style={{ fontSize: '10px', fontWeight: 900, color: '#fff' }}>MOVORA</span>
-                </div>
-              </div>
+                    <div className="vip-perk-card">
+                      <div className="vip-perk-icon">
+                        <Zap size={20} />
+                      </div>
+                      <div className="vip-perk-info">
+                        <h4>سيرفرات 4K فائقة السرعة</h4>
+                        <p>مشاهدة مباشرة بدون تقطيع على سيرفرات سينما VIP المخصصة للمشتركين.</p>
+                      </div>
+                    </div>
 
-              {/* SPIN ACTION BUTTON & COOLDOWN */}
-              <div className="vip-wheel-action-wrap">
-                {wheelStatus.canSpin ? (
-                  <button
-                    type="button"
-                    className="vip-spin-btn"
-                    onClick={handleSpinWheel}
-                    disabled={isSpinning}
-                  >
-                    {isSpinning ? (
-                      <>
-                        <Loader2 size={18} className="search-spinner" />
-                        <span>العجلة تدور الآن... ترقب جائزتك! 🍀</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={18} />
-                        <span>لف العجلة واكسب ساعتك المجانية 🎡</span>
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <div className="vip-wheel-cooldown-box">
-                    <Clock size={16} color="#facc15" />
-                    <span>
-                      لقد قمت بلف العجلة اليوم! العجلة القادمة متاحة بعد: <strong>{formatWheelCountdown()}</strong> ⏳
-                    </span>
+                    <div className="vip-perk-card">
+                      <div className="vip-perk-icon">
+                        <Crown size={20} />
+                      </div>
+                      <div className="vip-perk-info">
+                        <h4>شارة العضوية الذهبية</h4>
+                        <p>مظهر فاخر لحسابك وتجربة فريدة تميزك عن جميع الزوار في المنصة.</p>
+                      </div>
+                    </div>
+
+                    <div className="vip-perk-card">
+                      <div className="vip-perk-icon">
+                        <Film size={20} />
+                      </div>
+                      <div className="vip-perk-info">
+                        <h4>أولوية تلبية الطلبات</h4>
+                        <p>إضافة أي فيلم أو مسلسل تطلبه على تليجرام خلال ساعات معدودة فوراً.</p>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
 
-              {/* Result Celebration */}
-              {wheelResult && (
-                <div className="vip-wheel-win-alert">
-                  <Sparkles size={20} color="#facc15" />
-                  <div>
-                    <strong>مبروك يا بطل! كسبت {wheelResult.label} 🥳</strong>
-                    <p>تم إضافة الساعات إلى رصيد حسابك فوراً، استمتع بأقوى الأفلام بدون إعلانات!</p>
+                  {/* Plans Pricing */}
+                  <h3 className="vip-plans-title">
+                    <Sparkles size={16} style={{ color: '#facc15' }} />
+                    <span>اختر باقة اشتراكك:</span>
+                  </h3>
+                  <div className="vip-plans-row">
+                    <div className="vip-plan-card">
+                      <div className="vip-plan-name">باقة شهر</div>
+                      <div className="vip-plan-price">35 <span>جنيه</span></div>
+                      <div className="vip-plan-desc">30 يوماً مشاهدة بدون إعلانات</div>
+                    </div>
+
+                    <div className="vip-plan-card featured">
+                      <span className="vip-popular-tag">الأكثر طلباً ⭐</span>
+                      <div className="vip-plan-name">باقة 3 شهور</div>
+                      <div className="vip-plan-price">90 <span>جنيه</span></div>
+                      <div className="vip-plan-desc">وفر 15 جنيه كاملة</div>
+                    </div>
+
+                    <div className="vip-plan-card">
+                      <div className="vip-plan-name">باقة سنة كاملة</div>
+                      <div className="vip-plan-price">280 <span>جنيه</span></div>
+                      <div className="vip-plan-desc">توفير سنوي يصل لـ 40%</div>
+                    </div>
+                  </div>
+
+                  {/* Payment Instructions (Numbers removed - Telegram Direct Support) */}
+                  <div className="vip-payment-box">
+                    <h4 className="vip-payment-title">طرق الدفع والاشتراك السريع (مصر والعالم العربي):</h4>
+                    <p style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: '1.6', margin: '0 0 16px 0' }}>
+                      متوفر الدفع عبر <strong>فودافون كاش، إنستاباي، والمحافظ الإلكترونية والتحويلات البنكية</strong>. للحصول على بيانات التحويل واستلام كود تفعيلك الفوري في أقل من دقيقة، تواصل معنا مباشرة عبر تليجرام:
+                    </p>
+
+                    {/* Telegram CTA */}
+                    <a 
+                      href="https://t.me/movora_official" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="vip-telegram-cta"
+                    >
+                      <Send size={18} />
+                      <span>تواصل معنا على تليجرام للاشتراك واستلام الكود فوراً 🚀</span>
+                    </a>
+                  </div>
+                </>
+              )}
+
+              {/* TAB 2: Redeem Promo Code */}
+              {activeTab === 'redeem' && (
+                <div className="vip-redeem-container">
+                  <p className="vip-redeem-lead">
+                    هل استلمت كود التفعيل أو كود VIP؟ أدخل رمز الكود بالأسفل لتفعيل وضع المشاهدة بدون إعلانات فوراً على جهازك:
+                  </p>
+
+                  <form onSubmit={handleRedeem}>
+                    <div className="vip-input-wrap">
+                      <input 
+                        type="text"
+                        value={code}
+                        onChange={(e) => setCode(e.target.value.toUpperCase())}
+                        placeholder="مثال: VIP-MOV-98A4X"
+                        className="vip-code-input"
+                        autoFocus
+                        disabled={isSubmitting}
+                      />
+                      <button 
+                        type="submit" 
+                        className="vip-redeem-btn"
+                        disabled={isSubmitting || !code.trim()}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 size={16} className="search-spinner" />
+                            <span>جاري التحقق...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Crown size={16} />
+                            <span>تفعيل الحساب الآن</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+
+                  {feedback && (
+                    <div className={`vip-feedback ${feedback.type}`}>
+                      {feedback.type === 'success' ? (
+                        <CheckCircle2 size={18} />
+                      ) : (
+                        <AlertCircle size={18} />
+                      )}
+                      <span>{feedback.message}</span>
+                    </div>
+                  )}
+
+                  {/* Instructions on how to get a code */}
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '14px',
+                    padding: '16px 18px',
+                    fontSize: '13px',
+                    color: '#94a3b8',
+                    lineHeight: '1.7'
+                  }}>
+                    <strong style={{ color: '#facc15', display: 'block', marginBottom: '6px' }}>
+                      💡 ليس لديك كود تفعيل حتى الآن؟
+                    </strong>
+                    يمكنك الحصول على كودك الفوري في أقل من دقيقة عبر التحويل بفودافون كاش أو إنستاباي، ثم إرسال سكرين شوت عبر تليجرام.
+                    <button 
+                      type="button" 
+                      onClick={() => setActiveTab('plans')}
+                      style={{
+                        display: 'inline-block',
+                        marginRight: '6px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#facc15',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        padding: 0,
+                        fontFamily: 'inherit'
+                      }}
+                    >
+                      عرض باقات الاشتراك
+                    </button>
                   </div>
                 </div>
               )}
-            </div>
+            </>
           )}
 
-          {/* =========================================================
-              TAB 3: REDEEM GIFT CODE (إدخال كود هدية)
-              ========================================================= */}
-          {activeTab === 'redeem' && (
-            <div className="vip-redeem-container">
-              <div className="vip-redeem-lead-box">
-                <KeyRound size={22} color="#facc15" />
-                <p>
-                  هل حصلت على كود هدية أو كود VIP خاص من مسابقات قناة التليجرام؟ أدخل رمز الكود بالأسفل لتفعيله فوراً على جهازك:
-                </p>
-              </div>
-
-              <form onSubmit={handleRedeem}>
-                <div className="vip-input-wrap">
-                  <input 
-                    type="text"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.toUpperCase())}
-                    placeholder="مثال: VIP-MOV-98A4X"
-                    className="vip-code-input"
-                    disabled={isSubmitting}
-                    autoFocus
-                  />
-                  <button 
-                    type="submit" 
-                    className="vip-redeem-btn"
-                    disabled={isSubmitting || !code.trim()}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 size={16} className="search-spinner" />
-                        <span>جاري الفحص...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Zap size={16} />
-                        <span>تفعيل الكود</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-
-              {/* Telegram Drop Hint */}
-              <div className="vip-telegram-hint-card">
-                <div>
-                  <h4>ليس لديك كود؟ انضم لقناتنا 📢</h4>
-                  <p>نقوم بتوزيع أكواد VIP مجانية دورية في قناة موفورا على تليجرام للمتابعين المتفاعلين.</p>
-                </div>
-                <a 
-                  href="https://t.me/movora_me" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="vip-telegram-sub-btn"
-                >
-                  <Send size={15} />
-                  <span>انضم للقناة الآن</span>
-                </a>
-              </div>
-            </div>
-          )}
         </div>
+
       </div>
     </div>
   );

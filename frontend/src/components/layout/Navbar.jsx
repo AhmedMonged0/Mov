@@ -5,6 +5,7 @@ import Logo from '../shared/Logo';
 import { searchMovies, searchSeries, getPosterUrl, fetchRandomMovie } from '../../services/tmdb';
 import MovieRequestModal from '../shared/MovieRequestModal';
 import VipModal from '../shared/VipModal';
+import WelcomeGiftBar from './WelcomeGiftBar';
 import { getVipStatus, subscribeToVip } from '../../services/vipService';
 import '../../styles/Navbar.css';
 
@@ -186,9 +187,11 @@ export default function Navbar() {
 
   return (
     <>
-      <header className={`navbar ${isScrolled ? 'scrolled' : ''} ${mobileSearchOpen ? 'mobile-search-active' : ''}`} dir="rtl">
-      {/* Brand Logo with Custom Cinema Icon */}
-      <div className="nav-brand-group">
+      <div className="navbar-fixed-container">
+        <WelcomeGiftBar onOpenVipModal={() => setShowVipModal(true)} />
+        <header className={`navbar ${isScrolled ? 'scrolled' : ''} ${mobileSearchOpen ? 'mobile-search-active' : ''}`} dir="rtl">
+        {/* Brand Logo with Custom Cinema Icon */}
+        <div className="nav-brand-group">
         <Logo size="medium" showDomain={true} showBadge={true} badgeText="CINEMA" />
       </div>
 
@@ -297,10 +300,10 @@ export default function Navbar() {
             type="button"
             className={`nav-vip-badge-btn ${vipStatus.isVip ? 'active-member' : ''}`}
             onClick={() => setShowVipModal(true)}
-            title={vipStatus.isVip ? `أنت مشترك VIP (متبقي ${vipStatus.remainingDays} يوم)` : 'احصل على تجربة VIP مجانية 24 ساعة بدون إعلانات'}
+            title={vipStatus.isVip ? `أنت مشترك VIP (متبقي ${vipStatus.remainingDays} يوم)` : 'عضوية سينما VIP بدون إعلانات'}
           >
             <Crown size={14} />
-            <span>{vipStatus.isVip ? 'مشترك VIP 👑' : 'تجربة VIP مجاناً 🎁'}</span>
+            <span>{vipStatus.isVip ? 'مشترك VIP 👑' : 'Movora VIP 👑'}</span>
           </button>
         )}
 
@@ -496,6 +499,7 @@ export default function Navbar() {
         )}
       </div>
     </header>
+  </div>
 
     {/* Movie Request Modal (Outside header to avoid backdrop-filter stacking context) */}
     <MovieRequestModal 

@@ -60,128 +60,110 @@ export function getVipStatus() {
   }
 }
 
-// 1-Click Activate 24-Hour Free Trial
-export function activateFreeTrial() {
+const GIFT_TRACKER_KEY = 'movora_welcome_gift_tracker_v2';
+const GIFT_CHANGE_EVENT = 'movora_gift_changed';
+
+// Get or initialize Welcome Gift Tracker (after 24h / 1 day, user unlocks 12h VIP free)
+export function getWelcomeGiftTracker() {
+  if (typeof window === 'undefined') return { status: 'hidden' };
+
+  try {
+    const now = Date.now();
+    const raw = localStorage.getItem(GIFT_TRACKER_KEY);
+    let tracker = null;
+
+    if (!raw) {
+      // First visit: initialize 24h countdown to unlock 12h VIP
+      tracker = {
+        firstSeen: now,
+        unlockAt: now + 24 * 60 * 60 * 1000, // 24 hours (1 day)
+        status: 'waiting', // 'waiting' | 'ready' | 'active' | 'expired'
+        activeUntil: null,
+        dismissed: false
+      };
+      localStorage.setItem(GIFT_TRACKER_KEY, JSON.stringify(tracker));
+    } else {
+      tracker = JSON.parse(raw);
+    }
+
+    if (!tracker) return { status: 'hidden' };
+
+    // Update status based on current time
+    if (tracker.status === 'waiting' && now >= tracker.unlockAt) {
+      tracker.status = 'ready';
+      localStorage.setItem(GIFT_TRACKER_KEY, JSON.stringify(tracker));
+    } else if (tracker.status === 'active' && tracker.activeUntil && now >= tracker.activeUntil) {
+      tracker.status = 'expired';
+      localStorage.setItem(GIFT_TRACKER_KEY, JSON.stringify(tracker));
+    }
+
+    return tracker;
+  } catch (e) {
+    return { status: 'hidden' };
+  }
+}
+
+// Subscribe to gift tracker changes
+export function subscribeToGiftTracker(callback) {
+  if (typeof window === 'undefined') return () => {};
+  const handler = () => callback(getWelcomeGiftTracker());
+  window.addEventListener(GIFT_CHANGE_EVENT, handler);
+  return () => window.removeEventListener(GIFT_CHANGE_EVENT, handler);
+}
+
+export function notifyGiftChange() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(GIFT_CHANGE_EVENT, { detail: getWelcomeGiftTracker() }));
+  }
+}
+
+// Claim the 12-Hour VIP Gift
+export function claim12HourGift() {
   if (typeof window === 'undefined') return { success: false };
 
   const now = Date.now();
-  const durationMs = 24 * 60 * 60 * 1000; // 24 hours
-  const current = getVipStatus();
-  const baseTime = current.isVip ? current.expiresAt : now;
-  const expiresAt = baseTime + durationMs;
+  const durationMs = 12 * 60 * 60 * 1000; // 12 hours VIP
+  const activeUntil = now + durationMs;
+
+  const tracker = getWelcomeGiftTracker();
+  tracker.status = 'active';
+  tracker.activeUntil = activeUntil;
+  tracker.claimedAt = now;
+  localStorage.setItem(GIFT_TRACKER_KEY, JSON.stringify(tracker));
 
   const membership = {
     isVip: true,
-    code: 'FREE-TRIAL-24H',
-    expiresAt,
+    code: 'GIFT-12H-WELCOME',
+    expiresAt: activeUntil,
     durationDays: 1,
-    planName: 'تجربة VIP المجانية (24 ساعة)',
+    planName: 'هدية ترحيبية (12 ساعة VIP)',
     isTrial: true,
     redeemedAt: now
   };
 
   localStorage.setItem(VIP_STORAGE_KEY, JSON.stringify(membership));
-  localStorage.setItem('movora_trial_claimed', 'true');
   window.__MOVORA_IS_VIP = true;
   notifyVipChange();
+  notifyGiftChange();
 
-  return {
-    success: true,
-    membership,
-    message: 'تم تفعيل تجربتك المجانية لمدة 24 ساعة بنجاح! استمتع بمشاهدة بدون إعلانات نهائياً 🍿'
-  };
+  return { success: true, tracker, membership };
 }
 
-// Add extra VIP hours to user account (from viral quests, wheel spin, etc.)
-export function addVipHours(hours, reason = 'مكافأة تفاعلية') {
-  if (typeof window === 'undefined') return { success: false };
-
-  const now = Date.now();
-  const current = getVipStatus();
-  const msToAdd = Number(hours) * 60 * 60 * 1000;
-  const baseTime = current.isVip ? current.expiresAt : now;
-  const expiresAt = baseTime + msToAdd;
-
-  const membership = {
-    isVip: true,
-    code: current.code || 'VIP-REWARD',
-    expiresAt,
-    durationDays: Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24)),
-    planName: current.planName || 'مكافأة Movora VIP',
-    isTrial: current.isTrial ?? true,
-    redeemedAt: current.redeemedAt || now
-  };
-
-  localStorage.setItem(VIP_STORAGE_KEY, JSON.stringify(membership));
-  window.__MOVORA_IS_VIP = true;
-  notifyVipChange();
-
-  return { success: true, membership, hoursAdded: hours };
+// Dismiss or minimize gift bar
+export function dismissGiftBar() {
+  if (typeof window === 'undefined') return;
+  const tracker = getWelcomeGiftTracker();
+  tracker.dismissed = true;
+  localStorage.setItem(GIFT_TRACKER_KEY, JSON.stringify(tracker));
+  notifyGiftChange();
 }
 
-// Generate & retrieve unique user referral code
-export function getReferralCode() {
-  if (typeof window === 'undefined') return 'MOV-VIP';
-  let code = localStorage.getItem('movora_my_ref_code');
-  if (!code) {
-    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-    let rand = '';
-    for (let i = 0; i < 6; i++) {
-      rand += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    code = `MOV-${rand}`;
-    localStorage.setItem('movora_my_ref_code', code);
-  }
-  return code;
-}
-
-// Generate full referral sharing URL
-export function getReferralLink() {
-  const code = getReferralCode();
-  return `https://movora.me/?ref=${code}`;
-}
-
-// Lucky Spin Wheel status & cooldown check (once every 24 hours)
-export function getWheelStatus() {
-  if (typeof window === 'undefined') return { canSpin: true, nextSpinInMs: 0 };
-  const last = localStorage.getItem('movora_last_wheel_spin');
-  if (!last) return { canSpin: true, nextSpinInMs: 0 };
-
-  const diff = Date.now() - Number(last);
-  const cooldown = 24 * 60 * 60 * 1000;
-  if (diff >= cooldown) {
-    return { canSpin: true, nextSpinInMs: 0 };
-  }
-  return { canSpin: false, nextSpinInMs: cooldown - diff };
-}
-
-// Record wheel spin reward
-export function recordWheelSpin(hours) {
-  if (typeof window === 'undefined') return { success: false };
-  localStorage.setItem('movora_last_wheel_spin', String(Date.now()));
-  return addVipHours(hours, 'عجلة الحظ اليومية');
-}
-
-// Completed Quests Manager (Telegram, WhatsApp, Bookmarks)
-export function getCompletedQuests() {
-  if (typeof window === 'undefined') return [];
-  try {
-    return JSON.parse(localStorage.getItem('movora_completed_quests') || '[]');
-  } catch (e) {
-    return [];
-  }
-}
-
-export function claimQuestReward(questId, hours = 24) {
-  if (typeof window === 'undefined') return { success: false };
-  const completed = getCompletedQuests();
-  if (completed.includes(questId)) {
-    return { success: false, alreadyClaimed: true };
-  }
-  completed.push(questId);
-  localStorage.setItem('movora_completed_quests', JSON.stringify(completed));
-  addVipHours(hours, `مهمة ${questId}`);
-  return { success: true, hours };
+export function restoreGiftBar() {
+  if (typeof window === 'undefined') return;
+  const tracker = getWelcomeGiftTracker();
+  tracker.dismissed = false;
+  localStorage.setItem(GIFT_TRACKER_KEY, JSON.stringify(tracker));
+  notifyGiftChange();
 }
 
 // Quick check if current user has active VIP
