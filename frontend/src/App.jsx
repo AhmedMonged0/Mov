@@ -6,6 +6,8 @@ import Home from './pages/Home';
 import MovieDetails from './pages/MovieDetails';
 import Categories from './pages/Categories';
 import SearchResults from './pages/SearchResults';
+import Series from './pages/Series';
+import SeriesDetails from './pages/SeriesDetails';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminLogin from './pages/admin/AdminLogin';
 import ErrorBoundary from './components/shared/ErrorBoundary';
@@ -43,7 +45,9 @@ function App() {
           <Route path="/" element={<ErrorBoundary><MainLayout /></ErrorBoundary>}>
             <Route index element={<Home />} />
             <Route path="movie/:id" element={<MovieDetails />} />
-            <Route path="series/:id" element={<MovieDetails />} />
+            <Route path="series" element={<Series />} />
+            <Route path="series/:id" element={<SeriesDetails />} />
+            <Route path="tv/:id" element={<SeriesDetails />} />
             <Route path="categories" element={<Categories />} />
             <Route path="search" element={<SearchResults />} />
           </Route>

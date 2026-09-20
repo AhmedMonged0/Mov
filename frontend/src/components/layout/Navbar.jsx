@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Menu, X, Star, Film, Loader2, Play, Sparkles, Flame, Send, Dices, Clapperboard, Crown } from 'lucide-react';
+import { Search, Menu, X, Star, Film, Loader2, Play, Sparkles, Flame, Send, Dices, Clapperboard, Crown, Tv } from 'lucide-react';
 import Logo from '../shared/Logo';
-import { searchMovies, getPosterUrl, fetchRandomMovie } from '../../services/tmdb';
+import { searchMovies, searchSeries, getPosterUrl, fetchRandomMovie } from '../../services/tmdb';
 import MovieRequestModal from '../shared/MovieRequestModal';
 import VipModal from '../shared/VipModal';
 import { getVipStatus, subscribeToVip } from '../../services/vipService';
@@ -126,8 +126,13 @@ export default function Navbar() {
 
     debounceTimerRef.current = setTimeout(async () => {
       try {
-        const results = await searchMovies(val.trim(), 1);
-        setPreviewResults(Array.isArray(results) ? results.slice(0, 6) : []);
+        const [movies, series] = await Promise.all([
+          searchMovies(val.trim(), 1).catch(() => []),
+          searchSeries(val.trim(), 1).catch(() => [])
+        ]);
+        const taggedMovies = (movies || []).slice(0, 4).map(m => ({ ...m, media_type: 'movie' }));
+        const taggedSeries = (series || []).slice(0, 4).map(s => ({ ...s, media_type: 'tv' }));
+        setPreviewResults([...taggedMovies, ...taggedSeries].slice(0, 7));
       } catch (err) {
         setPreviewResults([]);
       } finally {
@@ -150,13 +155,17 @@ export default function Navbar() {
     }
   };
 
-  // Select movie directly from preview dropdown
-  const handleSelectMovie = (movie) => {
+  // Select movie or series directly from preview dropdown
+  const handleSelectMovie = (item) => {
     setShowDropdown(false);
     setMobileMenu(false);
     setMobileSearchOpen(false);
     setSearchQuery('');
-    navigate(`/movie/${movie.id}`);
+    if (item.media_type === 'tv' || item.first_air_date) {
+      navigate(`/series/${item.id}`);
+    } else {
+      navigate(`/movie/${item.id}`);
+    }
   };
 
   // Clear search query
@@ -171,6 +180,7 @@ export default function Navbar() {
 
   const navLinks = [
     { name: 'الرئيسية', path: '/' },
+    { name: 'المسلسلات 📺', path: '/series' },
     { name: 'التصنيفات', path: '/categories' },
   ];
 
@@ -395,19 +405,20 @@ export default function Navbar() {
 
             {previewResults.length > 0 ? (
               <div className="dropdown-results-list">
-                {previewResults.map((movie) => {
-                  const title = movie.title || movie.original_title || 'فيلم';
-                  const year = movie.release_date ? movie.release_date.split('-')[0] : '';
-                  const rating = movie.vote_average ? Number(movie.vote_average).toFixed(1) : null;
-                  const poster = movie.poster_path ? getPosterUrl(movie.poster_path, 'w92') : null;
+                {previewResults.map((item) => {
+                  const isTv = item.media_type === 'tv' || !!item.first_air_date;
+                  const title = item.name || item.title || item.original_name || item.original_title || 'عمل فني';
+                  const year = (item.release_date || item.first_air_date || '').split('-')[0];
+                  const rating = item.vote_average ? Number(item.vote_average).toFixed(1) : null;
+                  const poster = item.poster_path ? getPosterUrl(item.poster_path, 'w92') : null;
 
                   return (
                     <div 
-                      key={movie.id}
+                      key={`${item.media_type || 'm'}-${item.id}`}
                       className="dropdown-item"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSelectMovie(movie);
+                        handleSelectMovie(item);
                       }}
                     >
                       <div className="dropdown-poster">
@@ -415,7 +426,7 @@ export default function Navbar() {
                           <img src={poster} alt={title} loading="lazy" />
                         ) : (
                           <div className="dropdown-poster-placeholder">
-                            <Film size={16} />
+                            {isTv ? <Tv size={16} /> : <Film size={16} />}
                           </div>
                         )}
                         <div className="dropdown-play-hover">
@@ -424,16 +435,26 @@ export default function Navbar() {
                       </div>
 
                       <div className="dropdown-info">
-                        <div className="dropdown-title">{title}</div>
+                        <div className="dropdown-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{
+                            background: isTv ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 49, 90, 0.2)',
+                            color: isTv ? '#38bdf8' : '#ff315a',
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            padding: '1px 5px',
+                            borderRadius: '4px',
+                            flexShrink: 0
+                          }}>
+                            {isTv ? 'مسلسل' : 'فيلم'}
+                          </span>
+                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
+                        </div>
                         <div className="dropdown-meta">
                           {year && <span className="dropdown-year">{year}</span>}
                           {rating && (
                             <span className="dropdown-rating">
                               <Star size={11} fill="currentColor" /> {rating}
                             </span>
-                          )}
-                          {movie.original_title && movie.original_title !== title && (
-                            <span className="dropdown-original-title">{movie.original_title}</span>
                           )}
                         </div>
                       </div>

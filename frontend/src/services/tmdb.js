@@ -232,9 +232,157 @@ export const fetchRandomMovie = async () => {
   return { id: randomFallbackId };
 };
 
+// =========================================================================
+// TV SERIES & SHOWS API SERVICES
+// =========================================================================
+
+export const TV_GENRES = [
+  { id: 'all', name: 'الكل' },
+  { id: 10759, name: 'حركة ومغامرة' },
+  { id: 18, name: 'دراما' },
+  { id: 80, name: 'جريمة' },
+  { id: 10765, name: 'خيال علمي وفانتازيا' },
+  { id: 35, name: 'كوميديا' },
+  { id: 9648, name: 'غموض' },
+  { id: 16, name: 'أنمي ورسوم متحركة' },
+  { id: 10768, name: 'حرب وسياسة' },
+  { id: 99, name: 'وثائقي' }
+];
+
+/**
+ * Get popular TV shows in Arabic
+ */
+export const fetchPopularSeries = async (page = 1) => {
+  try {
+    const url = `${BASE_URL}/tv/popular?api_key=${TMDB_API_KEY}&language=ar&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB Error: ${res.status}`);
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Failed to fetch popular TV series:', error);
+    return [];
+  }
+};
+
+/**
+ * Get top rated TV series
+ */
+export const fetchTopRatedSeries = async (page = 1) => {
+  try {
+    const url = `${BASE_URL}/tv/top_rated?api_key=${TMDB_API_KEY}&language=ar&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB Error: ${res.status}`);
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Failed to fetch top rated TV series:', error);
+    return [];
+  }
+};
+
+/**
+ * Get currently airing / on the air TV series
+ */
+export const fetchOnTheAirSeries = async (page = 1) => {
+  try {
+    const url = `${BASE_URL}/tv/on_the_air?api_key=${TMDB_API_KEY}&language=ar&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB Error: ${res.status}`);
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Failed to fetch on the air TV series:', error);
+    return [];
+  }
+};
+
+/**
+ * Get trending TV series
+ */
+export const fetchTrendingSeries = async (timeWindow = 'day', page = 1) => {
+  try {
+    const url = `${BASE_URL}/trending/tv/${timeWindow}?api_key=${TMDB_API_KEY}&language=ar&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB Error: ${res.status}`);
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Failed to fetch trending TV series:', error);
+    return [];
+  }
+};
+
+/**
+ * Get TV series full details by ID (with videos, credits, similar)
+ */
+export const fetchSeriesDetails = async (seriesId) => {
+  try {
+    const url = `${BASE_URL}/tv/${seriesId}?api_key=${TMDB_API_KEY}&language=ar&append_to_response=videos,credits,similar`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB TV Details Error: ${res.status}`);
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error(`Failed to fetch TV details for ID ${seriesId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get season episodes details
+ */
+export const fetchSeasonDetails = async (seriesId, seasonNumber = 1) => {
+  try {
+    const url = `${BASE_URL}/tv/${seriesId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=ar`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB Season Details Error: ${res.status}`);
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error(`Failed to fetch season ${seasonNumber} for TV series ${seriesId}:`, error);
+    return null;
+  }
+};
+
+/**
+ * Search TV Series by title
+ */
+export const searchSeries = async (searchTerm, page = 1) => {
+  if (!searchTerm || !searchTerm.trim()) return [];
+  try {
+    const query = encodeURIComponent(searchTerm.trim());
+    const url = `${BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&language=ar&query=${query}&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB Search TV Error: ${res.status}`);
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error(`Failed to search TV series for "${searchTerm}":`, error);
+    return [];
+  }
+};
+
+/**
+ * Fetch TV series by genre
+ */
+export const fetchSeriesByGenre = async (genreId, page = 1) => {
+  try {
+    const url = `${BASE_URL}/discover/tv?api_key=${TMDB_API_KEY}&language=ar&with_genres=${genreId}&sort_by=popularity.desc&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch TV series by genre');
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Failed to discover TV series by genre:', error);
+    return [];
+  }
+};
+
 export default {
   TMDB_API_KEY,
   IMAGE_BASE_URL,
+  TV_GENRES,
   getPosterUrl,
   getBackdropUrl,
   fetchPopularMovies,
@@ -246,4 +394,12 @@ export default {
   fetchMovieVideos,
   fetchMoviesByGenre,
   fetchRandomMovie,
+  fetchPopularSeries,
+  fetchTopRatedSeries,
+  fetchOnTheAirSeries,
+  fetchTrendingSeries,
+  fetchSeriesDetails,
+  fetchSeasonDetails,
+  searchSeries,
+  fetchSeriesByGenre,
 };
