@@ -464,10 +464,15 @@ export async function redeemVipCode(code) {
       })
     });
 
-    const data = await res.json();
+    let data = null;
+    try {
+      data = await res.json();
+    } catch (e) {
+      data = null;
+    }
 
-    if (!res.ok || !data.success) {
-      return { success: false, error: data.error || 'تعذر تفعيل الكود، تأكد من صحته' };
+    if (!res.ok || !data?.success) {
+      return { success: false, error: data?.error || 'تعذر تفعيل الكود، تأكد من صحته' };
     }
 
     // Save membership into tamper-proof signed vault
@@ -520,11 +525,13 @@ export async function cancelVipCode(codeId, codeStr) {
       })
     });
 
-    const data = await res.json();
-    if (res.ok && data.success) {
+    let data = null;
+    try { data = await res.json(); } catch (e) { data = null; }
+
+    if (res.ok && data?.success) {
       return { success: true, vipCodes: data.vipCodes };
     }
-    return { success: false, error: data.error || 'تعذر إلغاء الكود' };
+    return { success: false, error: data?.error || 'تعذر إلغاء الكود' };
   } catch (err) {
     console.error('Failed to cancel VIP code:', err);
     return { success: false, error: 'حدث خطأ في الاتصال بالخادم' };
@@ -546,7 +553,7 @@ export async function fetchVipCodes() {
 
     if (res.ok) {
       const data = await res.json();
-      return { success: true, vipCodes: data.vipCodes || [] };
+      return { success: true, vipCodes: data?.vipCodes || [] };
     }
   } catch (err) {
     console.error('Failed to fetch VIP codes:', err);
@@ -582,11 +589,13 @@ export async function createVipCode({ code, durationDays = 30, planName, note = 
       })
     });
 
-    const data = await res.json();
-    if (res.ok && data.success) {
+    let data = null;
+    try { data = await res.json(); } catch (e) { data = null; }
+
+    if (res.ok && data?.success) {
       return { success: true, code: data.code, vipCodes: data.vipCodes };
     }
-    return { success: false, error: data.error || 'تعذر إنشاء الكود' };
+    return { success: false, error: data?.error || 'تعذر إنشاء الكود' };
   } catch (err) {
     console.error('Failed to create VIP code:', err);
     return { success: false, error: 'حدث خطأ في الاتصال بالخادم' };
@@ -606,11 +615,13 @@ export async function deleteVipCode(codeId, codeStr) {
       })
     });
 
-    const data = await res.json();
-    if (res.ok && data.success) {
+    let data = null;
+    try { data = await res.json(); } catch (e) { data = null; }
+
+    if (res.ok && data?.success) {
       return { success: true, vipCodes: data.vipCodes };
     }
-    return { success: false, error: data.error || 'تعذر حذف الكود' };
+    return { success: false, error: data?.error || 'تعذر حذف الكود' };
   } catch (err) {
     console.error('Failed to delete VIP code:', err);
     return { success: false, error: 'حدث خطأ في الاتصال بالخادم' };

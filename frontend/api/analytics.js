@@ -275,7 +275,6 @@ export default async function handler(req, res) {
       const today = getArabicDayName();
 
       const {
-        action,
         path,
         movie,
         server,
