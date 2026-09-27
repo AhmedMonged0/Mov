@@ -556,8 +556,8 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                 className={`fb-mode-tab-btn ${publishMode === 'trailer' ? 'active' : ''}`}
                 onClick={() => setPublishMode('trailer')}
               >
-                <Clapperboard size={16} />
-                <span>الخيار 1: نشر التريلر الرسمي 🎬 (تلقائي)</span>
+                <Clapperboard size={15} />
+                <span>1. نشر التريلر (تلقائي 🎬)</span>
               </button>
 
               <button 
@@ -565,8 +565,8 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                 className={`fb-mode-tab-btn ${publishMode === 'clip' ? 'active' : ''}`}
                 onClick={() => setPublishMode('clip')}
               >
-                <Video size={16} />
-                <span>الخيار 2: نشر لقطة من الفيلم 📱</span>
+                <Video size={15} />
+                <span>2. نشر لقطة من الفيلم 📱</span>
               </button>
             </div>
 
@@ -685,24 +685,24 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                     <span>جاري جلب الإعلان الترويجي الرسمي...</span>
                   </div>
                 ) : trailerKey ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {/* Embedded Trailer Player */}
-                    <div style={{ position: 'relative', width: '100%', height: '230px', borderRadius: '10px', overflow: 'hidden', background: '#000' }}>
+                  <div className="fb-trailer-player-card">
+                    {/* Embedded 16:9 Responsive Trailer Player */}
+                    <div className="fb-trailer-frame-wrap">
                       <iframe 
-                        src={`https://www.youtube.com/embed/${trailerKey}?rel=0`} 
+                        src={`https://www.youtube-nocookie.com/embed/${trailerKey}?rel=0&modestbranding=1&enablejsapi=1`} 
                         title="Official Trailer" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen 
-                        style={{ width: '100%', height: '100%', border: 'none' }}
                       />
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <div className="fb-trailer-bottom-bar">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#4ade80', fontWeight: 700 }}>
                         <CheckCircle2 size={14} />
-                        <span>جاهز للنشر تلقائياً مع البوستر والقصة والرابط</span>
+                        <span>الإعلان جاهز للنشر مع البوستر والقصة والرابط</span>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div className="fb-trailer-links-group">
                         <a 
                           href={`https://www.youtube.com/watch?v=${trailerKey}`} 
                           target="_blank" 
@@ -711,7 +711,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                           style={{ padding: '6px 12px', fontSize: '12px' }}
                         >
                           <ExternalLink size={13} />
-                          <span>فتح على يوتيوب</span>
+                          <span>فتح على يوتيوب ↗</span>
                         </a>
 
                         <a 
