@@ -487,13 +487,23 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
         {/* Setup Help Guide Dropdown */}
         {showHelp && (
           <div className="fb-setup-guide">
-            <h4>خطوات ربط صفحة فيسبوك في دقيقتين:</h4>
+            <h4>طرق استخراج معرف الصفحة (Page ID) والـ Token بسهولة:</h4>
             <ol>
-              <li>ادخل على <strong>Meta for Developers</strong> وافتح أداة <strong>Graph API Explorer</strong>: <code>developers.facebook.com/tools/explorer</code>.</li>
-              <li>اختر صفحتك (Page) من قائمة <strong>User or Page</strong>، وفعّل الصلاحيات: <code>pages_manage_posts</code> و <code>pages_read_engagement</code> و <code>pages_show_list</code>.</li>
-              <li>انسخ <strong>Page Access Token</strong> وضعه في خانة الرمز أدناه.</li>
-              <li>معرف الصفحة (<strong>Page ID</strong>) تجده في إعدادات صفحتك على فيسبوك -&gt; قسم «حول الصفحة (About)».</li>
-              <li>الرمز ومعرف الصفحة يُحفظان تلقائياً في جهازك للأبد.</li>
+              <li>
+                <strong>أسهل طريقة لمعرفة Page ID:</strong> ادخل على موقع <a href="https://findmyfbid.in" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline', fontWeight: 'bold' }}>findmyfbid.in ↗</a> وضع رابط صفحتك وهيطلعهولك في ثانية، أو من صفحتك ⬅️ الإعدادات ⬅️ تجربة الصفحات الجديدة / معلومات الصفحة.
+              </li>
+              <li>
+                <strong>استخراج Page Access Token:</strong> ادخل على أداة <a href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline', fontWeight: 'bold' }}>Graph API Explorer ↗</a>.
+              </li>
+              <li>
+                اختر صفحتك من قائمة <strong>User or Page</strong>، وفعّل الصلاحيات: <code>pages_manage_posts</code> و <code>pages_read_engagement</code>.
+              </li>
+              <li>
+                يمكنك أيضاً معرفة الـ ID من شاشة Graph Explorer بكتابة <code>me?fields=id,name</code> والضغط على <strong>Submit</strong>.
+              </li>
+              <li>
+                انسخ الـ <strong>Page ID</strong> والـ <strong>Page Access Token</strong> وضعهما في الخانتين بالأسفل (يُحفظان تلقائياً في جهازك للأبد).
+              </li>
             </ol>
           </div>
         )}
@@ -501,7 +511,18 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
         {/* Credentials Bar */}
         <div className="fb-credentials-bar">
           <div className="fb-input-group">
-            <label>معرف صفحة فيسبوك (Page ID):</label>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>معرف صفحة فيسبوك (Page ID):</span>
+              <a 
+                href="https://findmyfbid.in" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style={{ color: '#facc15', fontSize: '11px', textDecoration: 'underline', fontWeight: 600 }}
+                title="استخرج رقم ID صفحتك بوضع رابط الصفحة فقط"
+              >
+                مش عارف الـ ID؟ اضغط هنا ↗
+              </a>
+            </label>
             <input 
               type="text" 
               value={pageId} 
