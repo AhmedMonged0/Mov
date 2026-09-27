@@ -38,7 +38,7 @@ import {
 import '../../styles/FacebookPublisher.css';
 
 const DEFAULT_PAGE_ID = '1251912034679695';
-const DEFAULT_ACCESS_TOKEN = 'EAASdtnZCltswBSlDjMWVr4ylZApfrmpFiJa8C70X0idg4GXJZCsmWVAl6hCV3dbdBXkXw3SkPK3zJI1UVFMJqusRYB00P9Wnji4SNYO0Cv5qU7PuugzRL1MEXRAIr1sjtY1XAMDa2IDKzjkhkntKDt2yh6cOCqaH2WexeRnCCl1qDafb8D4WmP6xIdCJaBfYZBnHc5nZCF8hjO4z0GvbFL0hJTCocetQH8F6v92iGZBw1ZAeDxteOzjJkA5xqpM3IdAkcVgOiSGtUWcWWXjwNReA7koU4i9Gxu9qQZDZD';
+const DEFAULT_ACCESS_TOKEN = 'EAASdtnZCltswBSsnleYp8ZApe4uWZCasngcWivi9rE45NWlxZB7vilEJGipH9fMo412hXEpzPBi90Tkw2gGdN7x3lwDTaZBTw3ZCPlrExNGW7MT683OOHnLx5O3wYQzNygms59Y8L15pFxRG6C3RUmefADbwJu7IXI7JkVWmp3tgbEd3e48Y6oY9EYa4BZA4ZAjgvEleDbBwO8mJIXPcnpk2EMuZA0Jjm2zAF48n5qmj1N0aC5F1Tma6ZCUh3t2RAZD';
 
 // Hooks for Trailer Mode
 const TRAILER_HOOKS = [
@@ -69,7 +69,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
   });
   const [accessToken, setAccessToken] = useState(() => {
     const saved = localStorage.getItem('movora_fb_access_token');
-    if (!saved || saved.includes('BSobytw') || saved.trim().length < 15) {
+    if (!saved || !saved.includes('BSsnleY') || saved.trim().length < 15) {
       localStorage.setItem('movora_fb_access_token', DEFAULT_ACCESS_TOKEN);
       return DEFAULT_ACCESS_TOKEN;
     }
