@@ -40,11 +40,14 @@ import {
   Plus,
   Copy,
   Check,
-  Layers
+  Layers,
+  Share2,
+  Video
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { getAdSettings, saveAdSettingsToCloud, extractVerificationCode, purgeAdminAds } from '../../services/adShield';
 import TelegramPublisherModal from '../../components/admin/TelegramPublisherModal';
+import FacebookPublisherModal from '../../components/admin/FacebookPublisherModal';
 import { fetchVipCodes, createVipCode, deleteVipCode, cancelVipCode, generateRandomCodePrefix } from '../../services/vipService';
 import { 
   loadAnalytics, 
@@ -91,6 +94,9 @@ export default function AdminDashboard() {
   // Telegram Smart Publisher Modal State
   const [showTelegramModal, setShowTelegramModal] = useState(false);
   const [telegramPreloadQuery, setTelegramPreloadQuery] = useState('');
+
+  // Facebook Smart Publisher Modal State
+  const [showFacebookModal, setShowFacebookModal] = useState(false);
 
   // VIP Promo Codes Modal State
   const [showVipAdminModal, setShowVipAdminModal] = useState(false);
@@ -509,6 +515,15 @@ export default function AdminDashboard() {
         >
           <Send size={16} />
           <span>النشر على تليجرام 📢</span>
+        </button>
+
+        <button 
+          type="button"
+          className={`admin-tab-item tab-facebook ${activeTab === 'facebook' ? 'active' : ''}`}
+          onClick={() => setActiveTab('facebook')}
+        >
+          <Share2 size={16} />
+          <span>النشر على فيسبوك 🎬📱</span>
         </button>
 
         <button 
@@ -1915,6 +1930,66 @@ export default function AdminDashboard() {
         </div>
       </div>
     )}
+
+    {/* ================= SECTION 6: FACEBOOK VIDEO & REELS PUBLISHER ================= */}
+    {(activeTab === 'facebook' || activeTab === 'all') && (
+      <div className="admin-section-block">
+        <div className="admin-panel-card" style={{ padding: '28px', border: '1px solid rgba(24, 119, 242, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: 'rgba(24, 119, 242, 0.15)',
+                border: '1px solid rgba(24, 119, 242, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#60a5fa'
+              }}>
+                <Share2 size={24} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#fff' }}>
+                  أداة النشر وصناعة الفيديوهات لفيسبوك 🎬📱
+                </h3>
+                <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+                  تسجيل واقتطاع دقيقة من الفيلم، كتابة العنوان والوصف والهاشتاغات الذكية، والنشر على صفحتك وريلز بضغطة زر
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowFacebookModal(true)}
+              style={{
+                background: 'linear-gradient(135deg, #1877f2 0%, #0d5ec4 100%)',
+                color: '#fff',
+                fontWeight: 'bold',
+                border: 'none',
+                padding: '11px 22px',
+                borderRadius: '10px',
+                fontSize: '13.5px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 16px rgba(24, 119, 242, 0.35)',
+                fontFamily: 'inherit'
+              }}
+            >
+              <Share2 size={15} />
+              <span>فتح أداة النشر وصناعة الفيديوهات لفيسبوك 🚀</span>
+            </button>
+          </div>
+
+          <p style={{ color: '#cbd5e1', fontSize: '13.5px', lineHeight: '1.7', margin: 0 }}>
+            تتيح لك الأداة اقتطاع لقطة مشوقة (30 إلى 60 ثانية) من أي فيلم أو مسلسل عبر مسجل الشاشة المدمج أو رفع فيديو، وتوليد نصوص وهاشتاغات فيسبوك الجذابة وروابط المشاهدة الكاملة على موفورا، مع إمكانية النشر المباشر عبر Facebook Graph API أو التصدير لـ Meta Business Suite.
+          </p>
+        </div>
+      </div>
+    )}
   </main>
 
 
@@ -2181,6 +2256,13 @@ export default function AdminDashboard() {
             setTelegramPreloadQuery('');
           }} 
           initialQuery={telegramPreloadQuery}
+        />
+      )}
+
+      {/* Facebook Smart Video & Reels Publisher Modal */}
+      {showFacebookModal && (
+        <FacebookPublisherModal 
+          onClose={() => setShowFacebookModal(false)}
         />
       )}
 
