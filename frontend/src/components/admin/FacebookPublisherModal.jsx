@@ -37,7 +37,7 @@ import {
 } from '../../services/tmdb';
 import '../../styles/FacebookPublisher.css';
 
-const DEFAULT_PAGE_ID = '';
+const DEFAULT_PAGE_ID = '1251912034679695';
 const DEFAULT_ACCESS_TOKEN = '';
 
 // Hooks for Trailer Mode
