@@ -123,12 +123,15 @@ export const searchMovies = async (searchTerm, page = 1) => {
  */
 export const fetchMovieDetails = async (movieId) => {
   try {
-    const url = `${BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=ar&append_to_response=videos,credits,similar`;
+    const url = `${BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=ar&append_to_response=videos,credits,similar,external_ids`;
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error(`TMDB Movie Details Error: ${res.status}`);
     }
     const data = await res.json();
+    if (!data.imdb_id && data.external_ids?.imdb_id) {
+      data.imdb_id = data.external_ids.imdb_id;
+    }
     return data;
   } catch (error) {
     console.error(`Failed to fetch movie details for ID ${movieId}:`, error);
@@ -318,10 +321,13 @@ export const fetchTrendingSeries = async (timeWindow = 'day', page = 1) => {
  */
 export const fetchSeriesDetails = async (seriesId) => {
   try {
-    const url = `${BASE_URL}/tv/${seriesId}?api_key=${TMDB_API_KEY}&language=ar&append_to_response=videos,credits,similar`;
+    const url = `${BASE_URL}/tv/${seriesId}?api_key=${TMDB_API_KEY}&language=ar&append_to_response=videos,credits,similar,external_ids`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`TMDB TV Details Error: ${res.status}`);
     const data = await res.json();
+    if (!data.imdb_id && data.external_ids?.imdb_id) {
+      data.imdb_id = data.external_ids.imdb_id;
+    }
     return data;
   } catch (error) {
     console.error(`Failed to fetch TV details for ID ${seriesId}:`, error);

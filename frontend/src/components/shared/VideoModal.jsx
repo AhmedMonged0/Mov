@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Film, Play, Star, ShieldCheck, Languages, Crown } from 'lucide-react';
+import { X, Server, Film, Play, Star, ShieldCheck, Languages, Crown, RotateCcw } from 'lucide-react';
 import { fetchMovieVideos } from '../../services/tmdb';
 import { trackMovieStream } from '../../services/analyticsTracker';
 import { isVipActive, subscribeToVip } from '../../services/vipService';
 import AdBannerSlot from './AdBannerSlot';
 import '../../styles/VideoModal.css';
 
-export default function VideoModal({ movie, initialServer = 'primary', onClose }) {
-  const [activeServer, setActiveServer] = useState(initialServer); // 'primary' | 'multiembed' | 'backup' | 'trailer'
+export default function VideoModal({ movie, initialServer = 'multiembed', onClose }) {
+  const [activeServer, setActiveServer] = useState(initialServer); // 'multiembed' | 'primary' | 'autoembed' | 'backup' | 'embed2' | 'trailer'
   const [trailerKey, setTrailerKey] = useState(null);
   const [loadingTrailer, setLoadingTrailer] = useState(true);
   const [isVip, setIsVip] = useState(() => isVipActive());
@@ -90,25 +90,58 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
   const releaseYear = movie.release_date ? movie.release_date.split('-')[0] : (movie.year || '');
   const rating = movie.vote_average ? movie.vote_average.toFixed(1) : (movie.rating || null);
 
-  // Sources selection with Original English Audio guaranteed (Prioritizing Ad-Free VidLink)
-  let iframeSrc = '';
-  if (activeServer === 'primary') {
-    // Flagship VidLink HD: Ultra-clean, ad-free player, original English audio + built-in Arabic CC subtitles
-    iframeSrc = `https://vidlink.pro/movie/${movie.id}`;
-  } else if (activeServer === 'autoembed') {
-    // Fast clean alternative
-    iframeSrc = `https://player.autoembed.cc/embed/movie/${movie.id}`;
-  } else if (activeServer === 'multiembed') {
-    // MultiEmbed: English audio + prominent multi-language subtitle track menu
-    iframeSrc = `https://multiembed.mov/?video_id=${movie.id}&tmdb=1`;
-  } else if (activeServer === 'backup') {
-    // VidSrc: Classic backup
-    iframeSrc = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
-  } else if (activeServer === 'trailer') {
-    iframeSrc = trailerKey 
-      ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0` 
-      : 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1';
-  }
+  // Streaming sources with Arabic subtitles as primary default & fallback servers
+  const MODAL_SERVERS = [
+    {
+      id: 'multiembed',
+      name: 'سيرفر 1 (ترجمة عربي تلقائية) 🇪🇬',
+      title: 'سيرفر MultiEmbed - يترجم للعربية تلقائياً ومتعدد المصادر البديلة',
+      url: `https://multiembed.mov/?video_id=${movie.imdb_id || movie.id}&tmdb=1&default_lang=ar`
+    },
+    {
+      id: 'primary',
+      name: 'سيرفر 2 (VidLink HD) ⭐',
+      title: 'سيرفر VidLink فائق الجودة وسريع',
+      url: `https://vidlink.pro/movie/${movie.id}?primaryColor=ff315a&secondaryColor=1e293b`
+    },
+    {
+      id: 'autoembed',
+      name: 'سيرفر 3 (AutoEmbed)',
+      title: 'سيرفر AutoEmbed السريع',
+      url: `https://player.autoembed.cc/embed/movie/${movie.id}`
+    },
+    {
+      id: 'backup',
+      name: 'سيرفر 4 (VidSrc)',
+      title: 'سيرفر VidSrc الاحتياطي',
+      url: `https://vidsrc.me/embed/movie?tmdb=${movie.id}`
+    },
+    {
+      id: 'embed2',
+      name: 'سيرفر 5 (2Embed)',
+      title: 'سيرفر 2Embed الاحتياطي الإضافي',
+      url: `https://www.2embed.cc/embed/${movie.id}`
+    },
+    {
+      id: 'trailer',
+      name: 'التريلر (الإعلان)',
+      title: 'مشاهدة إعلان الفيلم على يوتيوب',
+      url: trailerKey 
+        ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0` 
+        : 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1'
+    }
+  ];
+
+  const currentServerObj = MODAL_SERVERS.find(s => s.id === activeServer) || MODAL_SERVERS[0];
+  const iframeSrc = currentServerObj.url;
+
+  // Quick switch to next server if current provider shows "We couldn't find this content" or fails
+  const handleNextServer = () => {
+    const streamServers = MODAL_SERVERS.filter(s => s.id !== 'trailer');
+    const currentIndex = streamServers.findIndex(s => s.id === activeServer);
+    const nextIndex = (currentIndex + 1) % streamServers.length;
+    setActiveServer(streamServers[nextIndex].id);
+  };
 
   return (
     <div className="video-modal-overlay" onClick={onClose} dir="rtl">
@@ -141,7 +174,7 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
                     <Star size={12} fill="currentColor" /> {rating}
                   </span>
                 )}
-                <span className="modal-badge-movora">Movora Cinema (VidLink HD)</span>
+                <span className="modal-badge-movora">Movora Cinema (ترجمة عربي تلقائية)</span>
               </div>
             </div>
           </div>
@@ -178,46 +211,17 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
           </div>
 
           <div className="server-buttons-grid">
-            <button
-              className={`server-btn ${activeServer === 'primary' ? 'active' : ''}`}
-              onClick={() => setActiveServer('primary')}
-            >
-              <Play size={14} />
-              سيرفر VidLink (سريع ودقة عالية)
-            </button>
-
-            <button
-              className={`server-btn ${activeServer === 'secondary' ? 'active' : ''}`}
-              onClick={() => setActiveServer('secondary')}
-            >
-              <Server size={14} />
-              سيرفر AutoEmbed
-            </button>
-
-            <button
-              className={`server-btn ${activeServer === 'server3' ? 'active' : ''}`}
-              onClick={() => setActiveServer('server3')}
-            >
-              <Server size={14} />
-              سيرفر MultiEmbed (متعدد)
-            </button>
-
-            <button
-              className={`server-btn ${activeServer === 'server4' ? 'active' : ''}`}
-              onClick={() => setActiveServer('server4')}
-            >
-              <Server size={14} />
-              سيرفر VidSrc (احتياطي)
-            </button>
-
-            <button
-              className={`server-btn trailer-btn ${activeServer === 'trailer' ? 'active' : ''}`}
-              onClick={() => setActiveServer('trailer')}
-              disabled={loadingTrailer && !trailerKey}
-            >
-              <Film size={14} />
-              الإعلان الرسمي (Trailer)
-            </button>
+            {MODAL_SERVERS.map(srv => (
+              <button
+                key={srv.id}
+                className={`server-btn ${activeServer === srv.id ? 'active' : ''}`}
+                onClick={() => setActiveServer(srv.id)}
+                title={srv.title}
+              >
+                {srv.id === 'trailer' ? <Film size={14} /> : <Server size={14} />}
+                {srv.name}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -233,17 +237,35 @@ export default function VideoModal({ movie, initialServer = 'primary', onClose }
           />
         </div>
 
+        {/* Smart Server Switcher & Arabic Subtitles Guidance Banner */}
+        <div className="player-smart-helper-banner">
+          <div className="helper-content">
+            <div className="helper-badge">
+              <Languages size={14} />
+              <span>الترجمة العربية نشطة 🇪🇬</span>
+            </div>
+            <div className="helper-text">
+              <span>
+                إذا ظهرت لك رسالة <strong>"We couldn't find this content"</strong> أو تعطل المشغل، اضغط على <strong>تبديل السيرفر</strong> للتغيير لسيرفر بديل فوراً. لتغيير الترجمة اضغط على زر <strong>CC</strong> داخل المشغل.
+              </span>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            className="quick-switch-server-btn" 
+            onClick={handleNextServer}
+            title="التبديل إلى السيرفر البديل التالي فوراً"
+          >
+            <RotateCcw size={15} />
+            <span>تبديل السيرفر 🔄</span>
+          </button>
+        </div>
+
         {/* Optional Sponsored Banner Slot */}
         <AdBannerSlot slot="player" />
 
         {/* Player Bottom Info Bar with Subtitle Guidance */}
         <div className="video-modal-footer">
-          <div className="player-hint">
-            <Languages size={15} style={{ color: '#ff315a', verticalAlign: 'middle', marginLeft: 6, flexShrink: 0 }} />
-            <span>
-              <strong>الصوت الأساسي: إنجليزي أصلي.</strong> لاختيار أو تفعيل الترجمة للعربية، اضغط على زر الترجمة <strong>(CC أو Subtitles)</strong> داخل المشغل واختر <strong>Arabic</strong>.
-            </span>
-          </div>
           <button className="close-bottom-btn" onClick={onClose}>
             إغلاق المشغل
           </button>

@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { 
   Play, Download, Star, ArrowRight, Film, Clock, Calendar, 
   Server, Languages, ShieldCheck, Share2, Check, Copy, 
-  Sparkles, Send, Crown 
+  Sparkles, Send, Crown, RotateCcw
 } from 'lucide-react';
 import { fetchMovieDetails, fetchMovieVideos, getPosterUrl, getBackdropUrl } from '../services/tmdb';
 import { trackMovieStream } from '../services/analyticsTracker';
@@ -19,7 +19,7 @@ export default function MovieDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentServer, setCurrentServer] = useState('primary'); // 'primary' | 'multiembed' | 'backup' | 'trailer'
+  const [currentServer, setCurrentServer] = useState('multiembed'); // Default to Arabic Subtitles Server
   const [trailerKey, setTrailerKey] = useState(null);
   const [imgError, setImgError] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -190,19 +190,58 @@ export default function MovieDetails() {
   const minutes = movie.runtime ? movie.runtime % 60 : 0;
   const runtimeStr = movie.runtime ? `${hours > 0 ? `${hours} س ` : ''}${minutes} د` : null;
 
-  // Streaming source url based on server selection (Prioritizing Ad-Free VidLink HD)
-  let playerSrc = `https://vidlink.pro/movie/${movie.id}`;
-  if (currentServer === 'autoembed') {
-    playerSrc = `https://player.autoembed.cc/embed/movie/${movie.id}`;
-  } else if (currentServer === 'multiembed') {
-    playerSrc = `https://multiembed.mov/?video_id=${movie.id}&tmdb=1`;
-  } else if (currentServer === 'backup') {
-    playerSrc = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
-  } else if (currentServer === 'trailer') {
-    playerSrc = trailerKey 
-      ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0` 
-      : 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1';
-  }
+  // Streaming sources with Arabic subtitles as primary default & fallback servers
+  const MOVIE_SERVERS = [
+    {
+      id: 'multiembed',
+      name: 'سيرفر 1 (ترجمة عربي تلقائية) 🇪🇬',
+      title: 'سيرفر MultiEmbed - ترجمة عربية تلقائية ومتعدد المصادر البديلة',
+      url: `https://multiembed.mov/?video_id=${movie.imdb_id || movie.id}&tmdb=1&default_lang=ar`
+    },
+    {
+      id: 'primary',
+      name: 'سيرفر 2 (VidLink HD) ⭐',
+      title: 'سيرفر VidLink فائق الجودة وسريع',
+      url: `https://vidlink.pro/movie/${movie.id}?primaryColor=ff315a&secondaryColor=1e293b`
+    },
+    {
+      id: 'autoembed',
+      name: 'سيرفر 3 (AutoEmbed)',
+      title: 'سيرفر AutoEmbed السريع',
+      url: `https://player.autoembed.cc/embed/movie/${movie.id}`
+    },
+    {
+      id: 'backup',
+      name: 'سيرفر 4 (VidSrc)',
+      title: 'سيرفر VidSrc الاحتياطي',
+      url: `https://vidsrc.me/embed/movie?tmdb=${movie.id}`
+    },
+    {
+      id: 'embed2',
+      name: 'سيرفر 5 (2Embed)',
+      title: 'سيرفر 2Embed الاحتياطي الإضافي',
+      url: `https://www.2embed.cc/embed/${movie.id}`
+    },
+    {
+      id: 'trailer',
+      name: 'التريلر (الإعلان)',
+      title: 'مشاهدة إعلان الفيلم على يوتيوب',
+      url: trailerKey 
+        ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0` 
+        : 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1'
+    }
+  ];
+
+  const currentServerObj = MOVIE_SERVERS.find(s => s.id === currentServer) || MOVIE_SERVERS[0];
+  const playerSrc = currentServerObj.url;
+
+  // Quick switch to next server if current provider shows "We couldn't find this content" or fails
+  const handleNextServer = () => {
+    const streamServers = MOVIE_SERVERS.filter(s => s.id !== 'trailer');
+    const currentIndex = streamServers.findIndex(s => s.id === currentServer);
+    const nextIndex = (currentIndex + 1) % streamServers.length;
+    setCurrentServer(streamServers[nextIndex].id);
+  };
 
   return (
     <div className="details-page" dir="rtl">
@@ -221,37 +260,16 @@ export default function MovieDetails() {
             </button>
             <div className="server-selector">
               <span><Server size={15} /> السيرفر:</span>
-              <button 
-                className={currentServer === 'primary' ? 'active' : ''} 
-                onClick={() => setCurrentServer('primary')}
-                title="سيرفر نقي بدون إعلانات مزعجة وبدقة عالية"
-              >
-                سيرفر سينما نقي (VidLink HD) ⭐
-              </button>
-              <button 
-                className={currentServer === 'autoembed' ? 'active' : ''} 
-                onClick={() => setCurrentServer('autoembed')}
-              >
-                سيرفر سريع (AutoEmbed)
-              </button>
-              <button 
-                className={currentServer === 'multiembed' ? 'active' : ''} 
-                onClick={() => setCurrentServer('multiembed')}
-              >
-                سيرفر الترجمة (MultiEmbed)
-              </button>
-              <button 
-                className={currentServer === 'backup' ? 'active' : ''} 
-                onClick={() => setCurrentServer('backup')}
-              >
-                سيرفر احتياطي (VidSrc)
-              </button>
-              <button 
-                className={currentServer === 'trailer' ? 'active' : ''} 
-                onClick={() => setCurrentServer('trailer')}
-              >
-                التريلر
-              </button>
+              {MOVIE_SERVERS.map(srv => (
+                <button 
+                  key={srv.id}
+                  className={currentServer === srv.id ? 'active' : ''} 
+                  onClick={() => setCurrentServer(srv.id)}
+                  title={srv.title}
+                >
+                  {srv.name}
+                </button>
+              ))}
               {vipStatus.isVip ? (
                 <div 
                   className="ad-shield-badge active"
@@ -303,23 +321,33 @@ export default function MovieDetails() {
               allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
             />
           </div>
+
+          {/* Smart Server Switcher & Arabic Subtitles Guidance Banner */}
+          <div className="player-smart-helper-banner">
+            <div className="helper-content">
+              <div className="helper-badge">
+                <Languages size={14} />
+                <span>الترجمة العربية نشطة 🇪🇬</span>
+              </div>
+              <div className="helper-text">
+                <span>
+                  إذا ظهرت لك رسالة <strong>"We couldn't find this content"</strong> أو تعطل المشغل، اضغط على <strong>تبديل السيرفر</strong> للتغيير لسيرفر بديل فوراً. لتغيير الترجمة اضغط على زر <strong>CC</strong> داخل المشغل.
+                </span>
+              </div>
+            </div>
+            <button 
+              type="button" 
+              className="quick-switch-server-btn" 
+              onClick={handleNextServer}
+              title="التبديل إلى السيرفر البديل التالي فوراً"
+            >
+              <RotateCcw size={15} />
+              <span>تبديل السيرفر 🔄</span>
+            </button>
+          </div>
+
           {/* Optional Sponsored Banner Slot */}
           <AdBannerSlot slot="player" />
-          <div style={{
-            background: '#0e1017',
-            padding: '10px 18px',
-            borderTop: '1px solid #1a1d28',
-            fontSize: '12px',
-            color: '#94a3b8',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <Languages size={15} style={{ color: '#ff315a', flexShrink: 0 }} />
-            <span>
-              <strong style={{ color: '#fff' }}>الصوت الأساسي: إنجليزي أصلي.</strong> لاختيار الترجمة باللغة العربية أو أي لغة، انقر على زر الترجمة <strong style={{ color: '#ff315a' }}>(CC أو Subtitles)</strong> داخل شاشة المشغل ثم اختر <strong style={{ color: '#fff' }}>Arabic</strong>.
-            </span>
-          </div>
 
           {/* Upsell VIP Banner for Non-VIP viewers */}
           {!vipStatus.isVip && (

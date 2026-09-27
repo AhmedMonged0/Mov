@@ -17,7 +17,8 @@ import {
   Share2, 
   Check, 
   Loader2,
-  Crown
+  Crown,
+  RotateCcw
 } from 'lucide-react';
 import { 
   fetchSeriesDetails, 
@@ -31,11 +32,36 @@ import AdBannerSlot from '../components/shared/AdBannerSlot';
 import '../styles/Series.css';
 
 const SERVERS = [
-  { id: 'vidlink', name: 'سيرفر VidLink (سريع ودقة عالية) ⭐', url: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}` },
-  { id: 'autoembed', name: 'سيرفر AutoEmbed', url: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}` },
-  { id: 'multiembed', name: 'سيرفر MultiEmbed (متعدد)', url: (id, s, e) => `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}` },
-  { id: 'vidsrc', name: 'سيرفر VidSrc (احتياطي)', url: (id, s, e) => `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}` },
-  { id: '2embed', name: 'سيرفر 2Embed', url: (id, s, e) => `https://www.2embed.cc/embedtv/${id}&s=${s}&e=${e}` }
+  { 
+    id: 'multiembed', 
+    name: 'سيرفر 1 (ترجمة عربي تلقائية) 🇪🇬', 
+    title: 'سيرفر MultiEmbed - يترجم إلى العربية تلقائياً ومتعدد المصادر البديلة',
+    url: (id, s, e, imdb) => `https://multiembed.mov/?video_id=${imdb || id}&tmdb=1&s=${s}&e=${e}&default_lang=ar` 
+  },
+  { 
+    id: 'vidlink', 
+    name: 'سيرفر 2 (VidLink HD) ⭐', 
+    title: 'سيرفر VidLink سريع ودقة عالية',
+    url: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}?primaryColor=ff315a&secondaryColor=1e293b` 
+  },
+  { 
+    id: 'autoembed', 
+    name: 'سيرفر 3 (AutoEmbed)', 
+    title: 'سيرفر AutoEmbed السريع',
+    url: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}` 
+  },
+  { 
+    id: 'vidsrc', 
+    name: 'سيرفر 4 (VidSrc)', 
+    title: 'سيرفر VidSrc الاحتياطي',
+    url: (id, s, e) => `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}` 
+  },
+  { 
+    id: '2embed', 
+    name: 'سيرفر 5 (2Embed)', 
+    title: 'سيرفر 2Embed الاحتياطي الإضافي',
+    url: (id, s, e) => `https://www.2embed.cc/embedtv/${id}&s=${s}&e=${e}` 
+  }
 ];
 
 export default function SeriesDetails() {
@@ -56,8 +82,8 @@ export default function SeriesDetails() {
   const [seasonData, setSeasonData] = useState(null);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
 
-  // Current server
-  const [currentServer, setCurrentServer] = useState('vidlink');
+  // Current server - default to Arabic MultiEmbed
+  const [currentServer, setCurrentServer] = useState('multiembed');
   const [isCopied, setIsCopied] = useState(false);
   const [isVip, setIsVip] = useState(() => isVipActive());
 
@@ -223,7 +249,14 @@ export default function SeriesDetails() {
 
   // Active player source
   const serverConfig = SERVERS.find(s => s.id === currentServer) || SERVERS[0];
-  const playerSrc = serverConfig.url(series.id, currentSeason, currentEpisode);
+  const playerSrc = serverConfig.url(series.id, currentSeason, currentEpisode, series.imdb_id);
+
+  // Quick switch to next server if current provider shows "We couldn't find this content" or fails
+  const handleNextServer = () => {
+    const currentIndex = SERVERS.findIndex(s => s.id === currentServer);
+    const nextIndex = (currentIndex + 1) % SERVERS.length;
+    setCurrentServer(SERVERS[nextIndex].id);
+  };
 
   const isFirstEpisode = currentSeason === 1 && currentEpisode === 1;
   const isLastEpisode = 
@@ -374,21 +407,28 @@ export default function SeriesDetails() {
           {/* Optional Sponsored Banner Slot */}
           <AdBannerSlot slot="player" />
 
-          {/* Subtitle guidance hint */}
-          <div style={{
-            background: '#0a0d16',
-            padding: '10px 18px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-            fontSize: '12px',
-            color: '#94a3b8',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <Languages size={15} style={{ color: '#ff315a', flexShrink: 0 }} />
-            <span>
-              <strong style={{ color: '#fff' }}>الصوت الأساسي: إنجليزي أصلي.</strong> لتفعيل أو تغيير الترجمة للعربية، انقر على زر الترجمة <strong style={{ color: '#ff315a' }}>(CC أو Subtitles)</strong> داخل شاشة المشغل ثم اختر <strong style={{ color: '#fff' }}>Arabic</strong>.
-            </span>
+          {/* Smart Server Switcher & Arabic Subtitles Guidance Banner */}
+          <div className="player-smart-helper-banner">
+            <div className="helper-content">
+              <div className="helper-badge">
+                <Languages size={14} />
+                <span>الترجمة العربية نشطة 🇪🇬</span>
+              </div>
+              <div className="helper-text">
+                <span>
+                  إذا ظهرت لك رسالة <strong>"We couldn't find this content"</strong> أو تعطل المشغل، اضغط على <strong>تبديل السيرفر</strong> للتغيير لسيرفر بديل فوراً. لتغيير الترجمة اضغط على زر <strong>CC</strong> داخل المشغل.
+                </span>
+              </div>
+            </div>
+            <button 
+              type="button" 
+              className="quick-switch-server-btn" 
+              onClick={handleNextServer}
+              title="التبديل إلى السيرفر البديل التالي فوراً"
+            >
+              <RotateCcw size={15} />
+              <span>تبديل السيرفر 🔄</span>
+            </button>
           </div>
 
           {/* Server Switchers Bar */}
@@ -403,6 +443,7 @@ export default function SeriesDetails() {
                   key={srv.id}
                   className={`series-server-btn ${currentServer === srv.id ? 'active' : ''}`}
                   onClick={() => setCurrentServer(srv.id)}
+                  title={srv.title}
                 >
                   {srv.name}
                 </button>
