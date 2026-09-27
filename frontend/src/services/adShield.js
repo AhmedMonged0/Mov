@@ -223,6 +223,48 @@ export function initAdShield() {
     };
   } catch (e) {}
 
+  // 3. Global click & pointer interceptor in CAPTURE phase to kill any popunders before they fire
+  try {
+    const preventAdClicks = (e) => {
+      if (!checkIsVip() && !checkIsAdmin()) return;
+      const target = e.target;
+      if (!target) return;
+
+      try {
+        const adParent = target.closest && target.closest(
+          'a[href*="profitableratecpmnetwork"], a[href*="quge5"], a[href*="adsterra"], a[href*="monetag"], ' +
+          '[class*="adsterra"], [id*="adsterra"], [class*="monetag"], [id*="monetag"], [class*="inpage_push"]'
+        );
+
+        if (adParent) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          try { adParent.remove(); } catch(err) {}
+          return false;
+        }
+
+        if (!target.closest('#root')) {
+          const computed = window.getComputedStyle(target);
+          if (computed.position === 'fixed' || computed.position === 'absolute') {
+            const z = parseInt(computed.zIndex, 10);
+            if (z >= 9999) {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              try { target.remove(); } catch(err) {}
+              return false;
+            }
+          }
+        }
+      } catch (err) {}
+    };
+
+    window.addEventListener('click', preventAdClicks, true);
+    window.addEventListener('auxclick', preventAdClicks, true);
+    window.addEventListener('pointerdown', preventAdClicks, true);
+  } catch (e) {}
+
   // 3. MutationObserver to immediately destroy any injected ad nodes for VIP or Admin
   try {
     const observer = new MutationObserver((mutations) => {

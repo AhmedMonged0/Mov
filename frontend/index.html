@@ -88,11 +88,18 @@
         function isUserVip() {
           try {
             var raw = localStorage.getItem('movora_vip_membership_v1');
-            if (raw) {
-              var d = JSON.parse(raw);
-              if (d && (d.isVip || (d.expiresAt && Date.now() < Number(d.expiresAt)))) {
-                return true;
+            if (!raw) return false;
+            var d = JSON.parse(raw);
+            if (d && d.d) {
+              try {
+                var jsonStr = typeof atob !== 'undefined' ? decodeURIComponent(atob(d.d)) : d.d;
+                d = JSON.parse(jsonStr);
+              } catch(e) {
+                try { d = JSON.parse(atob(d.d)); } catch(err) {}
               }
+            }
+            if (d && (d.isVip || (d.expiresAt && Date.now() < Number(d.expiresAt)))) {
+              return true;
             }
           } catch(e) {}
           return false;
@@ -103,21 +110,63 @@
 
         if (isVip || isAdmin) {
           window.__MOVORA_IS_VIP = true;
-          // Freeze Adsterra script injection permanently in this session
-          var origCreate = document.createElement;
+
+          // Freeze Adsterra and other ad script injection permanently in this session
+          var isAdUrl = function(url) {
+            if (typeof url !== 'string') return false;
+            var u = url.toLowerCase();
+            return u.indexOf('profitableratecpmnetwork') !== -1 ||
+                   u.indexOf('quge5') !== -1 ||
+                   u.indexOf('adsterra') !== -1 ||
+                   u.indexOf('monetag') !== -1;
+          };
+
+          var origCreate = document.createElement.bind(document);
           document.createElement = function(tag) {
             var el = origCreate.apply(document, arguments);
-            if (tag && tag.toLowerCase && tag.toLowerCase() === 'script') {
-              var origSetAttr = el.setAttribute;
+            if (tag && typeof tag === 'string' && tag.toLowerCase() === 'script') {
+              var origSetAttr = el.setAttribute.bind(el);
               el.setAttribute = function(k, v) {
-                if (k === 'src' && typeof v === 'string' && (v.indexOf('profitableratecpmnetwork') !== -1 || v.indexOf('quge5') !== -1)) {
+                if (k && k.toLowerCase() === 'src' && isAdUrl(v)) {
                   return;
                 }
                 return origSetAttr.apply(el, arguments);
               };
+
+              var realSrc = '';
+              try {
+                Object.defineProperty(el, 'src', {
+                  set: function(v) {
+                    if (isAdUrl(v)) return;
+                    realSrc = v;
+                    origSetAttr('src', v);
+                  },
+                  get: function() {
+                    return realSrc || el.getAttribute('src') || '';
+                  },
+                  configurable: true
+                });
+              } catch(e) {}
             }
             return el;
           };
+
+          // Intercept appendChild on head and body
+          ['head', 'body'].forEach(function(target) {
+            var parent = document[target] || (target === 'head' ? document.documentElement : null);
+            if (parent) {
+              var origAppend = parent.appendChild.bind(parent);
+              parent.appendChild = function(child) {
+                if (child && child.tagName === 'SCRIPT' && isAdUrl(child.src)) {
+                  return child;
+                }
+                return origAppend.apply(parent, arguments);
+              };
+            }
+          });
+
+          // Empty no-op ad loader
+          window.__loadMovoraAds = function() {};
           return; // Absolutely zero ads for VIP or Admin
         }
 
