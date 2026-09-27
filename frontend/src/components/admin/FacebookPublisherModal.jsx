@@ -38,7 +38,7 @@ import {
 import '../../styles/FacebookPublisher.css';
 
 const DEFAULT_PAGE_ID = '1251912034679695';
-const DEFAULT_ACCESS_TOKEN = 'EAASdtnZCltswBSobytwYWNZARsIPjLKrQ50mpWCiR33v0hDhynGT8v446VPWFyuPljla1ZCtUZAZBAKXE5oUjrBjmxhjwh8Fqk1q3aefDtSKqi4ZAzcuZCWO4LyPsZAa57blZB9M36mX7bgLxit9up3H0tvOUxth7CQToHSzWdHfnnDvgh1MBkfg1wQmP1alUcvsZC9dBU7R7On9Lkinvpy981KyG31qlCNWAZCZBOIStEXeIRZAYKxo34aRhczknw8CADwcZD';
+const DEFAULT_ACCESS_TOKEN = 'EAASdtnZCltswBSlDjMWVr4ylZApfrmpFiJa8C70X0idg4GXJZCsmWVAl6hCV3dbdBXkXw3SkPK3zJI1UVFMJqusRYB00P9Wnji4SNYO0Cv5qU7PuugzRL1MEXRAIr1sjtY1XAMDa2IDKzjkhkntKDt2yh6cOCqaH2WexeRnCCl1qDafb8D4WmP6xIdCJaBfYZBnHc5nZCF8hjO4z0GvbFL0hJTCocetQH8F6v92iGZBw1ZAeDxteOzjJkA5xqpM3IdAkcVgOiSGtUWcWWXjwNReA7koU4i9Gxu9qQZDZD';
 
 // Hooks for Trailer Mode
 const TRAILER_HOOKS = [
@@ -69,7 +69,11 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
   });
   const [accessToken, setAccessToken] = useState(() => {
     const saved = localStorage.getItem('movora_fb_access_token');
-    return (saved && saved.trim().length > 15) ? saved : DEFAULT_ACCESS_TOKEN;
+    if (!saved || saved.includes('BSobytw') || saved.trim().length < 15) {
+      localStorage.setItem('movora_fb_access_token', DEFAULT_ACCESS_TOKEN);
+      return DEFAULT_ACCESS_TOKEN;
+    }
+    return saved;
   });
   const [showToken, setShowToken] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
