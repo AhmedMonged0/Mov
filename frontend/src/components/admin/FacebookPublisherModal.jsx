@@ -23,7 +23,8 @@ import {
   Download,
   Trash2,
   Scissors,
-  Radio
+  Radio,
+  Clapperboard
 } from 'lucide-react';
 import { 
   fetchTrendingMovies, 
@@ -31,6 +32,7 @@ import {
   searchMovies, 
   searchSeries, 
   fetchMovieVideos,
+  fetchSeriesVideos,
   getPosterUrl 
 } from '../../services/tmdb';
 import '../../styles/FacebookPublisher.css';
@@ -38,23 +40,28 @@ import '../../styles/FacebookPublisher.css';
 const DEFAULT_PAGE_ID = '';
 const DEFAULT_ACCESS_TOKEN = '';
 
-const MOVIE_HOOKS = [
-  '🔥 مشهد يحبس الأنفاس من فيلم السهرة لا يفوتك!',
-  '🍿 لو بتدور على فيلم سهرة جامد ومشوق.. شوف اللقطة دي!',
-  '😱 الصدمة في الدقيقة الأخيرة من المشهد ده!',
-  '🎬 من أقوى وأفضل أفلام السينما لعام 2025',
-  '⚡️ حصرياً بجودة 4K وبدون إعلانات مزعجة على موفورا'
+// Hooks for Trailer Mode
+const TRAILER_HOOKS = [
+  '🎬 الإعلان الرسمي المشوق لفيلم سهرة الليلة.. لا يفوتك!',
+  '🔥 شاهد التريلر الرسمي للعمل المنتظر.. متوفر الآن بجودة 4K!',
+  '⚡️ الإعلان الترويجي الحصري.. فيلم يستحق المشاهدة سهرة اليوم!',
+  '🍿 إعلان الفيلم الأكثر طلباً هذا الأسبوع على موفورا',
+  '⭐️ تريلر حصري لواحد من أقوى إنتاجات السينما العالمية'
 ];
 
-const SERIES_HOOKS = [
-  '📺 أقوى مشهد من الحلقة الجديدة.. إثارة وتشويق لا ينتهي!',
-  '🔥 لو لسه مابدأتش المسلسل ده فايتك كتير جداً!',
-  '⚡️ لقطة الموسم من المسلسل المنتظر.. شوف الصدمة!',
-  '⭐️ من أعلى المسلسلات تقييماً ومشاهدة هذا الأسبوع',
-  '🍿 جميع حلقات ومواسم المسلسل كاملة ومترجمة الآن'
+// Hooks for Movie Scene Clip Mode
+const CLIP_HOOKS = [
+  '🔥 مشهد يحبس الأنفاس من فيلم سهرة الليلة لا يفوتك!',
+  '😱 الصدمة في الدقيقة الأخيرة من اللقطة دي.. شوف للنهاية!',
+  '🍿 أقوى لقطة أكشن من الفيلم الأسطوري.. روعة!',
+  '⚡️ مشهد للتاريخ بجودة فائقة 1080p.. لن تصدق ما حدث!',
+  '🎬 لقطة مميزة من أقوى أفلام السينما لعام 2025'
 ];
 
 export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
+  // Mode Selection: 'trailer' (نشر التريلر) | 'clip' (نشر لقطة من فيلم)
+  const [publishMode, setPublishMode] = useState('trailer');
+
   // Facebook Page Credentials
   const [pageId, setPageId] = useState(() => localStorage.getItem('movora_fb_page_id') || DEFAULT_PAGE_ID);
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem('movora_fb_access_token') || DEFAULT_ACCESS_TOKEN);
@@ -70,16 +77,18 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
   const [loadingTrending, setLoadingTrending] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Video Studio & 60-Second Clip State
+  // Trailer State
+  const [trailerKey, setTrailerKey] = useState(null);
+  const [loadingTrailer, setLoadingTrailer] = useState(false);
+
+  // Clip State (Upload / Quick Capture)
   const [videoBlob, setVideoBlob] = useState(null);
   const [videoUrl, setVideoUrl] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [trailerKey, setTrailerKey] = useState(null);
-  const [loadingTrailer, setLoadingTrailer] = useState(false);
 
-  // Caption & Hooks Customization
-  const [selectedHook, setSelectedHook] = useState(MOVIE_HOOKS[0]);
+  // Caption Customization
+  const [selectedHook, setSelectedHook] = useState(TRAILER_HOOKS[0]);
   const [customSynopsis, setCustomSynopsis] = useState('');
   const [customTitle, setCustomTitle] = useState('');
 
@@ -100,7 +109,16 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
     selectedMedia?.first_air_date || (selectedMedia && !selectedMedia?.release_date && selectedMedia?.name)
   );
 
-  // Load trending movies and series on mount
+  // Update hook when mode changes
+  useEffect(() => {
+    if (publishMode === 'trailer') {
+      setSelectedHook(TRAILER_HOOKS[0]);
+    } else {
+      setSelectedHook(CLIP_HOOKS[0]);
+    }
+  }, [publishMode]);
+
+  // Load trending items on mount
   useEffect(() => {
     const loadTrending = async () => {
       setLoadingTrending(true);
@@ -134,7 +152,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
     loadTrending();
   }, []);
 
-  // Update item selection
+  // Update item selection & fetch trailer
   const selectItem = (item) => {
     setSelectedMedia(item);
     const itemIsTv = item.media_type === 'tv' || Boolean(item.first_air_date || (!item.release_date && item.name));
@@ -143,19 +161,17 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
       : (item.title || item.original_title);
     
     setCustomTitle(title || '');
-    setCustomSynopsis(item.overview || 'قصة مشوقة وأحداث درامية ومثيرة تحبس الأنفاس.');
-    setSelectedHook(itemIsTv ? SERIES_HOOKS[0] : MOVIE_HOOKS[0]);
+    setCustomSynopsis(item.overview || 'قصة سينمائية مشوقة وأحداث درامية ومثيرة تحبس الأنفاس.');
 
-    // Check trailer
-    if (item.id && !itemIsTv) {
-      setLoadingTrailer(true);
-      fetchMovieVideos(item.id).then(videos => {
-        const tr = (videos || []).find(v => v.type === 'Trailer' && v.site === 'YouTube') || videos?.[0];
-        setTrailerKey(tr?.key || null);
-      }).catch(() => setTrailerKey(null)).finally(() => setLoadingTrailer(false));
-    } else {
-      setTrailerKey(null);
-    }
+    // Fetch trailer for movie or series
+    setLoadingTrailer(true);
+    const fetchFunc = itemIsTv ? fetchSeriesVideos(item.id) : fetchMovieVideos(item.id);
+    fetchFunc.then(videos => {
+      const tr = (videos || []).find(v => v.type === 'Trailer' && v.site === 'YouTube') ||
+                 (videos || []).find(v => v.site === 'YouTube') ||
+                 videos?.[0];
+      setTrailerKey(tr?.key || null);
+    }).catch(() => setTrailerKey(null)).finally(() => setLoadingTrailer(false));
   };
 
   // Search input handler with debounce
@@ -194,12 +210,11 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
   };
 
   // -------------------------------------------------------------
-  // Video Recording & Capture (Screen / Tab Recorder with Audio)
+  // Clip Studio: Recording & File Upload
   // -------------------------------------------------------------
   const startRecording = async () => {
     try {
       setFeedback(null);
-      // Ask user to select tab or screen
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { cursor: 'never', frameRate: 30 },
         audio: true
@@ -229,22 +244,17 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
         stream.getTracks().forEach(t => t.stop());
       };
 
-      // Handle user stopping screen share via native browser bar
       stream.getVideoTracks()[0].onended = () => {
-        if (mediaRecorder.state !== 'inactive') {
-          mediaRecorder.stop();
-        }
+        if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
       };
 
       mediaRecorder.start(1000);
       setIsRecording(true);
       setRecordingSeconds(0);
 
-      // 60-second countdown / counter
       recordingTimerRef.current = setInterval(() => {
         setRecordingSeconds(prev => {
           if (prev >= 60) {
-            // Stop at 60 seconds automatically
             if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
               mediaRecorderRef.current.stop();
             }
@@ -255,11 +265,8 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
       }, 1000);
 
     } catch (err) {
-      console.warn('Recording cancelled or not permitted:', err);
+      console.warn('Recording cancelled:', err);
       setIsRecording(false);
-      if (err.name !== 'NotAllowedError') {
-        setFeedback({ type: 'error', text: 'تعذر بدء تسجيل الشاشة. يرجى التأكد من إعطاء الإذن للمتصفح.' });
-      }
     }
   };
 
@@ -271,7 +278,6 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
     setIsRecording(false);
   };
 
-  // Local Video Upload Handler
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -299,7 +305,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
     const a = document.createElement('a');
     a.href = videoUrl;
     const cleanTitle = (customTitle || 'movora-clip').replace(/\s+/g, '-');
-    a.download = `${cleanTitle}-60s-clip.webm`;
+    a.download = `${cleanTitle}-scene-clip.webm`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -319,16 +325,29 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
       ? `https://movora.me/series/${selectedMedia.id}` 
       : `https://movora.me/movie/${selectedMedia.id}`;
 
+    if (publishMode === 'trailer') {
+      return `${selectedHook}\n` +
+        `🎬 تريلر: ${title} (${year})\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `⭐ التقييم: ${rating} / 10 | 📅 سنة الإصدار: ${year}\n` +
+        `🎙️ الصوت: إنجليزي أصلي | 📝 الترجمة: عربية مدمجة\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `📖 قصة العمل:\n${synopsis}\n\n` +
+        `👇 لمشاهدة العمل كاملاً وبجودة فائقة 1080p و 4K بدون إعلانات مزعجة:\n` +
+        `🔗 ${watchUrl}\n\n` +
+        `#تريلر #أفلام #سينما #افلام_اجنبية #موفورا #movies #Trailer #اكسبلور`;
+    }
+
     return `${selectedHook}\n` +
-      `🎬 ${title} (${year})\n` +
+      `🔥 لقطة من: ${title} (${year})\n` +
       `━━━━━━━━━━━━━━━━━━━\n` +
       `⭐ التقييم: ${rating} / 10 | 📅 سنة الإصدار: ${year}\n` +
-      `🎙️ الصوت: إنجليزي أصلي | 📝 الترجمة: عربية مدمجة\n` +
+      `🎙️ الصوت: أصلي | 📝 الترجمة: عربية مدمجة\n` +
       `━━━━━━━━━━━━━━━━━━━\n` +
       `📖 قصة العمل:\n${synopsis}\n\n` +
-      `👇 لمشاهدة الفيلم كامل بجودة فائقة 1080p و 4K بدون إعلانات مزعجة:\n` +
+      `👇 لمشاهدة العمل كاملاً بجودة فائقة 1080p و 4K بدون إعلانات مزعجة:\n` +
       `🔗 ${watchUrl}\n\n` +
-      `#أفلام #سينما #افلام_اجنبية #موفورا #Reels #فيلم_السهرة #movies #Explore #اكسبلور`;
+      `#أفلام #لقطات_أفلام #سينما #موفورا #Reels #فيلم_السهرة #movies #Explore #اكسبلور`;
   };
 
   const handleCopyText = () => {
@@ -355,7 +374,6 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
       return;
     }
 
-    // Save credentials to localStorage
     localStorage.setItem('movora_fb_page_id', pageId.trim());
     localStorage.setItem('movora_fb_access_token', accessToken.trim());
 
@@ -366,13 +384,13 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
     const itemTitle = customTitle || selectedMedia.title || selectedMedia.name || 'Movora Cinema';
 
     try {
-      if (videoBlob) {
-        // Publish as Video / Reel via Facebook Graph Video API
+      if (publishMode === 'clip' && videoBlob) {
+        // Upload clip video
         const formData = new FormData();
         formData.append('access_token', accessToken.trim());
         formData.append('title', itemTitle);
         formData.append('description', fullCaption);
-        formData.append('source', videoBlob, 'movora-video.webm');
+        formData.append('source', videoBlob, 'movora-scene.webm');
 
         const uploadRes = await fetch(`https://graph-video.facebook.com/v19.0/${pageId.trim()}/videos`, {
           method: 'POST',
@@ -380,16 +398,14 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
         });
 
         const data = await uploadRes.json();
-        if (data.error) {
-          throw new Error(data.error.message || 'فشل في نشر الفيديو على فيسبوك');
-        }
+        if (data.error) throw new Error(data.error.message);
 
         setFeedback({ 
           type: 'success', 
-          text: `تم نشر مقطع الفيديو بنجاح على صفحتك في فيسبوك! (ID: ${data.id}) 🚀` 
+          text: `تم نشر لقطة الفيديو بنجاح على صفحتك في فيسبوك! (ID: ${data.id}) 🚀` 
         });
       } else {
-        // Publish as Photo & Link Post via Facebook Graph API
+        // Publish post with poster and trailer/watch link
         const posterUrl = selectedMedia.poster_path 
           ? getPosterUrl(selectedMedia.poster_path, 'w780') 
           : 'https://movora.me/favicon.svg';
@@ -405,27 +421,24 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
         });
 
         const data = await postRes.json();
-        if (data.error) {
-          throw new Error(data.error.message || 'فشل في نشر البوست على فيسبوك');
-        }
+        if (data.error) throw new Error(data.error.message);
 
         setFeedback({ 
           type: 'success', 
-          text: `تم نشر البوست والبوستر بنجاح على صفحتك في فيسبوك! (Post ID: ${data.post_id || data.id}) 🚀` 
+          text: `تم نشر البوست بنجاح على صفحتك في فيسبوك! (Post ID: ${data.post_id || data.id}) 🚀` 
         });
       }
     } catch (err) {
       console.error('Facebook publish error:', err);
       setFeedback({ 
         type: 'error', 
-        text: `خطأ في النشر: ${err.message}. يرجى التحقق من صلاحيات Page Access Token (pages_manage_posts).` 
+        text: `خطأ في النشر: ${err.message}. يرجى مراجعة الصلاحيات (pages_manage_posts).` 
       });
     } finally {
       setIsPublishing(false);
     }
   };
 
-  // Filter items by media type tabs
   const rawList = searchResults.length > 0 ? searchResults : trendingItems;
   const displayList = rawList.filter(item => {
     const itemIsTv = item.media_type === 'tv' || Boolean(item.first_air_date || (!item.release_date && item.name));
@@ -449,8 +462,8 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
               <Share2 size={22} />
             </div>
             <div>
-              <h2 className="fb-modal-title">أداة النشر وصناعة الفيديوهات لفيسبوك 🎬📱</h2>
-              <p className="fb-modal-sub">اقتطاع دقيقة من الفيلم، وتوليد نصوص وهاشتاغات ذكية والنشر على صفحتك وريلز بضغطة زر</p>
+              <h2 className="fb-modal-title">أداة النشر لفيسبوك: نشر التريلر أو لقطة من العمل 🎬📱</h2>
+              <p className="fb-modal-sub">اختر نشر الإعلان الرسمي المشوق (تلقائي بدون تسجيل) أو نشر لقطة مميزة من الفيلم</p>
             </div>
           </div>
 
@@ -480,7 +493,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
               <li>اختر صفحتك (Page) من قائمة <strong>User or Page</strong>، وفعّل الصلاحيات: <code>pages_manage_posts</code> و <code>pages_read_engagement</code> و <code>pages_show_list</code>.</li>
               <li>انسخ <strong>Page Access Token</strong> وضعه في خانة الرمز أدناه.</li>
               <li>معرف الصفحة (<strong>Page ID</strong>) تجده في إعدادات صفحتك على فيسبوك -&gt; قسم «حول الصفحة (About)».</li>
-              <li>الرمز ومعرف الصفحة يُحفظان تلقائياً في جهازك للأبد دون الحاجة لإدخالهما مجدداً.</li>
+              <li>الرمز ومعرف الصفحة يُحفظان تلقائياً في جهازك للأبد.</li>
             </ol>
           </div>
         )}
@@ -497,7 +510,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                 setPageId(v);
                 localStorage.setItem('movora_fb_page_id', v.trim());
               }} 
-              placeholder="مثال: 104829104829104"
+              placeholder="مثال: 104829104829104 (اختياري للنشر التلقائي)"
               dir="ltr"
             />
           </div>
@@ -516,7 +529,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                   setAccessToken(v);
                   localStorage.setItem('movora_fb_access_token', v.trim());
                 }} 
-                placeholder="EAA..." 
+                placeholder="EAA... (اختياري للنشر التلقائي)" 
                 dir="ltr"
               />
               <button 
@@ -533,9 +546,30 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
         {/* Main 2-Column Workspace */}
         <div className="fb-workspace-grid">
           
-          {/* Left Column: Media Picker & 60-Second Video Studio */}
+          {/* Left Column */}
           <div className="fb-left-col">
             
+            {/* Mode Switcher Tabs */}
+            <div className="fb-mode-tabs-container">
+              <button 
+                type="button" 
+                className={`fb-mode-tab-btn ${publishMode === 'trailer' ? 'active' : ''}`}
+                onClick={() => setPublishMode('trailer')}
+              >
+                <Clapperboard size={16} />
+                <span>الخيار 1: نشر التريلر الرسمي 🎬 (تلقائي)</span>
+              </button>
+
+              <button 
+                type="button" 
+                className={`fb-mode-tab-btn ${publishMode === 'clip' ? 'active' : ''}`}
+                onClick={() => setPublishMode('clip')}
+              >
+                <Video size={16} />
+                <span>الخيار 2: نشر لقطة من الفيلم 📱</span>
+              </button>
+            </div>
+
             {/* Search Bar */}
             <div className="fb-search-bar">
               <Search size={16} className="fb-search-icon" />
@@ -543,7 +577,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                 type="text" 
                 value={searchQuery} 
                 onChange={handleSearchChange} 
-                placeholder="ابحث عن الفيلم أو المسلسل المطلوب صناعة المقطع له..." 
+                placeholder="ابحث عن الفيلم أو المسلسل (مثال: Inception, Oppenheimer, أرطغرل)..." 
                 dir="rtl"
               />
               {isSearching && <Loader2 size={16} className="fb-spinner" />}
@@ -589,7 +623,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                 {searchResults.length > 0 ? (
                   <span>نتائج البحث ({displayList.length}):</span>
                 ) : (
-                  <span>اختر عملاً سينمائياً للتجهيز:</span>
+                  <span>اختر العمل السينمائي المطلوب:</span>
                 )}
               </div>
 
@@ -632,117 +666,174 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
               </div>
             </div>
 
-            {/* ================= 60-Second Video Studio Module ================= */}
-            <div className="fb-video-studio-card">
-              <div className="fb-studio-header">
-                <div className="fb-studio-title">
-                  <Video size={18} style={{ color: '#1877f2' }} />
-                  <span>استوديو مقطع الدقيقة (Video Clip & Reels Studio)</span>
-                </div>
-                <div className="fb-studio-badge">
-                  {videoBlob ? '✓ الفيديو جاهز للنشر' : 'جاهز للتسجيل أو الرفع'}
-                </div>
-              </div>
-
-              {/* Action Buttons: Record 60s, Upload Clip, TMDB Trailer */}
-              <div className="fb-video-actions-row">
-                {!isRecording ? (
-                  <button 
-                    type="button" 
-                    className="fb-studio-btn record"
-                    onClick={startRecording}
-                    title="تسجيل لقطة من 30 إلى 60 ثانية من المشغل بالصوت والصورة"
-                  >
-                    <Radio size={15} />
-                    <span>تسجيل دقيقة من المشغل 🔴</span>
-                  </button>
-                ) : (
-                  <button 
-                    type="button" 
-                    className="fb-studio-btn record recording"
-                    onClick={stopRecording}
-                    title="إيقاف التسجيل واعتماد المقطع"
-                  >
-                    <Square size={14} fill="#fff" />
-                    <span>إيقاف التسجيل ({recordingSeconds} ثانية / 60) ⏹️</span>
-                  </button>
-                )}
-
-                <button 
-                  type="button" 
-                  className="fb-studio-btn upload"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="رفع مقطع جاهز من جهازك"
-                >
-                  <Upload size={14} />
-                  <span>رفع مقطع من جهازك 📁</span>
-                </button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileUpload} 
-                  accept="video/*" 
-                  style={{ display: 'none' }} 
-                />
-
-                {trailerKey && (
-                  <a 
-                    href={`https://www.youtube.com/watch?v=${trailerKey}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="fb-studio-btn trailer"
-                    title="مشاهدة وتحميل الإعلان الترويجي الرسمي"
-                  >
-                    <ExternalLink size={14} />
-                    <span>تريلر اليوتيوب الرسمي 🎬</span>
-                  </a>
-                )}
-              </div>
-
-              {/* Video Player Preview Box */}
-              {videoUrl ? (
-                <div className="fb-video-preview-box">
-                  <video src={videoUrl} controls autoPlay muted playsInline />
-                  <div className="fb-video-bar-meta">
-                    <span style={{ color: '#4ade80', fontWeight: 700 }}>
-                      ✓ تم تجهيز الفيديو بنجاح (جاهز للنشر كفيديو أو ريلز على فيسبوك)
-                    </span>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        type="button" 
-                        className="fb-download-clip-btn" 
-                        onClick={downloadRecordedClip}
-                        title="تنزيل المقطع إلى جهازك بصيغة WebM / MP4"
-                      >
-                        <Download size={13} />
-                        <span>تنزيل المقطع</span>
-                      </button>
-                      <button 
-                        type="button" 
-                        className="fb-delete-video-btn" 
-                        onClick={clearVideo}
-                        title="حذف الفيديو الحالي"
-                      >
-                        <Trash2 size={13} />
-                        <span>حذف</span>
-                      </button>
-                    </div>
+            {/* ================= OPTION 1: TRAILER MODE (AUTO NO-RECORD) ================= */}
+            {publishMode === 'trailer' && (
+              <div className="fb-video-studio-card">
+                <div className="fb-studio-header">
+                  <div className="fb-studio-title">
+                    <Clapperboard size={18} style={{ color: '#facc15' }} />
+                    <span>الإعلان الرسمي المشوق (Trailer) • تلقائي 100% بدون تسجيل</span>
+                  </div>
+                  <div className="fb-studio-badge" style={{ background: 'rgba(250, 204, 21, 0.15)', color: '#facc15', borderColor: 'rgba(250, 204, 21, 0.35)' }}>
+                    {trailerKey ? '✓ تم جلب التريلر الرسمي' : 'جاري البحث عن التريلر...'}
                   </div>
                 </div>
-              ) : (
-                <div style={{
-                  padding: '16px',
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px dashed rgba(255,255,255,0.15)',
-                  borderRadius: '10px',
-                  textAlign: 'center',
-                  fontSize: '12.5px',
-                  color: '#94a3b8'
-                }}>
-                  اضغط على <strong>«تسجيل دقيقة من المشغل 🔴»</strong> لتسجيل اللقطة المشوقة مباشرة أثناء تشغيل الفيلم في موفورا، أو اسحب أي مقطع فيديو من جهازك.
+
+                {loadingTrailer ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
+                    <Loader2 size={24} className="fb-spinner" style={{ margin: '0 auto 8px', display: 'block' }} />
+                    <span>جاري جلب الإعلان الترويجي الرسمي...</span>
+                  </div>
+                ) : trailerKey ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {/* Embedded Trailer Player */}
+                    <div style={{ position: 'relative', width: '100%', height: '230px', borderRadius: '10px', overflow: 'hidden', background: '#000' }}>
+                      <iframe 
+                        src={`https://www.youtube.com/embed/${trailerKey}?rel=0`} 
+                        title="Official Trailer" 
+                        allowFullScreen 
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#4ade80', fontWeight: 700 }}>
+                        <CheckCircle2 size={14} />
+                        <span>جاهز للنشر تلقائياً مع البوستر والقصة والرابط</span>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <a 
+                          href={`https://www.youtube.com/watch?v=${trailerKey}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="fb-studio-btn trailer"
+                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                        >
+                          <ExternalLink size={13} />
+                          <span>فتح على يوتيوب</span>
+                        </a>
+
+                        <a 
+                          href={`https://cobalt.tools/#https://www.youtube.com/watch?v=${trailerKey}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="fb-studio-btn upload"
+                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                          title="تحميل فيديو التريلر بصيغة MP4 لرفعه كفيديو على فيسبوك"
+                        >
+                          <Download size={13} />
+                          <span>تحميل MP4 📥</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '12.5px' }}>
+                    لم يتم العثور على إعلان ترويجي رسمي لهذا العمل، سيتم نشر البوستر بجودة فائقة مع القصة ورابط المشاهدة.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ================= OPTION 2: MOVIE CLIP MODE ================= */}
+            {publishMode === 'clip' && (
+              <div className="fb-video-studio-card">
+                <div className="fb-studio-header">
+                  <div className="fb-studio-title">
+                    <Video size={18} style={{ color: '#1877f2' }} />
+                    <span>نشر لقطة من الفيلم (Movie Scene Clip)</span>
+                  </div>
+                  <div className="fb-studio-badge">
+                    {videoBlob ? '✓ اللقطة جاهزة' : 'ارفع لقطة أو سجل من المشغل'}
+                  </div>
                 </div>
-              )}
-            </div>
+
+                <div className="fb-video-actions-row">
+                  <button 
+                    type="button" 
+                    className="fb-studio-btn upload"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="رفع مقطع جاهز من جهازك"
+                  >
+                    <Upload size={14} />
+                    <span>رفع لقطة من جهازك 📁</span>
+                  </button>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileUpload} 
+                    accept="video/*" 
+                    style={{ display: 'none' }} 
+                  />
+
+                  {!isRecording ? (
+                    <button 
+                      type="button" 
+                      className="fb-studio-btn record"
+                      onClick={startRecording}
+                      title="تسجيل لقطة من 30 إلى 60 ثانية من المشغل لمن يرغب"
+                    >
+                      <Radio size={14} />
+                      <span>تسجيل لقطة من المشغل (اختياري) 🔴</span>
+                    </button>
+                  ) : (
+                    <button 
+                      type="button" 
+                      className="fb-studio-btn record recording"
+                      onClick={stopRecording}
+                      title="إيقاف التسجيل واعتماد المقطع"
+                    >
+                      <Square size={13} fill="#fff" />
+                      <span>إيقاف التسجيل ({recordingSeconds} ثانية) ⏹️</span>
+                    </button>
+                  )}
+                </div>
+
+                {videoUrl ? (
+                  <div className="fb-video-preview-box">
+                    <video src={videoUrl} controls autoPlay muted playsInline />
+                    <div className="fb-video-bar-meta">
+                      <span style={{ color: '#4ade80', fontWeight: 700 }}>
+                        ✓ تم تجهيز اللقطة بنجاح للنشر كفيديو أو ريلز
+                      </span>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          type="button" 
+                          className="fb-download-clip-btn" 
+                          onClick={downloadRecordedClip}
+                          title="تنزيل اللقطة إلى جهازك بصيغة WebM / MP4"
+                        >
+                          <Download size={13} />
+                          <span>تنزيل</span>
+                        </button>
+                        <button 
+                          type="button" 
+                          className="fb-delete-video-btn" 
+                          onClick={clearVideo}
+                          title="حذف المقطع الحالي"
+                        >
+                          <Trash2 size={13} />
+                          <span>حذف</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{
+                    padding: '16px',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px dashed rgba(255,255,255,0.15)',
+                    borderRadius: '10px',
+                    textAlign: 'center',
+                    fontSize: '12.5px',
+                    color: '#94a3b8'
+                  }}>
+                    اسحب مقطع لقطة الفيلم من جهازك عبر زر <strong>«رفع لقطة من جهازك 📁»</strong>، أو سجل لقطة سريعة من المشغل.
+                  </div>
+                )}
+              </div>
+            )}
 
           </div>
 
@@ -764,7 +855,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                   value={selectedHook} 
                   onChange={(e) => setSelectedHook(e.target.value)}
                 >
-                  {(isTv ? SERIES_HOOKS : MOVIE_HOOKS).map((hook, idx) => (
+                  {(publishMode === 'trailer' ? TRAILER_HOOKS : CLIP_HOOKS).map((hook, idx) => (
                     <option key={idx} value={hook}>{hook}</option>
                   ))}
                 </select>
@@ -799,7 +890,9 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
 
               {/* Facebook Mock Post Preview */}
               <div>
-                <label className="fb-field-label">معاينة المنشور على فيسبوك (Facebook Preview):</label>
+                <label className="fb-field-label">
+                  معاينة المنشور على فيسبوك ({publishMode === 'trailer' ? 'منشور تريلر' : 'منشور لقطة'}):
+                </label>
                 <div className="fb-mock-card">
                   <div className="fb-mock-header">
                     <div className="fb-mock-avatar">M</div>
@@ -878,7 +971,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
             ) : (
               <>
                 <Share2 size={16} />
-                <span>نشر الفيديو في صفحة فيسبوك الآن 🚀</span>
+                <span>نشر المنشور في صفحة فيسبوك الآن 🚀</span>
               </>
             )}
           </button>

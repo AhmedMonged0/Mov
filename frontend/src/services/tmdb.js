@@ -161,6 +161,25 @@ export const fetchMovieVideos = async (movieId) => {
 };
 
 /**
+ * Get series trailers / videos
+ */
+export const fetchSeriesVideos = async (seriesId) => {
+  try {
+    let res = await fetch(`${BASE_URL}/tv/${seriesId}/videos?api_key=${TMDB_API_KEY}&language=ar`);
+    let data = await res.json();
+    if (data.results && data.results.length > 0) {
+      return data.results;
+    }
+    res = await fetch(`${BASE_URL}/tv/${seriesId}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
+    data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error(`Failed to fetch videos for series ${seriesId}:`, error);
+    return [];
+  }
+};
+
+/**
  * Discover movies by category / genre ID
  */
 export const fetchMoviesByGenre = async (genreId, page = 1) => {
@@ -408,4 +427,5 @@ export default {
   fetchSeasonDetails,
   searchSeries,
   fetchSeriesByGenre,
+  fetchSeriesVideos,
 };

@@ -234,6 +234,45 @@
   gap: 16px;
 }
 
+/* Mode Selector Tabs (نشر التريلر vs نشر لقطة من فيلم) */
+.fb-mode-tabs-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fb-mode-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.fb-mode-tab-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.fb-mode-tab-btn.active {
+  background: linear-gradient(135deg, #1877f2 0%, #0d5ec4 100%);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(24, 119, 242, 0.4);
+}
+
 /* Search Bar */
 .fb-search-bar {
   position: relative;
