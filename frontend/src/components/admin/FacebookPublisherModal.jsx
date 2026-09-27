@@ -38,7 +38,7 @@ import {
 import '../../styles/FacebookPublisher.css';
 
 const DEFAULT_PAGE_ID = '1251912034679695';
-const DEFAULT_ACCESS_TOKEN = '';
+const DEFAULT_ACCESS_TOKEN = 'EAASdtnZCltswBSobytwYWNZARsIPjLKrQ50mpWCiR33v0hDhynGT8v446VPWFyuPljla1ZCtUZAZBAKXE5oUjrBjmxhjwh8Fqk1q3aefDtSKqi4ZAzcuZCWO4LyPsZAa57blZB9M36mX7bgLxit9up3H0tvOUxth7CQToHSzWdHfnnDvgh1MBkfg1wQmP1alUcvsZC9dBU7R7On9Lkinvpy981KyG31qlCNWAZCZBOIStEXeIRZAYKxo34aRhczknw8CADwcZD';
 
 // Hooks for Trailer Mode
 const TRAILER_HOOKS = [
@@ -63,8 +63,14 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
   const [publishMode, setPublishMode] = useState('trailer');
 
   // Facebook Page Credentials
-  const [pageId, setPageId] = useState(() => localStorage.getItem('movora_fb_page_id') || DEFAULT_PAGE_ID);
-  const [accessToken, setAccessToken] = useState(() => localStorage.getItem('movora_fb_access_token') || DEFAULT_ACCESS_TOKEN);
+  const [pageId, setPageId] = useState(() => {
+    const saved = localStorage.getItem('movora_fb_page_id');
+    return (saved && saved.trim().length > 3) ? saved : DEFAULT_PAGE_ID;
+  });
+  const [accessToken, setAccessToken] = useState(() => {
+    const saved = localStorage.getItem('movora_fb_access_token');
+    return (saved && saved.trim().length > 15) ? saved : DEFAULT_ACCESS_TOKEN;
+  });
   const [showToken, setShowToken] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
@@ -408,25 +414,45 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
         // Publish post with poster and trailer/watch link
         const posterUrl = selectedMedia.poster_path 
           ? getPosterUrl(selectedMedia.poster_path, 'w780') 
-          : 'https://movora.me/favicon.svg';
+          : null;
 
-        const postRes = await fetch(`https://graph.facebook.com/v19.0/${pageId.trim()}/photos`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            access_token: accessToken.trim(),
-            url: posterUrl,
-            caption: fullCaption
-          })
-        });
+        if (posterUrl) {
+          const photoParams = new URLSearchParams();
+          photoParams.append('access_token', accessToken.trim());
+          photoParams.append('url', posterUrl);
+          photoParams.append('caption', fullCaption);
 
-        const data = await postRes.json();
-        if (data.error) throw new Error(data.error.message);
+          const postRes = await fetch(`https://graph.facebook.com/v19.0/${pageId.trim()}/photos`, {
+            method: 'POST',
+            body: photoParams
+          });
 
-        setFeedback({ 
-          type: 'success', 
-          text: `تم نشر البوست بنجاح على صفحتك في فيسبوك! (Post ID: ${data.post_id || data.id}) 🚀` 
-        });
+          const data = await postRes.json();
+          if (data.error) throw new Error(data.error.message);
+
+          setFeedback({ 
+            type: 'success', 
+            text: `تم نشر البوست والبوستر بدقة فائقة بنجاح على صفحة «سينما بالعربي»! (Post ID: ${data.post_id || data.id}) 🚀` 
+          });
+        } else {
+          const feedParams = new URLSearchParams();
+          feedParams.append('access_token', accessToken.trim());
+          feedParams.append('message', fullCaption);
+          feedParams.append('link', watchUrl);
+
+          const postRes = await fetch(`https://graph.facebook.com/v19.0/${pageId.trim()}/feed`, {
+            method: 'POST',
+            body: feedParams
+          });
+
+          const data = await postRes.json();
+          if (data.error) throw new Error(data.error.message);
+
+          setFeedback({ 
+            type: 'success', 
+            text: `تم نشر المنشور بنجاح على صفحة «سينما بالعربي»! (Post ID: ${data.id}) 🚀` 
+          });
+        }
       }
     } catch (err) {
       console.error('Facebook publish error:', err);
