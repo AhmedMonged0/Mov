@@ -394,13 +394,14 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
     const itemTitle = customTitle || selectedMedia.title || selectedMedia.name || 'Movora Cinema';
 
     try {
-      if (publishMode === 'clip' && videoBlob) {
-        // Upload clip video
+      if (videoBlob) {
+        // Upload real native video to Facebook (trailer MP4 or movie scene clip)
         const formData = new FormData();
         formData.append('access_token', accessToken.trim());
         formData.append('title', itemTitle);
         formData.append('description', fullCaption);
-        formData.append('source', videoBlob, 'movora-scene.webm');
+        const fileName = (videoBlob.name) || (publishMode === 'trailer' ? 'movora-trailer.mp4' : 'movora-scene.mp4');
+        formData.append('source', videoBlob, fileName);
 
         const uploadRes = await fetch(`https://graph-video.facebook.com/v19.0/${pageId.trim()}/videos`, {
           method: 'POST',
@@ -412,7 +413,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
 
         setFeedback({ 
           type: 'success', 
-          text: `تم نشر لقطة الفيديو بنجاح على صفحتك في فيسبوك! (ID: ${data.id}) 🚀` 
+          text: `تم نشر فيديو ${publishMode === 'trailer' ? 'التريلر' : 'اللقطة'} بنجاح كفيديو أصلي على صفحتك «سينما بالعربي»! (Video ID: ${data.id}) 🚀🎬` 
         });
       } else {
         // Publish post with poster and trailer/watch link
@@ -600,6 +601,15 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
           {/* Left Column */}
           <div className="fb-left-col">
             
+            {/* Hidden Universal File Input for Trailer and Clip */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileUpload} 
+              accept="video/*" 
+              style={{ display: 'none' }} 
+            />
+
             {/* Mode Switcher Tabs */}
             <div className="fb-mode-tabs-container">
               <button 
@@ -750,7 +760,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                     <div className="fb-trailer-bottom-bar">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#4ade80', fontWeight: 700 }}>
                         <CheckCircle2 size={14} />
-                        <span>الإعلان جاهز للنشر مع البوستر والقصة والرابط</span>
+                        <span>{videoBlob ? 'فيديو التريلر مرفق وجاهز للنشر الأصلي!' : 'التريلر الرسمي معروض وجاهز'}</span>
                       </div>
 
                       <div className="fb-trailer-links-group">
@@ -766,7 +776,7 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                         </a>
 
                         <a 
-                          href={`https://cobalt.tools/#https://www.youtube.com/watch?v=${trailerKey}`} 
+                          href={`https://www.ssyoutube.com/watch?v=${trailerKey}`} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="fb-studio-btn upload"
@@ -774,9 +784,102 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                           title="تحميل فيديو التريلر بصيغة MP4 لرفعه كفيديو على فيسبوك"
                         >
                           <Download size={13} />
-                          <span>تحميل MP4 📥</span>
+                          <span>تحميل MP4 سريع 📥</span>
                         </a>
                       </div>
+                    </div>
+
+                    {/* Dedicated Trailer Video Attachment Panel */}
+                    <div className="fb-trailer-attachment-panel">
+                      {videoBlob ? (
+                        <div className="fb-attached-video-card">
+                          <div className="fb-attached-video-header">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <CheckCircle2 size={16} color="#22c55e" />
+                              <span style={{ fontWeight: 800, fontSize: '13px', color: '#4ade80' }}>
+                                تم إرفاق ملف التريلر: {videoBlob.name || 'trailer.mp4'}
+                              </span>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={clearVideo} 
+                              className="fb-remove-video-btn"
+                              title="حذف الفيديو والرجوع لنشر البوستر"
+                            >
+                              <Trash2 size={13} />
+                              <span>إلغاء الفيديو</span>
+                            </button>
+                          </div>
+
+                          {videoUrl && (
+                            <div className="fb-video-preview-box" style={{ marginTop: '6px' }}>
+                              <video src={videoUrl} controls autoPlay muted playsInline style={{ maxHeight: '180px' }} />
+                              <div className="fb-video-bar-meta">
+                                <span style={{ color: '#4ade80', fontSize: '12px', fontWeight: 700 }}>
+                                  ✓ جاهز! سيتم رفع هذا الفيديو لينشر كـ فيديو فيسبوك أصلي (Native Video) يشتغل تلقائياً
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="fb-trailer-download-attach-box">
+                          <div className="fb-attach-prompt-title">
+                            <Film size={15} style={{ color: '#facc15' }} />
+                            <span>تريد نشر التريلر كـ «فيديو أصلي» بدلاً من صورة البوستر؟</span>
+                          </div>
+
+                          <div className="fb-attach-steps-row">
+                            <div className="fb-attach-step-card">
+                              <span className="fb-step-num">1</span>
+                              <div className="fb-step-content">
+                                <span className="fb-step-text">حمّل التريلر بصيغة MP4:</span>
+                                <div className="fb-step-buttons">
+                                  <a 
+                                    href={`https://www.ssyoutube.com/watch?v=${trailerKey}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="fb-action-mini-btn primary"
+                                    title="تحميل مباشر سريع"
+                                  >
+                                    <Download size={13} />
+                                    <span>تحميل سريع (ssyoutube) 📥</span>
+                                  </a>
+                                  <a 
+                                    href={`https://cobalt.tools/#https://www.youtube.com/watch?v=${trailerKey}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="fb-action-mini-btn"
+                                    title="تحميل بديل عبر Cobalt"
+                                  >
+                                    <ExternalLink size={12} />
+                                    <span>Cobalt 🌐</span>
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="fb-attach-step-card">
+                              <span className="fb-step-num">2</span>
+                              <div className="fb-step-content">
+                                <span className="fb-step-text">ارفق الفيديو الذي حمّلته:</span>
+                                <button 
+                                  type="button" 
+                                  className="fb-action-mini-btn upload"
+                                  onClick={() => fileInputRef.current?.click()}
+                                >
+                                  <Upload size={13} />
+                                  <span>إرفاق ملف MP4 📁</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="fb-step-notice">
+                            💡 <strong>ملاحظة:</strong> فيسبوك لا يقبل تضمين يوتيوب كفيديو أصلي في الصفحات. إذا لم ترفق ملف فيديو، سيتم نشر البوستر فائق الجودة مع القصة والرابط.
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -810,13 +913,6 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
                     <Upload size={14} />
                     <span>رفع لقطة من جهازك 📁</span>
                   </button>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileUpload} 
-                    accept="video/*" 
-                    style={{ display: 'none' }} 
-                  />
 
                   {!isRecording ? (
                     <button 
@@ -1017,12 +1113,16 @@ export default function FacebookPublisherModal({ onClose, initialQuery = '' }) {
             {isPublishing ? (
               <>
                 <Loader2 size={16} className="fb-spinner" />
-                <span>جاري النشر على فيسبوك...</span>
+                <span>{videoBlob ? 'جاري رفع الفيديو إلى صفحة فيسبوك...' : 'جاري نشر البوست على فيسبوك...'}</span>
               </>
             ) : (
               <>
                 <Share2 size={16} />
-                <span>نشر المنشور في صفحة فيسبوك الآن 🚀</span>
+                <span>
+                  {videoBlob 
+                    ? `نشر فيديو ${publishMode === 'trailer' ? 'التريلر' : 'اللقطة'} الأصلي على صفحتك 🎬🚀` 
+                    : 'نشر المنشور (البوستر والقصة) في صفحتك 🚀'}
+                </span>
               </>
             )}
           </button>
